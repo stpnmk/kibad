@@ -8,6 +8,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from scipy.stats import norm as _norm
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
@@ -174,10 +175,12 @@ def run_naive_forecast(
     model.fit(y)
     preds = model.predict(horizon)
 
-    # residual std for CI
+    # residual std for CI (exclude NaN predictions to avoid bias)
     in_sample = model.predict(len(y))[-len(y):]
-    resid_std = float(np.nanstd(y - in_sample))
-    z = 1.96 if confidence >= 0.95 else 1.645
+    valid_mask = ~np.isnan(in_sample)
+    resid = y[valid_mask] - in_sample[valid_mask] if valid_mask.any() else y - in_sample
+    resid_std = float(np.nanstd(resid))
+    z = float(_norm.ppf(1 - (1 - confidence) / 2))
     lower = preds - z * resid_std
     upper = preds + z * resid_std
 
@@ -427,9 +430,10 @@ def run_arx_forecast(
     in_sample_preds = model.predict_in_sample()
     future_preds = model.predict(horizon, future_exog=future_exog)
 
-    resid = y.values - np.where(np.isnan(in_sample_preds), y.values, in_sample_preds)
+    valid_mask = ~np.isnan(in_sample_preds)
+    resid = y.values[valid_mask] - in_sample_preds[valid_mask] if valid_mask.any() else y.values - in_sample_preds
     resid_std = float(np.nanstd(resid))
-    z = 1.96 if confidence >= 0.95 else 1.645
+    z = float(_norm.ppf(1 - (1 - confidence) / 2))
 
     freq = pd.infer_freq(dates) or "MS"
     future_dates = pd.date_range(dates.iloc[-1], periods=horizon + 1, freq=freq)[1:]

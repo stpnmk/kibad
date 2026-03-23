@@ -662,7 +662,7 @@ def bh_correction(p_values: list[float], alpha: float = 0.05) -> list[dict[str, 
         return []
 
     indexed = sorted(enumerate(p_values), key=lambda x: x[1])
-    results: list[dict[str, Any]] = [{}] * n
+    results: list[dict[str, Any]] = [{} for _ in range(n)]
 
     # Compute adjusted p-values (step-up)
     prev_adj = 0.0

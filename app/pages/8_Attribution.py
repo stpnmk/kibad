@@ -145,7 +145,7 @@ if st.button(t("run"), key="btn_attr", type="primary"):
     }
     method_key = method_map.get(method, "additive")
 
-    with st.spinner("Computing attribution..."):
+    with st.spinner("Вычисляем атрибуцию..."):
         try:
             if method_key == "additive":
                 result = additive_attribution(df, target_col, target_prev_col, driver_cols, driver_prev_cols, segment_col)
@@ -168,7 +168,7 @@ if st.button(t("run"), key="btn_attr", type="primary"):
             })
 
         except Exception as e:
-            st.error(f"Attribution error: {e}")
+            st.error(f"Ошибка атрибуции: {e}")
             st.stop()
 
 # ---------------------------------------------------------------------------

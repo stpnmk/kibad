@@ -269,7 +269,7 @@ if "_cmp_result" in st.session_state:
                 return ""
             return "color: green; font-weight: bold" if val > 0 else ("color: red; font-weight: bold" if val < 0 else "")
 
-        styled = cmp_df.style.applymap(color_delta, subset=["Изменение", "Изменение %"])
+        styled = cmp_df.style.map(color_delta, subset=["Изменение", "Изменение %"])
         st.dataframe(styled, use_container_width=True, height=350)
 
         # KPI summary cards

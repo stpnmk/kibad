@@ -25,18 +25,18 @@ from core.explore import (
 from core.insights import analyze_dataset, format_insights_markdown, get_chart_recommendation, score_data_quality
 from app.styles import inject_all_css, page_header, section_header
 
-st.set_page_config(page_title="KIBAD – Explore", layout="wide")
+st.set_page_config(page_title="KIBAD – Анализ", layout="wide")
 init_state()
 inject_all_css()
 page_header("5. Анализ данных", "Авто-инсайты, распределения, корреляции и профилирование", "🔎")
 
-chosen = dataset_selectbox("Dataset", key="explore_ds_sel")
+chosen = dataset_selectbox("Датасет", key="explore_ds_sel")
 if not chosen:
     st.stop()
 
 df = get_active_df()
 if df is None:
-    st.error("No prepared data found. Go to Prepare first.")
+    st.error("Подготовленные данные не найдены. Перейдите на страницу **Подготовка** для обработки.")
     st.stop()
 
 num_cols = df.select_dtypes(include="number").columns.tolist()
@@ -45,7 +45,7 @@ dt_cols = [c for c in df.columns if pd.api.types.is_datetime64_any_dtype(df[c])]
 all_cols = list(df.columns)
 
 show_pending_notification()
-st.markdown(f"**Shape:** {df.shape[0]:,} rows × {df.shape[1]} cols")
+st.markdown(f"**Размер:** {df.shape[0]:,} строк × {df.shape[1]} колонок")
 
 tab_auto, tab_quality, tab_ts, tab_dist, tab_corr, tab_pairplot, tab_pivot, tab_waterfall, tab_stl, tab_kpi, tab_profile = st.tabs([
     "🤖 Авто-анализ", "🏥 Качество данных",

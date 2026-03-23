@@ -677,7 +677,7 @@ def detect_anomalies(
 
     if method == "rolling_zscore":
         roll_mean = s.rolling(window, min_periods=max(3, window // 2)).mean()
-        roll_std = s.rolling(window, min_periods=max(3, window // 2)).std()
+        roll_std = s.rolling(window, min_periods=max(3, window // 2)).std().replace(0, np.nan)
         z_scores = ((s - roll_mean) / roll_std).abs()
         result = z_scores > threshold
         result = result.fillna(False)
