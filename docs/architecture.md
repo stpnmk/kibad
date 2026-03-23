@@ -1,158 +1,166 @@
-# KIBAD Architecture
+# Архитектура KIBAD
 
-## Overview
+## Обзор
 
-KIBAD (KPI-Based Analytical Dashboard) is a multi-page Streamlit application for
-interactive data analysis. It follows a layered architecture that separates
-concerns into five distinct layers: Core, Analytics, Visualization, UI, and
-Storage.
+KIBAD — многостраничное Streamlit-приложение для интерактивного анализа данных. Архитектура построена на разделении ответственности: пять слоёв изолируют логику ввода/вывода, аналитические вычисления, визуализацию, пользовательский интерфейс и хранение данных.
 
-## Layer Separation
+## Разделение слоёв
 
-### 1. Core Layer (IO, Schema, Validation, Transforms)
+### 1. Слой данных (IO, схема, валидация, преобразования)
 
-Handles all data ingestion, validation, and transformation logic. No UI
-dependencies -- pure Python functions that can be tested independently.
+Отвечает за загрузку, валидацию и трансформацию данных. Не содержит зависимостей от UI — только чистые функции Python, которые можно тестировать независимо.
 
-| Module              | Responsibility                                        |
-|---------------------|-------------------------------------------------------|
-| `core/data.py`      | File I/O: CSV, Excel (xlsx/xls), Parquet, PostgreSQL  |
-| `core/validate.py`  | Schema checks, type inference, constraint enforcement  |
-| `core/prepare.py`   | Cleaning, type coercion, missing value handling        |
-| `core/aggregate.py` | Group-by operations, pivot tables, rolling windows     |
+| Модуль | Ответственность |
+|--------|----------------|
+| `core/data.py` | Загрузка файлов: CSV, Excel (xlsx/xls), Parquet, PostgreSQL |
+| `core/validate.py` | Проверка схемы, вывод типов, контроль ограничений |
+| `core/prepare.py` | Очистка, приведение типов, обработка пропусков |
+| `core/aggregate.py` | Группировка, сводные таблицы, скользящие окна |
+| `core/merge.py` | Объединение датасетов: JOIN, UNION, конкатенация с диагностикой pitfalls |
 
-### 2. Analytics Layer (Statistical Tests, Models, Attribution)
+### 2. Аналитический слой (статистика, модели, атрибуция)
 
-Implements all analytical methods. Each module exposes pure functions that accept
-DataFrames and return results as dicts or DataFrames.
+Реализует все аналитические методы. Каждый модуль предоставляет чистые функции, принимающие DataFrame и возвращающие результат в виде словаря или DataFrame.
 
-| Module                | Responsibility                                      |
-|-----------------------|-----------------------------------------------------|
-| `core/tests.py`       | Hypothesis testing: t-test, Mann-Whitney, Chi-sq    |
-| `core/models.py`      | Time series: STL, SARIMAX, ARX, anomaly detection   |
-| `core/attribution.py` | Factor attribution: additive, multiplicative, SHAP  |
-| `core/simulation.py`  | Monte Carlo, scenario what-if analysis              |
-| `core/triggers.py`    | Alert rules: threshold, deviation, slope triggers   |
+| Модуль | Ответственность |
+|--------|----------------|
+| `core/tests.py` | Статистические тесты: t-тест, Манна-Уитни, хи-квадрат, Bootstrap, Power Analysis |
+| `core/models.py` | Временные ряды: STL, SARIMAX, ARX, обнаружение аномалий |
+| `core/attribution.py` | Факторная атрибуция: аддитивная, мультипликативная, Shapley Values |
+| `core/simulation.py` | Монте-Карло, сценарный анализ «что если», VaR/CVaR |
+| `core/triggers.py` | Правила алертов: пороговые значения, отклонение от базы, изменение тренда |
 
-### 3. Visualization Layer (Plotly Charts)
+### 3. Слой визуализации (графики Plotly)
 
-All charts are built with Plotly and returned as `go.Figure` objects. Chart
-functions live inside page modules and in `core/explore.py`.
+Все графики строятся на Plotly и возвращаются как объекты `go.Figure`. Функции построения графиков находятся внутри модулей страниц и в `core/explore.py`.
 
-### 4. UI Layer (Streamlit Pages)
+### 4. Слой UI (страницы Streamlit)
 
-Ten Streamlit pages provide the user interface. Each page imports from the Core
-and Analytics layers, never from other pages.
+Двадцать страниц Streamlit формируют пользовательский интерфейс. Каждая страница импортирует только из модулей `core/` и `services/`, но никогда из других страниц.
 
-### 5. Storage Layer (Session State, Audit Logs)
+### 5. Слой хранения (состояние сессии, аудит-лог)
 
-| Module            | Responsibility                                        |
-|-------------------|-------------------------------------------------------|
-| `core/audit.py`   | Append-only audit log of all user operations          |
-| `core/i18n.py`    | Internationalization strings (Russian / English)      |
-| `core/report.py`  | PDF/HTML report generation via Jinja2 + WeasyPrint    |
+| Модуль | Ответственность |
+|--------|----------------|
+| `core/audit.py` | Append-only аудит-лог всех операций пользователя |
+| `core/i18n.py` | Локализация строк интерфейса (русский / английский) |
+| `core/report.py` | Генерация PDF/HTML отчётов через Jinja2 и WeasyPrint |
 
-Session state is managed through `st.session_state` and acts as an in-memory
-store for the current analysis session.
+Состояние сессии хранится в `st.session_state` и является единственным источником данных для текущей аналитической сессии. Управление состоянием централизовано через `app/state.py`.
 
-## Module Diagram
+## Схема модулей
 
 ```
-app/main.py                          (entry point)
+app/main.py                              (точка входа)
   |
   +-- app/pages/
-  |     1_Data.py        -----> core/data.py, core/validate.py
-  |     2_Prepare.py     -----> core/prepare.py
-  |     3_GroupAggregate.py ---> core/aggregate.py
-  |     4_Explore.py     -----> core/explore.py
-  |     5_Tests.py       -----> core/tests.py
-  |     6_TimeSeries.py  -----> core/models.py
-  |     7_Attribution.py -----> core/attribution.py
-  |     8_Simulation.py  -----> core/simulation.py
-  |     9_Report.py      -----> core/report.py
-  |    10_Help.py        -----> core/i18n.py
+  |     0_Start.py           -----> (навигация)
+  |     1_Data.py            -----> core/data.py, core/validate.py
+  |     2_Prepare.py         -----> core/prepare.py
+  |     3_GroupAggregate.py  -----> core/aggregate.py
+  |     4_Merge.py           -----> core/merge.py
+  |     5_Explore.py         -----> core/explore.py
+  |     6_Tests.py           -----> core/tests.py
+  |     7_TimeSeries.py      -----> core/models.py
+  |     8_Attribution.py     -----> core/attribution.py
+  |     9_Simulation.py      -----> core/simulation.py
+  |     10_Report.py         -----> core/report.py, core/audit.py
+  |     11_Help.py           -----> core/i18n.py
+  |     12_Clustering.py     -----> core/explore.py, scikit-learn
+  |     14_RollRate.py       -----> core/simulation.py
+  |     19_Compare.py        -----> core/explore.py
+  |     20_Charts.py         -----> plotly
+  |     21_Pipeline.py       -----> core/* (оркестратор)
+  |     22_TextAnalytics.py  -----> (текстовый анализ)
+  |     24_Templates.py      -----> core/* (пошаговые сценарии)
+  |     25_AutoAnalyst.py    -----> core/explore.py, core/tests.py
   |
   +-- core/
-  |     data.py           IO adapters (CSV, Excel, Parquet, SQL)
-  |     validate.py       Schema validation, type checks
-  |     prepare.py        Cleaning, parsing, imputation
-  |     aggregate.py      GroupBy, pivot, rolling stats
-  |     explore.py        EDA utilities, distribution plots
-  |     tests.py          Statistical hypothesis tests
-  |     models.py         Time series models, anomaly detection
-  |     attribution.py    Factor decomposition
-  |     simulation.py     Monte Carlo, what-if scenarios
-  |     triggers.py       Alert / trigger rule engine
-  |     audit.py          Operation audit trail
-  |     i18n.py           Localization (RU/EN)
-  |     report.py         PDF/HTML report builder
-  |     __init__.py       Public API re-exports
+  |     data.py           Адаптеры ввода/вывода (CSV, Excel, Parquet, SQL)
+  |     validate.py       Валидация схемы, проверка типов
+  |     prepare.py        Очистка, парсинг, импутация
+  |     aggregate.py      GroupBy, сводные таблицы, скользящие статистики
+  |     merge.py          Объединение датасетов, диагностика pitfalls
+  |     explore.py        EDA, распределения, корреляции
+  |     tests.py          Статистические тесты
+  |     models.py         Модели временных рядов, обнаружение аномалий
+  |     attribution.py    Факторная декомпозиция
+  |     simulation.py     Монте-Карло, сценарное моделирование
+  |     triggers.py       Правила и движок алертов
+  |     audit.py          Аудит-след операций
+  |     i18n.py           Локализация (RU/EN)
+  |     report.py         Генерация PDF/HTML отчётов
+  |     __init__.py       Публичный API (реэкспорт)
   |
-  +-- data/               Sample datasets (CSV)
-  +-- tests/              pytest test suite
-  +-- services/           Background / helper services
+  +-- services/
+  |     db.py             Подключение к PostgreSQL (SQLAlchemy)
+  |
+  +-- sample_data/        Тестовые датасеты (CSV)
+  +-- tests/              Набор тестов pytest (343 теста)
 ```
 
-## Data Flow
+## Поток данных
 
-The primary data flow follows a linear pipeline:
+Основной поток данных следует линейному конвейеру:
 
 ```
-  Upload          Validate          Clean/Prepare
- (CSV/XLSX/  -->  (schema,    -->   (type coercion,
-  Parquet/SQL)     types,            missing values,
-                   constraints)      outlier handling)
-       |                                  |
-       v                                  v
-   Analyze         <--  Iterate  <--  Transform
-  (tests,                             (aggregate,
-   models,                             pivot,
-   attribution)                        filter)
-       |
-       v
-    Export
-  (PDF report,
-   CSV download,
-   audit log)
+  Загрузка         Валидация          Очистка/Подготовка
+(CSV/XLSX/    -->  (схема,      -->   (приведение типов,
+ Parquet/SQL)      типы,               пропуски,
+                   ограничения)        выбросы)
+      |                                     |
+      v                                     v
+  Анализ        <--  Итерации  <--   Трансформация
+ (тесты,                             (агрегация,
+  модели,                             сводные таблицы,
+  атрибуция)                          фильтры)
+      |
+      v
+   Экспорт
+ (PDF/HTML отчёт,
+  CSV, аудит-лог)
 ```
 
-### Step-by-step
+### Пошаговое описание
 
-1. **Upload** -- User loads data via file upload or PostgreSQL connection
-   (`1_Data.py` -> `core/data.py`).
-2. **Validate** -- Automatic schema detection; user reviews inferred types and
-   constraints (`core/validate.py`).
-3. **Clean/Prepare** -- Type coercion, date parsing, missing value imputation,
-   duplicate removal (`2_Prepare.py` -> `core/prepare.py`).
-4. **Transform** -- Group-by aggregation, pivot tables, calculated columns
-   (`3_GroupAggregate.py` -> `core/aggregate.py`).
-5. **Analyze** -- EDA, hypothesis tests, time series models, factor attribution,
-   simulation (`4_Explore` through `8_Simulation`).
-6. **Export** -- Generate PDF/HTML report, download processed data, review audit
-   log (`9_Report.py` -> `core/report.py`).
+1. **Загрузка** — пользователь загружает данные через файловый загрузчик или подключение к PostgreSQL (`1_Data.py` → `core/data.py`).
+2. **Валидация** — автоматическое определение схемы; пользователь проверяет выведенные типы и ограничения (`core/validate.py`).
+3. **Очистка/Подготовка** — приведение типов, парсинг дат, импутация пропусков, удаление дублей (`2_Prepare.py` → `core/prepare.py`).
+4. **Трансформация** — агрегация по группам, сводные таблицы, вычисляемые колонки (`3_GroupAggregate.py` → `core/aggregate.py`).
+5. **Анализ** — EDA, статистические тесты, модели временных рядов, факторная атрибуция, моделирование (`5_Explore` — `9_Simulation`).
+6. **Экспорт** — генерация PDF/HTML отчёта, скачивание обработанных данных, просмотр аудит-лога (`10_Report.py` → `core/report.py`).
 
-## Streamlit Pages
+## Страницы приложения
 
-| #  | Page             | Purpose                                      |
-|----|------------------|----------------------------------------------|
-| 1  | Data             | File upload, PostgreSQL import, preview       |
-| 2  | Prepare          | Type casting, cleaning, missing values        |
-| 3  | GroupAggregate    | Group-by, pivot tables, rolling aggregations  |
-| 4  | Explore          | EDA: distributions, correlations, scatter     |
-| 5  | Tests            | Statistical hypothesis testing                |
-| 6  | TimeSeries       | Decomposition, forecasting, anomaly detection |
-| 7  | Attribution      | Factor attribution analysis                   |
-| 8  | Simulation       | Monte Carlo, what-if scenarios                |
-| 9  | Report           | PDF/HTML report generation                    |
-| 10 | Help             | User guide, methodology reference             |
+| № | Страница | Назначение |
+|---|----------|------------|
+| 0 | Старт | Приветственный экран, выбор сценария |
+| 1 | Данные | Загрузка файлов, импорт из PostgreSQL, предпросмотр |
+| 2 | Подготовка | Приведение типов, очистка, обработка пропусков |
+| 3 | Группировка | Агрегация по группам, сводные таблицы, скользящие статистики |
+| 4 | Объединение | JOIN, UNION, конкатенация, диагностика pitfalls |
+| 5 | Исследование | EDA: распределения, корреляции, профиль данных |
+| 6 | Тесты | Статистическое тестирование гипотез, Power Analysis |
+| 7 | Временные ряды | Декомпозиция, прогнозирование, обнаружение аномалий |
+| 8 | Атрибуция | Факторный анализ |
+| 9 | Моделирование | Монте-Карло, сценарный анализ |
+| 10 | Отчёт | Генерация PDF/HTML отчётов |
+| 11 | Справка | Руководство пользователя, справочник методологий |
+| 12 | Кластеризация | K-means, иерархическая кластеризация, DBSCAN |
+| 14 | Roll-Rate | Матрица переходов, Марковские цепи |
+| 19 | Сравнение | Сравнение периодов и датасетов |
+| 20 | Графики | 18 типов интерактивных графиков |
+| 21 | Пайплайн | Визуальный редактор автоматизации |
+| 22 | Текстовая аналитика | Анализ текстов, облако слов, тональность |
+| 24 | Шаблоны | Пошаговые сценарии с трекером прогресса |
+| 25 | Авто-аналитик | Полный анализ одним кликом |
 
-## Key Design Decisions
+## Ключевые архитектурные решения
 
-- **No cross-page imports**: pages only import from `core/`. This prevents
-  circular dependencies and keeps pages independently testable.
-- **Pure functions in core**: all core modules are stateless. State lives
-  exclusively in `st.session_state`.
-- **Plotly for all charts**: consistent interactive charting across all pages
-  with export to PNG/SVG via kaleido.
-- **Offline-first**: no external API calls, no telemetry. The application runs
-  entirely on the local machine.
+- **Нет перекрёстных импортов между страницами**: страницы импортируют только из `core/`. Это предотвращает циклические зависимости и обеспечивает независимое тестирование каждой страницы.
+- **Чистые функции в core**: все модули ядра не содержат состояния. Состояние хранится исключительно в `st.session_state` и управляется через `app/state.py`.
+- **Plotly для всех графиков**: единообразная интерактивная визуализация на всех страницах с экспортом в PNG/SVG через kaleido.
+- **Офлайн-режим**: нет внешних API-вызовов, нет телеметрии. Приложение работает полностью на локальной машине.
+- **Дизайн-система**: токены дизайна (цвета, шрифты, градиенты) централизованы в `app/theme.py`; CSS и компоненты — в `app/styles.py` и `app/components/ux.py`.
+- **Локализация**: все строки интерфейса управляются через `core/i18n.py`. Основной язык — русский, резервный — английский.
+- **Аудит**: все значимые операции логируются в `core/audit.py` с отметкой времени.

@@ -14,7 +14,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import streamlit as st
 
-from app.state import init_state, dataset_selectbox, get_active_df
+from app.state import init_state, dataset_selectbox, get_active_df, store_prepared
 from core.interpret import interpret_correlation
 from app.components.ux import interpretation_box, recommendation_card, apply_recommendation_notification
 from core.explore import (
@@ -287,7 +287,7 @@ with tab_quality:
         if st.button("⚡ Удалить дубликаты", key="qc_dedup"):
             df_before = df.copy()
             df_new = df.drop_duplicates().reset_index(drop=True)
-            st.session_state["datasets"][chosen] = df_new
+            store_prepared(chosen, df_new)
             # invalidate quality and auto-analysis caches so next render is fresh
             st.session_state.get("quality_scores", {}).pop(chosen, None)
             st.session_state.get("auto_insights", {}).pop(chosen, None)
@@ -305,7 +305,7 @@ with tab_quality:
                 mode_val = df_new[col].mode()
                 if len(mode_val) > 0:
                     df_new[col] = df_new[col].fillna(mode_val[0])
-            st.session_state["datasets"][chosen] = df_new
+            store_prepared(chosen, df_new)
             # invalidate quality and auto-analysis caches
             st.session_state.get("quality_scores", {}).pop(chosen, None)
             st.session_state.get("auto_insights", {}).pop(chosen, None)

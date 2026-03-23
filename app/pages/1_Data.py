@@ -62,7 +62,24 @@ with tab_upload:
                             "rows": df.shape[0],
                             "columns": df.shape[1],
                         })
-                        st.success(f"**{ds_name}**: {df.shape[0]:,} x {df.shape[1]}")
+                        st.success(f"✅ Датасет «{ds_name}» загружен: {len(df):,} строк × {len(df.columns)} колонок")
+                        with st.expander("👁️ Предварительный просмотр данных", expanded=True):
+                            preview_c1, preview_c2, preview_c3, preview_c4 = st.columns(4)
+                            preview_c1.metric("Строк", f"{len(df):,}")
+                            preview_c2.metric("Столбцов", len(df.columns))
+                            preview_c3.metric("Числовых", len(df.select_dtypes(include='number').columns))
+                            preview_c4.metric("Пропусков", f"{df.isnull().sum().sum():,}")
+                            st.dataframe(df.head(10), use_container_width=True)
+                            # Column schema
+                            schema_df = pd.DataFrame({
+                                "Колонка": df.columns,
+                                "Тип": df.dtypes.astype(str).values,
+                                "Заполнено %": (df.notna().mean() * 100).round(1).values,
+                                "Уникальных": df.nunique().values,
+                                "Пример": [str(df[c].dropna().iloc[0]) if df[c].notna().any() else "—" for c in df.columns],
+                            })
+                            st.markdown("**Схема данных:**")
+                            st.dataframe(schema_df, use_container_width=True, hide_index=True)
                         data_quality_banner(qc)
                     except Exception as e:
                         st.error(f"{uploaded.name}: {e}")
@@ -705,7 +722,24 @@ with tab_postgres:
                         "columns": df_pg.shape[1],
                     })
                     st.session_state["db_last_result"] = df_pg
-                    st.success(f"✅ Датасет **{ds_name_pg}** загружен: {df_pg.shape[0]:,} строк × {df_pg.shape[1]} колонок")
+                    st.success(f"✅ Датасет «{ds_name_pg}» загружен: {len(df_pg):,} строк × {len(df_pg.columns)} колонок")
+                    with st.expander("👁️ Предварительный просмотр данных", expanded=True):
+                        preview_c1, preview_c2, preview_c3, preview_c4 = st.columns(4)
+                        preview_c1.metric("Строк", f"{len(df_pg):,}")
+                        preview_c2.metric("Столбцов", len(df_pg.columns))
+                        preview_c3.metric("Числовых", len(df_pg.select_dtypes(include='number').columns))
+                        preview_c4.metric("Пропусков", f"{df_pg.isnull().sum().sum():,}")
+                        st.dataframe(df_pg.head(10), use_container_width=True)
+                        # Column schema
+                        schema_df = pd.DataFrame({
+                            "Колонка": df_pg.columns,
+                            "Тип": df_pg.dtypes.astype(str).values,
+                            "Заполнено %": (df_pg.notna().mean() * 100).round(1).values,
+                            "Уникальных": df_pg.nunique().values,
+                            "Пример": [str(df_pg[c].dropna().iloc[0]) if df_pg[c].notna().any() else "—" for c in df_pg.columns],
+                        })
+                        st.markdown("**Схема данных:**")
+                        st.dataframe(schema_df, use_container_width=True, hide_index=True)
                     st.rerun()
             except Exception as exc:
                 st.error(f"Ошибка выполнения запроса: {exc}")

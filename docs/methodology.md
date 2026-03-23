@@ -1,13 +1,12 @@
-# KIBAD Methodology
+# Методология KIBAD
 
-## Statistical Hypothesis Tests
+## Статистические тесты
 
-### Welch's t-test
+### t-тест Уэлча
 
-**What it does**: Compares means of two independent samples without assuming
-equal variances.
+**Что делает**: сравнивает средние двух независимых выборок без предположения о равенстве дисперсий.
 
-**Formula**:
+**Формула**:
 
 ```
 t = (X1_bar - X2_bar) / sqrt(s1^2/n1 + s2^2/n2)
@@ -15,283 +14,355 @@ t = (X1_bar - X2_bar) / sqrt(s1^2/n1 + s2^2/n2)
 df = (s1^2/n1 + s2^2/n2)^2 / ((s1^2/n1)^2/(n1-1) + (s2^2/n2)^2/(n2-1))
 ```
 
-**Assumptions**: Independent observations, approximately normal distributions
-(robust for n > 30 by CLT).
+**Допущения**: независимые наблюдения, приближённо нормальное распределение (устойчив при n > 30 по ЦПТ).
 
-**When to use**: Comparing a metric (revenue, conversion) between two groups
-(control vs treatment, region A vs region B).
+**Когда применять**: сравнение метрики (выручка, конверсия) между двумя группами (контроль vs. тест, регион A vs. регион B).
 
-**When NOT to use**: Ordinal or heavily skewed data with small samples -- use
-Mann-Whitney U instead. Paired observations -- use paired t-test.
+**Когда не применять**: порядковые данные или сильно скошенные выборки малого размера — используйте критерий Манна-Уитни. Для парных наблюдений используйте парный t-тест.
 
-**Pitfalls**: Significant p-value does not imply practical significance. Always
-report effect size alongside the test.
+**Подводные камни**: значимое p-значение не означает практической значимости. Всегда указывайте величину эффекта вместе с результатом теста.
 
-### Mann-Whitney U Test
+---
 
-**What it does**: Non-parametric test comparing the rank distributions of two
-independent samples.
+### Критерий Манна-Уитни U
 
-**Formula**:
+**Что делает**: непараметрический тест, сравнивающий ранговые распределения двух независимых выборок.
+
+**Формула**:
 
 ```
 U = n1*n2 + n1*(n1+1)/2 - R1
 
-where R1 = sum of ranks in sample 1
+где R1 = сумма рангов выборки 1
 ```
 
-**Assumptions**: Independent observations, ordinal or continuous outcome.
+**Допущения**: независимые наблюдения, порядковый или непрерывный отклик.
 
-**When to use**: Skewed distributions, ordinal data, small samples where
-normality is questionable.
+**Когда применять**: скошенные распределения, порядковые данные, малые выборки с сомнительной нормальностью.
 
-**When NOT to use**: Paired data. When you need to compare means specifically
-(this tests stochastic dominance, not means).
+**Когда не применять**: для парных данных. Когда необходимо сравнить именно средние (тест проверяет стохастическое доминирование, а не средние).
 
-**Pitfalls**: Less powerful than t-test when normality holds. Ties reduce power.
+**Подводные камни**: менее мощный, чем t-тест при выполнении условия нормальности. Связанные ранги снижают мощность.
 
-### Chi-Square Test of Independence
+---
 
-**What it does**: Tests whether two categorical variables are independent.
+### Критерий хи-квадрат независимости
 
-**Formula**:
+**Что делает**: проверяет гипотезу о независимости двух категориальных переменных.
+
+**Формула**:
 
 ```
 chi2 = sum((O_ij - E_ij)^2 / E_ij)
 
-E_ij = (row_i_total * col_j_total) / grand_total
+E_ij = (итог_строки_i * итог_столбца_j) / общий_итог
 ```
 
-**Assumptions**: Expected frequency >= 5 in each cell (use Fisher's exact test
-otherwise).
+**Допущения**: ожидаемая частота >= 5 в каждой ячейке (при нарушении используйте точный критерий Фишера).
 
-**When to use**: Comparing proportions across categories (conversion rates by
-segment).
+**Когда применять**: сравнение долей по категориям (коэффициенты конверсии по сегментам).
 
-**When NOT to use**: Continuous variables. Small expected counts (< 5).
+**Когда не применять**: непрерывные переменные; малые ожидаемые частоты (< 5).
 
-### Correlation (Pearson and Spearman)
+---
 
-**Pearson r**: Linear relationship strength between two continuous variables.
+### Корреляция (Пирсон и Спирмен)
+
+**Коэффициент Пирсона r**: сила линейной связи между двумя непрерывными переменными.
 
 ```
 r = cov(X, Y) / (std(X) * std(Y))
 ```
 
-**Spearman rho**: Rank-based correlation, measures monotonic relationship.
+**Коэффициент Спирмена rho**: ранговая корреляция, измеряет монотонную связь.
 
-**When NOT to use**: Pearson is misleading for non-linear relationships. Always
-visualize the scatter plot first.
+**Когда не применять**: коэффициент Пирсона вводит в заблуждение при нелинейных зависимостях. Всегда сначала визуализируйте точечную диаграмму.
 
-### Bootstrap Confidence Interval
+---
 
-**What it does**: Estimates the sampling distribution of a statistic by
-resampling with replacement.
+### Bootstrap-доверительный интервал
 
-**Procedure**:
+**Что делает**: оценивает выборочное распределение статистики путём повторной выборки с возвращением.
 
-1. Draw B bootstrap samples (default B = 10,000) from the data.
-2. Compute the statistic of interest for each sample.
-3. Use the percentile method: CI = [q(alpha/2), q(1 - alpha/2)].
+**Процедура**:
 
-**When to use**: When parametric assumptions are uncertain, or for statistics
-without known closed-form CIs (e.g., median, ratio of means).
+1. Сформировать B бутстреп-выборок (по умолчанию B = 10 000) из исходных данных.
+2. Вычислить целевую статистику для каждой выборки.
+3. Использовать процентильный метод: ДИ = [q(alpha/2), q(1 - alpha/2)].
 
-**Pitfalls**: Bias-corrected and accelerated (BCa) intervals are preferred for
-skewed distributions but are more computationally expensive.
+**Когда применять**: при неопределённости параметрических допущений или для статистик без известных аналитических формул ДИ (медиана, отношение средних).
 
-### Permutation Test
+**Подводные камни**: ДИ с поправкой на смещение и ускорение (BCa) предпочтительны для скошенных распределений, но вычислительно дороже.
 
-**What it does**: Tests whether the observed difference between groups could
-arise by chance, by permuting group labels.
+---
 
-**Procedure**:
+### Перестановочный тест
 
-1. Compute the observed test statistic (e.g., difference in means).
-2. Randomly permute group labels N times (default N = 10,000).
-3. p-value = proportion of permuted statistics >= observed.
+**Что делает**: проверяет, может ли наблюдаемое различие между группами возникнуть случайно путём перестановки групповых меток.
 
-**When to use**: Small samples, non-standard test statistics, when parametric
-assumptions fail.
+**Процедура**:
 
-### Cliff's Delta (Effect Size)
+1. Вычислить наблюдаемую тестовую статистику (например, разность средних).
+2. Случайным образом переставить групповые метки N раз (по умолчанию N = 10 000).
+3. p-значение = доля переставленных статистик >= наблюдаемой.
 
-**What it does**: Non-parametric effect size measuring the probability that a
-randomly chosen observation from one group is larger than one from another.
+**Когда применять**: малые выборки, нестандартные тестовые статистики, несостоятельность параметрических допущений.
+
+---
+
+### Дельта Клиффа (величина эффекта)
+
+**Что делает**: непараметрическая величина эффекта, измеряющая вероятность того, что случайно выбранное наблюдение из одной группы больше наблюдения из другой.
 
 ```
 delta = (count(x_i > y_j) - count(x_i < y_j)) / (n1 * n2)
 ```
 
-**Interpretation**: |d| < 0.147 negligible, < 0.33 small, < 0.474 medium, else large.
+**Интерпретация**: |d| < 0,147 — пренебрежимо малый; < 0,33 — малый; < 0,474 — средний; иначе — большой.
 
-### Benjamini-Hochberg Correction
+---
 
-**What it does**: Controls the false discovery rate (FDR) when running multiple
-tests simultaneously.
+### Поправка Бенджамини-Хохберга
 
-**Procedure**:
+**Что делает**: контролирует частоту ложных обнаружений (FDR) при одновременном проведении нескольких тестов.
 
-1. Sort p-values in ascending order: p(1) <= p(2) <= ... <= p(m).
-2. For each p(i), compute the BH threshold: (i/m) * alpha.
-3. Find the largest i where p(i) <= threshold. Reject all hypotheses 1..i.
+**Процедура**:
 
-**When to use**: Always apply when running more than one hypothesis test in the
-same analysis (e.g., testing multiple metrics or segments).
+1. Отсортировать p-значения по возрастанию: p(1) <= p(2) <= ... <= p(m).
+2. Для каждого p(i) вычислить порог BH: (i/m) * alpha.
+3. Найти наибольшее i, при котором p(i) <= порог. Отвергнуть все гипотезы 1..i.
 
-## Time Series Methods
+**Когда применять**: всегда при проведении более одного теста в рамках одного анализа (например, проверка нескольких метрик или сегментов).
 
-### STL Decomposition
+---
 
-**What it does**: Decomposes a time series into trend, seasonal, and residual
-components using LOESS smoothing.
+### Анализ мощности (Power Analysis)
+
+**Что делает**: определяет минимальный размер выборки, необходимый для обнаружения заданной величины эффекта с заданными уровнями alpha и мощности.
+
+**Ключевые параметры**:
+
+- **alpha** — вероятность ошибки I рода (обычно 0,05)
+- **beta** — вероятность ошибки II рода; мощность = 1 - beta (обычно 0,80)
+- **Величина эффекта** — d Коэна для средних, w для долей
+
+```
+n = f(alpha, beta, effect_size)
+```
+
+**Когда применять**: при планировании A/B-тестов или экспериментов для определения необходимого объёма выборки до сбора данных.
+
+---
+
+## Методы временных рядов
+
+### STL-декомпозиция
+
+**Что делает**: разбивает временной ряд на трендовую, сезонную и остаточную компоненты с применением сглаживания LOESS.
 
 ```
 Y(t) = T(t) + S(t) + R(t)
 ```
 
-**When to use**: Understanding underlying patterns in monthly/weekly data.
+**Когда применять**: для выявления базовых закономерностей в месячных или недельных данных.
 
-**When NOT to use**: Irregular time series with missing observations or
-non-periodic data.
+**Когда не применять**: нерегулярные ряды с пропусками или непериодические данные.
+
+---
 
 ### ACF / PACF
 
-**ACF (Autocorrelation Function)**: Correlation of the series with its own
-lagged values. Identifies MA order.
+**ACF (автокорреляционная функция)**: корреляция ряда со своими лагами. Определяет порядок MA.
 
-**PACF (Partial ACF)**: Correlation after removing the effect of intermediate
-lags. Identifies AR order.
+**PACF (частная ACF)**: корреляция после устранения эффекта промежуточных лагов. Определяет порядок AR.
+
+---
 
 ### SARIMAX
 
-**What it does**: Seasonal ARIMA with exogenous regressors.
+**Что делает**: сезонная ARIMA с экзогенными регрессорами.
 
 ```
 ARIMA(p, d, q) x (P, D, Q, s) + X*beta
 ```
 
-- p, d, q: non-seasonal AR, differencing, MA orders.
-- P, D, Q, s: seasonal orders and period.
-- X: exogenous variables.
+- p, d, q: несезонные порядки AR, дифференцирования, MA.
+- P, D, Q, s: сезонные порядки и период.
+- X: внешние переменные.
 
-**When to use**: Forecasting time series with trend, seasonality, and external
-drivers.
+**Когда применять**: прогнозирование рядов с трендом, сезонностью и внешними факторами.
 
-**Pitfalls**: Requires stationary data (apply differencing). Sensitive to
-outliers. AIC/BIC for model selection.
+**Подводные камни**: требует стационарности (применяйте дифференцирование). Чувствителен к выбросам. Для выбора модели используйте AIC/BIC.
 
-### ARX (Autoregressive with Exogenous Variables)
+---
 
-Simplified model: `Y(t) = a1*Y(t-1) + ... + ap*Y(t-p) + b*X(t) + e(t)`.
+### ARX (авторегрессия с внешними переменными)
 
-**When to use**: When SARIMAX is overkill and a simple AR model with covariates
-suffices.
+Упрощённая модель: `Y(t) = a1*Y(t-1) + ... + ap*Y(t-p) + b*X(t) + e(t)`.
 
-### Naive Forecast
+**Когда применять**: когда SARIMAX избыточен и достаточна простая AR-модель с ковариатами.
 
-Baseline model: `Y(t+h) = Y(t)` (last value) or `Y(t+h) = Y(t-s)` (seasonal
-naive).
+---
 
-**When to use**: Always compute as a baseline. If your model cannot beat naive,
-it has no value.
+### Наивный прогноз
 
-### Anomaly Detection
+Базовая модель: `Y(t+h) = Y(t)` (последнее значение) или `Y(t+h) = Y(t-s)` (сезонный наивный прогноз).
 
-**Rolling z-score**: Flag points where `|x - rolling_mean| / rolling_std > threshold`.
+**Когда применять**: всегда вычисляйте как базовый ориентир. Если ваша модель не превосходит наивный прогноз, она не несёт аналитической ценности.
 
-**STL residual**: Flag points where the residual component exceeds a threshold
-(e.g., 3 standard deviations of residuals).
+---
 
-**When to use**: Monitoring KPIs for unexpected deviations.
+### Обнаружение аномалий
 
-## Factor Attribution
+**Скользящий z-показатель**: помечает точки, где `|x - скользящее_среднее| / скользящее_ст.откл. > порог`.
 
-### Additive Attribution
+**STL-остатки**: помечает точки, где остаточная компонента превышает порог (например, 3 стандартных отклонения остатков).
 
-**What it does**: Decomposes the total change in a metric into additive
-contributions of each factor.
+**Когда применять**: мониторинг ключевых метрик для выявления неожиданных отклонений.
+
+---
+
+## Факторная атрибуция
+
+### Аддитивная атрибуция
+
+**Что делает**: разбивает общее изменение метрики на аддитивные вклады каждого фактора.
 
 ```
 delta_Y = sum(delta_factor_i)
 ```
 
-Each factor's contribution is estimated by varying it while holding others at
-their base values.
+Вклад каждого фактора оценивается путём его изменения при фиксации остальных на базовых значениях.
 
-### Multiplicative Attribution (Log-Ratio)
+---
 
-**What it does**: Decomposes a ratio change into multiplicative factor
-contributions using logarithms.
+### Мультипликативная атрибуция (логарифмическое разложение)
+
+**Что делает**: разбивает изменение отношения на мультипликативные вклады факторов с применением логарифмов.
 
 ```
 ln(Y1/Y0) = sum(ln(factor_i_1 / factor_i_0))
 ```
 
-**When to use**: When the metric is a product of factors (e.g.,
-Revenue = Users * Conversion * ARPU).
+**Когда применять**: когда метрика является произведением факторов (например, Выручка = Пользователи × Конверсия × ARPU).
 
-### Regression-Based Attribution
+---
 
-Uses OLS regression coefficients to attribute change:
+### Регрессионная атрибуция
+
+Использует коэффициенты МНК-регрессии для атрибуции изменения:
 
 ```
 delta_Y = sum(beta_i * delta_X_i)
 ```
 
-**When to use**: When factors are not strictly multiplicative and interact.
+**Когда применять**: когда факторы не строго мультипликативны и взаимодействуют между собой.
 
-**Pitfalls**: Multicollinearity inflates coefficient uncertainty. Check VIF.
+**Подводные камни**: мультиколлинеарность завышает неопределённость коэффициентов. Проверяйте VIF.
 
-### Shapley Value Approximation
+---
 
-**What it does**: Fair allocation of total change among factors based on their
-marginal contributions across all possible orderings.
+### Значения Шепли (Shapley Values)
 
-```
-phi_i = (1/|N|!) * sum over permutations(marginal contribution of i)
-```
-
-KIBAD uses a sampling approximation (1000 permutations) for computational
-efficiency.
-
-**When to use**: When you need a theoretically fair attribution that accounts
-for factor interactions.
-
-**Pitfalls**: Computationally expensive for many factors. Approximation
-introduces variance.
-
-## Trigger Rules
-
-### Threshold Crossing
-
-Fires when a metric crosses an absolute threshold:
+**Что делает**: справедливое распределение общего изменения между факторами на основе их предельных вкладов во всех возможных перестановках.
 
 ```
-ALERT if metric > upper_threshold OR metric < lower_threshold
+phi_i = (1/|N|!) * sum по перестановкам (предельный вклад i)
 ```
 
-### Deviation from Baseline
+KIBAD использует аппроксимацию с выборкой (1000 перестановок) для вычислительной эффективности.
 
-Fires when a metric deviates from a rolling baseline by more than k standard
-deviations:
+**Когда применять**: когда требуется теоретически справедливая атрибуция, учитывающая взаимодействия факторов.
+
+**Подводные камни**: вычислительно затратно при большом числе факторов. Аппроксимация вносит дисперсию.
+
+---
+
+## Моделирование методом Монте-Карло
+
+### VaR (Value at Risk)
+
+**Что делает**: оценивает максимальный убыток с заданным уровнем достоверности за определённый период.
 
 ```
-ALERT if |metric - rolling_mean| > k * rolling_std
+VaR(alpha) = -quantile(portfolio_returns, alpha)
 ```
 
-### Slope Change
+**Процедура**:
+1. Моделирование N сценариев доходностей из исторического или параметрического распределения.
+2. Сортировка по возрастанию.
+3. VaR = значение на alpha-процентиле.
 
-Fires when the slope of a metric over a recent window differs significantly
-from the historical slope:
+---
+
+### CVaR (Conditional Value at Risk / ожидаемые потери)
+
+**Что делает**: среднее значение убытков, превышающих VaR.
+
+```
+CVaR(alpha) = -mean(returns | returns < -VaR)
+```
+
+**Когда применять**: CVaR предпочтительнее VaR для оценки хвостовых рисков — он учитывает не только порог, но и размер экстремальных убытков.
+
+---
+
+### Сценарный анализ
+
+Применение пользовательских шоков к ключевым параметрам (рост, ставки, затраты) и наблюдение их влияния на итоговые показатели. Строятся базовый, оптимистичный и пессимистичный сценарии.
+
+---
+
+## Roll-Rate и Марковские цепи
+
+### Матрица Roll-Rate
+
+**Что делает**: отслеживает переходы наблюдений между состояниями (например, категориями просроченной задолженности) за последовательные периоды.
+
+```
+P[i][j] = count(переход из состояния i в состояние j) / count(начальное состояние i)
+```
+
+### Марковские цепи
+
+Используют матрицу переходов для прогнозирования будущего распределения состояний:
+
+```
+S(t+1) = S(t) * P
+```
+
+**Когда применять**: управление кредитными рисками, анализ когорт клиентов, прогнозирование поведения портфеля.
+
+---
+
+## Правила-триггеры
+
+### Пересечение порогового значения
+
+Срабатывает, когда метрика пересекает абсолютный порог:
+
+```
+ALERT если metric > upper_threshold ИЛИ metric < lower_threshold
+```
+
+### Отклонение от базы
+
+Срабатывает, когда метрика отклоняется от скользящей базы более чем на k стандартных отклонений:
+
+```
+ALERT если |metric - rolling_mean| > k * rolling_std
+```
+
+### Изменение наклона тренда
+
+Срабатывает, когда наклон метрики за недавнее окно значительно отличается от исторического:
 
 ```
 slope_recent = linear_regression(metric, window=w_recent)
 slope_history = linear_regression(metric, window=w_history)
-ALERT if |slope_recent - slope_history| > threshold
+ALERT если |slope_recent - slope_history| > threshold
 ```
 
-**When to use**: Detecting trend shifts that threshold rules would miss.
+**Когда применять**: обнаружение разворотов тренда, которые пропустят пороговые правила.
 
-**Pitfalls**: Sensitive to window size selection. Short windows produce noisy
-alerts.
+**Подводные камни**: чувствителен к выбору ширины окна. Короткие окна дают шумные алерты.

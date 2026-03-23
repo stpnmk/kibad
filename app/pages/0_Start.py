@@ -144,7 +144,7 @@ with cta1:
 with cta2:
     st.page_link("pages/24_Templates.py", label="🗂️ Шаблоны анализа", use_container_width=True)
 with cta3:
-    st.page_link("pages/23_Help.py", label="📖 Справка", use_container_width=True)
+    st.page_link("pages/11_Help.py", label="📖 Справка", use_container_width=True)
 
 st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 

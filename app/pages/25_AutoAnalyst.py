@@ -28,7 +28,7 @@ try:
 except ImportError:
     _SCIPY_OK = False
 
-from app.state import init_state, dataset_selectbox, get_active_df
+from app.state import init_state, dataset_selectbox, get_active_df, store_prepared
 from app.styles import inject_all_css, page_header, section_header
 from app.components.ux import apply_recommendation_notification
 
@@ -664,7 +664,7 @@ def _render_section6(df: pd.DataFrame, res: dict, ds_name: str = "") -> None:
                     mode_val = df_new[col].mode()
                     if len(mode_val) > 0:
                         df_new[col] = df_new[col].fillna(mode_val[0])
-                st.session_state["datasets"][ds_name] = df_new
+                store_prepared(ds_name, df_new)
                 apply_recommendation_notification("Заполнение пропусков", df_before, df_new, ds_name)
                 cache_key = f"{ds_name}__{len(df_before)}__{len(df_before.columns)}"
                 st.session_state.get("auto_analysis", {}).pop(cache_key, None)
@@ -674,7 +674,7 @@ def _render_section6(df: pd.DataFrame, res: dict, ds_name: str = "") -> None:
             if st.button("⚡ Удалить дубликаты", key="aa_dedup"):
                 df_before = df.copy()
                 df_new = df.drop_duplicates().reset_index(drop=True)
-                st.session_state["datasets"][ds_name] = df_new
+                store_prepared(ds_name, df_new)
                 apply_recommendation_notification("Удаление дубликатов", df_before, df_new, ds_name)
                 cache_key = f"{ds_name}__{len(df_before)}__{len(df_before.columns)}"
                 st.session_state.get("auto_analysis", {}).pop(cache_key, None)

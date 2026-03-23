@@ -19,7 +19,7 @@ from core.explore import (
     plot_timeseries, plot_correlation_heatmap, plot_stl_decomposition,
 )
 
-st.set_page_config(page_title="KIBAD – Report", layout="wide")
+st.set_page_config(page_title="KIBAD – Отчёт", layout="wide")
 init_state()
 inject_all_css()
 
@@ -92,7 +92,7 @@ with st.expander("📋 Предварительный просмотр отчё�
 st.divider()
 
 if st.button("▶ Сформировать отчёт", key="btn_build_report", type="primary"):
-    with st.spinner("Building report..."):
+    with st.spinner("Формируется отчёт..."):
         rb = ReportBuilder(
             title=report_title,
             dataset_name=chosen,
@@ -246,7 +246,7 @@ if "last_report_html" in st.session_state:
                 key="dl_pdf",
             )
         except ImportError:
-            col2.warning("WeasyPrint not installed. Install with: `pip install weasyprint`")
+            col2.warning("WeasyPrint не установлен. Установите командой: `pip install weasyprint`")
         except OSError as e:
             if "libgobject" in str(e) or "pango" in str(e).lower() or "gobject" in str(e).lower():
                 col2.warning(
@@ -257,6 +257,6 @@ if "last_report_html" in st.session_state:
                     "HTML-версия отчёта доступна без дополнительных зависимостей."
                 )
             else:
-                col2.error(f"PDF generation error: {e}")
+                col2.error(f"Ошибка генерации PDF: {e}")
         except Exception as e:
-            col2.error(f"PDF generation error: {e}")
+            col2.error(f"Ошибка генерации PDF: {e}")

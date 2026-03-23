@@ -20,7 +20,7 @@ except ImportError:
     scipy_stats = None
 
 try:
-    from statsmodels.stats.power import TTestIndPower, TTestOneSampPower, NormalIndPower, FTestAnovaPower
+    from statsmodels.stats.power import TTestIndPower, TTestPower as TTestOneSampPower, NormalIndPower, FTestAnovaPower
     from statsmodels.stats.proportion import proportion_effectsize
     _STATSMODELS_OK = True
 except Exception:

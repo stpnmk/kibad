@@ -11,7 +11,7 @@ import streamlit as st
 from app.state import init_state
 from app.styles import inject_all_css, page_header, section_header
 
-st.set_page_config(page_title="KIBAD – Help", layout="wide")
+st.set_page_config(page_title="KIBAD – Справка", layout="wide")
 init_state()
 inject_all_css()
 
@@ -50,161 +50,160 @@ col1, col2 = st.columns(2)
 with col1:
     with st.expander("Страница 1 – Данные", expanded=False):
         st.markdown("""
-**Upload tab:**
-- Drag and drop a CSV or Excel file.
-- Choose a dataset name and CSV separator (`,`, `;`, `\\t`, `|`).
-- Click **Load File** to parse and store.
+**Вкладка «Загрузка»:**
+- Перетащите или выберите CSV- или Excel-файл.
+- Задайте название датасета и разделитель CSV (`,`, `;`, `\\t`, `|`).
+- Нажмите **Загрузить файл** для разбора и сохранения.
 
-**PostgreSQL tab:**
-- Enter host, port, database, user, password.
-- Write any SELECT query; rows are streamed for large tables.
-- The result is stored as a named dataset.
+**Вкладка «PostgreSQL»:**
+- Введите хост, порт, базу данных, логин и пароль.
+- Напишите любой SELECT-запрос; строки передаются потоком для больших таблиц.
+- Результат сохраняется как именованный датасет.
 
-**Dataset Catalog:**
-- Preview top-N rows.
-- See column profiling (missingness, unique counts, sample values).
-- Inspect numeric descriptive statistics.
-- Set per-column type overrides (datetime / numeric / categorical / boolean).
+**Каталог датасетов:**
+- Предварительный просмотр первых N строк.
+- Профилирование колонок: пропуски, уникальные значения, примеры.
+- Описательная статистика для числовых колонок.
+- Переопределение типов по колонкам (datetime / числовой / категориальный / логический).
         """)
 
     with st.expander("Страница 2 – Подготовка", expanded=False):
         st.markdown("""
-**Column Mapping:**
-Map real column names to logical roles:
-- `date` → used for time series and resampling
-- `target` → the main metric to forecast
-- `segment` → optional categorical grouping
+**Маппинг колонок:**
+Сопоставьте реальные названия колонок с логическими ролями:
+- `date` → используется для временных рядов и ресемплинга
+- `target` → основной показатель для прогноза
+- `segment` → необязательная категориальная группировка
 
-**Cleaning steps (apply in any order):**
-1. **Type overrides** – apply date/numeric/boolean casts.
-2. **Date parsing** – converts strings to datetime64; strips timezone.
-3. **Missing value imputation** – median, mean, mode, ffill, bfill, or zero-fill.
-4. **Outlier removal** – IQR fence or z-score threshold; reports rows removed.
-5. **Deduplication** – drops exact duplicates on selected columns.
+**Шаги очистки (выполняются в любом порядке):**
+1. **Переопределение типов** — приводит колонки к нужному типу (дата / число / логический).
+2. **Разбор дат** — конвертирует строки в datetime64; удаляет временную зону.
+3. **Заполнение пропусков** — медиана, среднее, мода, ffill, bfill или нулями.
+4. **Удаление выбросов** — метод IQR или z-score; сообщает, сколько строк удалено.
+5. **Дедупликация** — удаляет полные дубликаты по выбранным колонкам.
 
-**Resampling:**
-- Supports Daily, Weekly (W-MON), Monthly Start (MS), Monthly End (ME), Quarterly.
-- Aggregation: sum, mean, median, last, min, max.
-- Optional group-by for segment-level resampling.
+**Ресемплинг:**
+- Поддерживаются: ежедневный, еженедельный (W-MON), ежемесячный (MS/ME), квартальный.
+- Агрегация: sum, mean, median, last, min, max.
+- Группировка по сегменту при ресемплинге — опционально.
 
-**Feature Engineering:**
-- **Lags** – shift columns backward (1, 2, 3, 12 periods etc.)
-- **Rolling** – rolling mean, std, sum with configurable window
-- **EMA** – exponentially-weighted moving average
-- **Buckets** – quantile bins or custom bin edges
-- **Normalize** – z-score or min-max scaling
-- **Interaction** – multiply, divide, add, subtract two columns
+**Конструктор признаков:**
+- **Лаги** — сдвиг колонок назад (1, 2, 3, 12 периодов и т.д.)
+- **Скользящее** — скользящее среднее, СКО, сумма с настраиваемым окном
+- **EMA** — экспоненциально взвешенное скользящее среднее
+- **Бакетизация** — квантильные или пользовательские бины
+- **Нормализация** — z-score или min-max масштабирование
+- **Взаимодействия** — умножение, деление, сложение, вычитание двух колонок
         """)
 
     with st.expander("Страница 3 – Исследование", expanded=False):
         st.markdown("""
-**Time Series:** Multi-line chart with optional segment color. Download as PNG.
+**Временной ряд:** многолинейный график с опциональным цветом по сегменту. Скачать как PNG.
 
-**Distributions:**
-- Histogram with optional KDE (kernel density estimate) overlay.
-- Box plots grouped by a categorical column.
+**Распределения:**
+- Гистограмма с опциональным наложением KDE (ядерная оценка плотности).
+- Box plot с группировкой по категориальной колонке.
 
-**Correlation:**
-- Pearson / Spearman / Kendall heatmap.
-- Lag cross-correlation tool: find leading/lagging relationships.
+**Корреляции:**
+- Тепловая карта Пирсона / Спирмена / Кендалла.
+- Лаговая кросс-корреляция: найдите опережающие/запаздывающие связи.
 
-**Pivot Aggregation Builder:**
-- Choose row dimension, optional column dimension, metric, and aggregation.
-- Result shown as table + bar chart; export to CSV.
+**Конструктор сводных таблиц:**
+- Выберите строковое измерение, опциональное колоночное измерение, метрику и агрегат.
+- Результат: таблица + столбчатый график; экспорт в CSV.
 
-**Waterfall Chart:**
-- Manual: enter factor names and delta values.
-- Auto: period-over-period delta per selected column.
+**Водопадный график:**
+- Ручной: введите названия факторов и величины изменений.
+- Авто: изменение период-к-периоду по выбранной колонке.
 
-**STL Decomposition:**
-- Decomposes a time series into Trend + Seasonal + Residual.
-- Adjust seasonal period (12 = monthly annual, 52 = weekly).
+**STL-декомпозиция:**
+- Разбивает временной ряд на Тренд + Сезонность + Остаток.
+- Настройте сезонный период (12 = месячный / годовой, 52 = недельный).
 
-**KPI Builder:**
-- Write Python expressions (e.g., `revenue / sessions`).
-- KPI cards show last value and period-over-period % change.
+**Конструктор KPI:**
+- Введите Python-выражение (например, `revenue / sessions`).
+- KPI-карточки показывают последнее значение и % изменения за период.
         """)
 
 with col2:
     with st.expander("Страница 4 – Тесты", expanded=False):
         st.markdown("""
-All tests report:
-- **Test statistic** and **p-value**.
-- **Effect size** with a plain-English magnitude label (negligible / small / medium / large).
-- **Business interpretation** in non-technical language.
+Все тесты возвращают:
+- **Статистику теста** и **p-значение**.
+- **Размер эффекта** с текстовой меткой (пренебрежимый / малый / средний / большой).
+- **Бизнес-интерпретацию** на понятном языке.
 
-| Test | When to use |
-|------|-------------|
-| **t-Test** | Compare means of two groups (normally distributed) |
-| **Mann–Whitney** | Compare medians of two groups (non-parametric) |
-| **Chi-Square** | Test association between two categorical variables |
-| **Correlation** | Measure and test linear/rank relationship between two numeric columns |
-| **Bootstrap** | Robust mean/median comparison without normality assumption |
-| **A/B Test** | Full suite: runs all three tests + effect size + lift % |
+| Тест | Когда применять |
+|------|----------------|
+| **t-тест** | Сравнение средних двух групп (нормальное распределение) |
+| **Манн–Уитни** | Сравнение медиан двух групп (непараметрический) |
+| **Хи-квадрат** | Проверка связи между двумя категориальными переменными |
+| **Корреляция** | Измерение и тест линейной/ранговой связи двух числовых колонок |
+| **Bootstrap** | Устойчивое сравнение без предположения о нормальности |
+| **A/B-тест** | Полный набор: три теста + размер эффекта + lift % |
 
-Set the significance level **α** (0.01–0.10) in the sidebar.
-Test history is accumulated and exportable as CSV.
+Задайте уровень значимости **α** (0.01–0.10) в боковой панели.
+История тестов накапливается и экспортируется в CSV.
         """)
 
     with st.expander("Страница 5 – Прогнозирование", expanded=False):
         st.markdown("""
-**Models available:**
+**Доступные модели:**
 
-| Model | Best for | Notes |
-|-------|----------|-------|
-| **Seasonal Naive** | Stable seasonal business data | Repeats last seasonal cycle; unbeatable baseline |
-| **ARX (Ridge)** | Interpretable regression; any series | Lag features + exogenous variables; coefficient table provided |
-| **SARIMAX** | Complex seasonality + exog | Full ARIMA with seasonal orders; AIC/BIC and parameter table |
+| Модель | Лучше всего для | Особенности |
+|--------|----------------|-------------|
+| **Seasonal Naive** | Устойчивые сезонные данные | Повторяет последний сезонный цикл; непобедимый бейзлайн |
+| **ARX (Ridge)** | Интерпретируемая регрессия; любой ряд | Лаговые признаки + экзогенные переменные; таблица коэффициентов |
+| **SARIMAX** | Сложная сезонность + экзогенные | Полный ARIMA с сезонными порядками; AIC/BIC и таблица параметров |
 
-**Backtesting:**
-- Rolling window evaluation.
-- Select model, number of folds, minimum training size, horizon per fold.
-- Reports per-fold MAE, RMSE, MAPE, Bias.
+**Бэктестинг:**
+- Оценка на скользящем окне.
+- Выберите модель, число фолдов, минимальный размер обучения, горизонт фолда.
+- Метрики по каждому фолду: MAE, RMSE, MAPE, Bias.
 
-**Forecast chart** shows:
-- Black line = actual history
-- Dotted blue = in-sample fitted values
-- Orange solid = forecast
-- Shaded band = 95% confidence interval
+**График прогноза:**
+- Чёрная линия = история
+- Пунктирная синяя = встроенные значения (in-sample)
+- Оранжевая сплошная = прогноз
+- Закрашенная полоса = 95% доверительный интервал
 
-**Compare tab:** overlay all models side-by-side.
+**Вкладка «Сравнение»:** наложение всех моделей бок о бок.
         """)
 
     with st.expander("Страница 6 – Сценарное моделирование", expanded=False):
         st.markdown("""
-**Workflow:**
-1. Configure date, target, exogenous variables, and horizon in the sidebar.
-2. Use **sliders** to set percentage shocks per exogenous variable (e.g., +10% rate, -5% volume).
-3. Click **Run Simulation** — baseline and shocked forecasts are computed.
+**Порядок работы:**
+1. Настройте дату, целевую переменную, экзогенные переменные и горизонт в боковой панели.
+2. Используйте **слайдеры** для задания процентных шоков по каждой переменной (напр., +10% ставка, -5% объём).
+3. Нажмите **Запустить симуляцию** — рассчитываются базовый и шоковый прогнозы.
 
-**Charts:**
-- **Chart 1** – Actual history + baseline + scenario paths on the same timeline.
-  The actual line ends at the last available date; no forward extension.
-- **Chart 2** – Delta bar chart (scenario minus baseline per period).
-- **Chart 3** – Component flow stacked bars (if component columns are selected).
+**Графики:**
+- **График 1** — История + базовый + сценарный прогнозы на одной шкале времени.
+- **График 2** — Столбчатый график дельт (сценарий минус базовый за каждый период).
+- **График 3** — Составные накопленные столбцы по компонентам (если выбраны компонентные колонки).
 
-**Export:** Download scenario results as CSV.
+**Экспорт:** скачать результаты сценария в CSV.
 
-**Presets:** Save named scenario configurations (shock parameters) and reload them later.
-The preset library can be exported as JSON for sharing.
+**Пресеты:** сохраните именованные конфигурации сценариев (параметры шоков) и загружайте их позже.
+Библиотека пресетов экспортируется в JSON для обмена.
         """)
 
     with st.expander("Страница 7 – Отчёт", expanded=False):
         st.markdown("""
-**What's included:**
-- Dataset overview card (rows, columns, missingness).
-- Data profile table.
-- Auto business summary (trend direction, momentum, volatility, forecast narrative, caveats).
-- Time series chart, correlation heatmap, STL decomposition.
-- Forecast model results and explainability tables.
-- Statistical test results with interpretations.
-- Methods section describing all techniques used.
+**Что включается в отчёт:**
+- Карточка обзора датасета (строки, колонки, пропуски).
+- Профиль данных по колонкам.
+- Автоматическое бизнес-резюме (направление тренда, импульс, волатильность, нарратив прогноза).
+- График временного ряда, тепловая карта корреляций, STL-декомпозиция.
+- Результаты прогнозных моделей и таблицы интерпретации.
+- Результаты статистических тестов с интерпретациями.
+- Раздел «Методология» с описанием всех применённых техник.
 
-**Output formats:**
-- **HTML** – interactive charts, embedded via Plotly div.
-- **PDF** – requires WeasyPrint (`pip install weasyprint`).
+**Форматы вывода:**
+- **HTML** — интерактивные графики, встроенные через Plotly div.
+- **PDF** — требует WeasyPrint (`pip install weasyprint`).
 
-Both formats are downloadable directly from the page.
+Оба формата доступны для скачивания прямо со страницы.
         """)
 
 st.divider()
@@ -213,42 +212,42 @@ section_header("Частые проблемы и решения")
 
 with st.expander("Таблица типичных ошибок", expanded=False):
     st.markdown("""
-| Problem | Solution |
-|---------|----------|
-| **"No datetime columns"** | Go to **Prepare** → Date Parsing and parse your date column. |
-| **"Need at least 2 numeric columns"** | Ensure your columns are parsed as numeric (type overrides in Data). |
-| **SARIMAX takes too long** | Reduce seasonal order or series length; use ARX instead. |
-| **Outlier removal removes too many rows** | Increase IQR multiplier (e.g., 2.5 or 3.0). |
-| **STL fails with "not enough data"** | Need ≥ 2× the seasonal period of non-null data points. |
-| **Forecast CI not showing** | Ensure there are future dates (horizon ≥ 1). |
-| **PostgreSQL connection fails** | Check host/port/credentials; ensure psycopg2-binary is installed. |
-| **WeasyPrint PDF fails** | Install system dependencies (Cairo, Pango) per WeasyPrint docs. |
+| Проблема | Решение |
+|---------|---------|
+| **«Нет колонок с датами»** | Перейдите в **Подготовка** → Разбор дат и разберите дату. |
+| **«Нужно минимум 2 числовые колонки»** | Убедитесь, что колонки имеют числовой тип (переопределение в Данных). |
+| **SARIMAX работает слишком долго** | Уменьшите сезонный порядок или длину ряда; используйте ARX. |
+| **Удаление выбросов убирает слишком много строк** | Увеличьте множитель IQR (напр., 2.5 или 3.0). |
+| **STL завершается ошибкой «недостаточно данных»** | Нужно ≥ 2× сезонного периода ненулевых точек. |
+| **Доверительный интервал прогноза не отображается** | Убедитесь, что горизонт прогноза ≥ 1. |
+| **PostgreSQL не подключается** | Проверьте хост/порт/учётные данные; установите psycopg2-binary. |
+| **PDF через WeasyPrint не генерируется** | Установите системные зависимости (Cairo, Pango) согласно документации WeasyPrint. |
     """)
 
 with st.expander("Примеры датасетов", expanded=False):
     st.markdown("""
-Located in the `data/` folder of the project:
+Находятся в папке `data/` проекта:
 
-| File | Description |
-|------|-------------|
-| `sample_monthly_sales.csv` | Monthly sales, costs, units — ideal for forecasting demos |
-| `sample_ab_test.csv` | Two-group experiment data — use for A/B test page |
-| `sample_multivariate.csv` | Multi-segment monthly KPIs with exogenous variables |
+| Файл | Описание |
+|------|----------|
+| `sample_monthly_sales.csv` | Ежемесячные продажи, затраты, объёмы — идеально для демо прогнозирования |
+| `sample_ab_test.csv` | Данные двухгрупповного эксперимента — для страницы A/B-тест |
+| `sample_multivariate.csv` | Ежемесячные KPI по нескольким сегментам с экзогенными переменными |
 
-**Load a sample:**
-1. Go to **Data** → Upload tab.
-2. Click the uploader and navigate to the `data/` folder.
-3. Choose a file and click **Load File**.
+**Загрузить пример:**
+1. Перейдите в **Данные** → вкладка «Загрузка».
+2. Нажмите на область загрузки и перейдите в папку `data/`.
+3. Выберите файл и нажмите **Загрузить файл**.
     """)
 
 with st.expander("Советы по работе", expanded=False):
     st.markdown("""
-- Every chart has a **Download PNG** button (hover over the chart → camera icon in Plotly toolbar).
-- Every table has a **Download CSV** button below it.
-- Use **sidebar** on Forecast and Simulation pages to configure parameters globally.
-- Session state persists within the current browser session. Refresh = data loss.
-  Download your prepared CSV from the **Prepare** page to avoid re-work.
-- Multiple datasets can be loaded simultaneously and switched via the selectbox on each page.
+- У каждого графика есть кнопка **Скачать PNG** (наведите курсор на график → значок камеры в панели инструментов Plotly).
+- У каждой таблицы есть кнопка **Скачать CSV** под ней.
+- Используйте **боковую панель** на страницах «Прогноз» и «Моделирование» для глобальной настройки параметров.
+- Состояние сессии сохраняется в пределах текущей вкладки браузера. Обновление страницы = потеря данных.
+  Скачайте подготовленный CSV со страницы **Подготовка** во избежание повторной работы.
+- Можно одновременно загрузить несколько датасетов и переключаться между ними через выпадающий список на каждой странице.
     """)
 
 st.info("По вопросам и предложениям — создайте issue в репозитории проекта.")
