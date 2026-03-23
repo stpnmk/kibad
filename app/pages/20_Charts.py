@@ -820,7 +820,6 @@ with left:
         if _suggestion:
             st.info(_suggestion)
 
-    build_btn = st.button("▶ Построить график", type="primary", use_container_width=True, key="build_btn_bottom")
 
 # ===========================================================================
 # RIGHT PANEL – Chart output
@@ -831,7 +830,7 @@ with right:
     fig_state: go.Figure | None = st.session_state.get("last_chart_fig")
     fig_df_state: pd.DataFrame | None = st.session_state.get("last_chart_df")
 
-    if build_btn or build_btn_top:
+    if build_btn_top:
         try:
             # Validate minimal config
             if chart_key in ("treemap", "sunburst") and not cfg.get("path"):

@@ -16,7 +16,7 @@ import streamlit as st
 
 from app.state import init_state, dataset_selectbox, get_active_df, store_prepared
 from core.interpret import interpret_correlation
-from app.components.ux import interpretation_box, recommendation_card, apply_recommendation_notification
+from app.components.ux import interpretation_box, recommendation_card, queue_recommendation_notification, show_pending_notification
 from core.explore import (
     plot_timeseries, plot_histogram, plot_boxplot, plot_violin,
     plot_correlation_heatmap,
@@ -44,6 +44,7 @@ cat_cols = df.select_dtypes(include="object").columns.tolist()
 dt_cols = [c for c in df.columns if pd.api.types.is_datetime64_any_dtype(df[c])]
 all_cols = list(df.columns)
 
+show_pending_notification()
 st.markdown(f"**Shape:** {df.shape[0]:,} rows × {df.shape[1]} cols")
 
 tab_auto, tab_quality, tab_ts, tab_dist, tab_corr, tab_pairplot, tab_pivot, tab_waterfall, tab_stl, tab_kpi, tab_profile = st.tabs([
@@ -153,12 +154,35 @@ with tab_auto:
         st.divider()
         section_header("Рекомендуемые следующие шаги")
         for _ai_i, _ai_rec in enumerate(_ai_recs):
-            recommendation_card(
+            _atype = _ai_rec.get("action_type", "info")
+            _can_apply = _atype in ("fill_na", "dedup")
+            _clicked = recommendation_card(
                 action_label=_ai_rec["action"],
                 reason=_ai_rec["reason"],
                 priority=_ai_rec["priority"],
+                on_apply=True if _can_apply else None,
                 key=f"ai_rec_{_ai_i}",
             )
+            if _clicked:
+                _df_before = df.copy()
+                if _atype == "fill_na":
+                    _df_new = df.copy()
+                    for _col in _df_new.select_dtypes(include="number").columns:
+                        _df_new[_col] = _df_new[_col].fillna(_df_new[_col].median())
+                    for _col in _df_new.select_dtypes(include="object").columns:
+                        _mv = _df_new[_col].mode()
+                        if len(_mv) > 0:
+                            _df_new[_col] = _df_new[_col].fillna(_mv[0])
+                elif _atype == "dedup":
+                    _df_new = df.drop_duplicates().reset_index(drop=True)
+                else:
+                    _df_new = df
+                if _df_new is not df:
+                    store_prepared(chosen, _df_new)
+                    st.session_state.get("quality_scores", {}).pop(chosen, None)
+                    st.session_state.get("auto_insights", {}).pop(chosen, None)
+                    queue_recommendation_notification(_ai_rec["action"], _df_before, _df_new, chosen)
+                    st.rerun()
 
     # Smart page links based on what was found
     st.divider()
@@ -291,7 +315,7 @@ with tab_quality:
             # invalidate quality and auto-analysis caches so next render is fresh
             st.session_state.get("quality_scores", {}).pop(chosen, None)
             st.session_state.get("auto_insights", {}).pop(chosen, None)
-            apply_recommendation_notification("Удаление дубликатов", df_before, df_new, chosen)
+            queue_recommendation_notification("Удаление дубликатов", df_before, df_new, chosen)
             st.rerun()
 
     if total_nulls > 0:
@@ -309,7 +333,7 @@ with tab_quality:
             # invalidate quality and auto-analysis caches
             st.session_state.get("quality_scores", {}).pop(chosen, None)
             st.session_state.get("auto_insights", {}).pop(chosen, None)
-            apply_recommendation_notification("Заполнение пропусков", df_before, df_new, chosen)
+            queue_recommendation_notification("Заполнение пропусков", df_before, df_new, chosen)
             st.rerun()
 
     if _qs_has_missing:

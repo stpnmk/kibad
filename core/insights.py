@@ -363,6 +363,7 @@ def analyze_dataset(df: pd.DataFrame) -> dict[str, Any]:
             "priority": "high",
             "action": f"Заполните пропуски в {n_missing_cols} столбцах",
             "reason": f"Общий уровень пропусков {missing_pct:.1f}% может исказить анализ",
+            "action_type": "fill_na",
         })
 
     # Duplicates
@@ -371,6 +372,7 @@ def analyze_dataset(df: pd.DataFrame) -> dict[str, Any]:
             "priority": "high",
             "action": f"Удалите {n_dup} дублирующихся строк перед анализом",
             "reason": f"Дублей: {duplicate_pct:.1f}% от объёма — влияют на статистику",
+            "action_type": "dedup",
         })
 
     # Time series forecast opportunity

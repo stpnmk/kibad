@@ -30,7 +30,7 @@ except ImportError:
 
 from app.state import init_state, dataset_selectbox, get_active_df, store_prepared
 from app.styles import inject_all_css, page_header, section_header
-from app.components.ux import apply_recommendation_notification
+from app.components.ux import apply_recommendation_notification, queue_recommendation_notification, show_pending_notification
 
 # ---------------------------------------------------------------------------
 # Page config
@@ -738,6 +738,8 @@ df_active = get_active_df()
 if df_active is None or df_active.empty:
     st.warning("Выбранный датасет пуст или недоступен.")
     st.stop()
+
+show_pending_notification()
 
 # Config
 col_cfg1, col_cfg2, col_cfg3 = st.columns(3)

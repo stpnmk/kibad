@@ -323,16 +323,33 @@ def kpi_cards_row(metrics: dict[str, tuple], n_cols: int = 4) -> None:
                     st.metric(label=label, value=val)
 
 
-def apply_recommendation_notification(action: str, df_before, df_after, ds_name: str) -> None:
-    """Show a styled before/after notification after auto-applying a recommendation."""
-    import streamlit as st
-    rows_delta = len(df_after) - len(df_before)
-    cols_delta = len(df_after.columns) - len(df_before.columns)
-    nulls_before = int(df_before.isnull().sum().sum())
-    nulls_after = int(df_after.isnull().sum().sum())
-    nulls_delta = nulls_after - nulls_before
+def queue_recommendation_notification(action: str, df_before, df_after, ds_name: str) -> None:
+    """Store notification data in session_state for rendering AFTER st.rerun()."""
+    st.session_state["_rec_notify"] = {
+        "action": action,
+        "rows_before": len(df_before),
+        "rows_after": len(df_after),
+        "rows_delta": len(df_after) - len(df_before),
+        "nulls_before": int(df_before.isnull().sum().sum()),
+        "nulls_after": int(df_after.isnull().sum().sum()),
+        "nulls_delta": int(df_after.isnull().sum().sum()) - int(df_before.isnull().sum().sum()),
+        "ds_name": ds_name,
+    }
+    if "transform_logs" not in st.session_state:
+        st.session_state["transform_logs"] = []
+    st.session_state["transform_logs"].append({
+        "step": action, "dataset": ds_name,
+        "rows_before": len(df_before), "rows_after": len(df_after),
+    })
 
-    def _delta_str(val, positive_good=True):
+
+def show_pending_notification() -> None:
+    """Render and clear a queued recommendation notification (call at top of page)."""
+    n = st.session_state.pop("_rec_notify", None)
+    if n is None:
+        return
+
+    def _delta_str(val: int, positive_good: bool = True) -> str:
         if val == 0:
             return "<span style='color:#6c757d'>без изменений</span>"
         color = "#198754" if (val > 0) == positive_good else "#dc3545"
@@ -342,18 +359,15 @@ def apply_recommendation_notification(action: str, df_before, df_after, ds_name:
     st.markdown(f"""
     <div style='background:#f0fff4;border:1px solid #a3cfbb;border-left:4px solid #198754;
     border-radius:10px;padding:14px 18px;margin:10px 0'>
-    <div style='font-weight:700;color:#0f5132;margin-bottom:8px'>✅ Рекомендация применена: {action}</div>
+    <div style='font-weight:700;color:#0f5132;margin-bottom:8px'>✅ Применено: {n["action"]}</div>
     <div style='display:flex;gap:24px;font-size:0.9rem'>
-    <span>📋 Строки: {_delta_str(rows_delta, positive_good=False)}</span>
-    <span>🔢 Пропуски: {_delta_str(nulls_delta, positive_good=False)}</span>
-    <span>📊 Колонки: {_delta_str(cols_delta, positive_good=True)}</span>
+    <span>📋 Строки: {_delta_str(n["rows_delta"], positive_good=False)}</span>
+    <span>🔢 Пропуски: {_delta_str(n["nulls_delta"], positive_good=False)}</span>
+    <span>Было: {n["rows_before"]:,} → Стало: {n["rows_after"]:,}</span>
     </div>
     </div>""", unsafe_allow_html=True)
 
-    # log to audit trail
-    if "transform_logs" not in st.session_state:
-        st.session_state["transform_logs"] = []
-    st.session_state["transform_logs"].append({
-        "step": action, "dataset": ds_name,
-        "rows_before": len(df_before), "rows_after": len(df_after),
-    })
+
+def apply_recommendation_notification(action: str, df_before, df_after, ds_name: str) -> None:
+    """Kept for backwards compat — queues notification for display after rerun."""
+    queue_recommendation_notification(action, df_before, df_after, ds_name)
