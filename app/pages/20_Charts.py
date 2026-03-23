@@ -341,6 +341,12 @@ def _build_chart(chart_key: str, df: pd.DataFrame, cfg: dict,
         y_col = cfg["y"]
         color_col = cfg.get("color") or None
         plot_df = _maybe_topn(df, x_col, y_col, top_n, sort_vals)
+        # Auto-aggregate when X is categorical with many unique values
+        _n_unique = plot_df[x_col].nunique() if x_col in plot_df.columns else 0
+        if _n_unique > 20 and pd.api.types.is_numeric_dtype(plot_df.get(y_col, pd.Series(dtype=float))):
+            plot_df = plot_df.groupby(x_col, as_index=False)[y_col].sum()
+            import streamlit as _st
+            _st.caption(f"⚡ Колонка «{x_col}» содержит {_n_unique} уникальных значений — данные агрегированы (сумма по «{y_col}»).")
         kwargs: dict = dict(x=x_col, y=y_col, color=color_col, **color_kwargs_disc)
         fig = px.bar(plot_df, **kwargs)
 
@@ -350,6 +356,12 @@ def _build_chart(chart_key: str, df: pd.DataFrame, cfg: dict,
         y_col = cfg["y"]
         color_col = cfg.get("color") or None
         plot_df = _maybe_topn(df, x_col, y_col, top_n, sort_vals)
+        # Auto-aggregate when X is categorical with many unique values
+        _n_unique_h = plot_df[x_col].nunique() if x_col in plot_df.columns else 0
+        if _n_unique_h > 20 and pd.api.types.is_numeric_dtype(plot_df.get(y_col, pd.Series(dtype=float))):
+            plot_df = plot_df.groupby(x_col, as_index=False)[y_col].sum()
+            import streamlit as _st
+            _st.caption(f"⚡ Колонка «{x_col}» содержит {_n_unique_h} уникальных значений — данные агрегированы (сумма по «{y_col}»).")
         kwargs = dict(x=y_col, y=x_col, color=color_col, orientation="h", **color_kwargs_disc)
         fig = px.bar(plot_df, **kwargs)
 

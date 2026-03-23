@@ -293,6 +293,13 @@ with tab_mc:
         mc_seed = st.number_input("Сид случайности (0 = случайный)", value=42, min_value=0, key="mc_seed",
                                    help="Фиксирует результат для воспроизводимости. 0 = новый случайный каждый раз")
 
+    mc_method = st.radio(
+        "Метод симуляции",
+        ["Простые шоки", "GBM (геометрическое броуновское движение)"],
+        horizontal=True, key="mc_method",
+        help="GBM моделирует логнормальные доходности — реалистичнее для финансовых и бизнес-рядов.",
+    )
+
     mc_percentiles = st.multiselect("Показать перцентили",
                                      [5, 10, 25, 50, 75, 90, 95],
                                      default=[5, 50, 95], key="mc_pct_sel",
@@ -309,16 +316,27 @@ with tab_mc:
             all_paths = np.zeros((mc_n_sims, mc_horizon + 1))
             all_paths[:, 0] = base_value
 
-            for t in range(1, mc_horizon + 1):
-                period_shocks = rng.normal(mc_shock_mean / 100, mc_shock_std / 100, size=mc_n_sims)
-                all_paths[:, t] = all_paths[:, t-1] * (1 + period_shocks)
+            mu = mc_shock_mean / 100
+            sigma = mc_shock_std / 100
+
+            if mc_method == "GBM (геометрическое броуновское движение)":
+                # S(t) = S(t-1) * exp((μ - σ²/2) + σ * Z)  where Z ~ N(0,1)
+                for t in range(1, mc_horizon + 1):
+                    z = rng.standard_normal(mc_n_sims)
+                    all_paths[:, t] = all_paths[:, t-1] * np.exp((mu - 0.5 * sigma ** 2) + sigma * z)
+            else:
+                # Simple multiplicative shocks
+                for t in range(1, mc_horizon + 1):
+                    period_shocks = rng.normal(mu, sigma, size=mc_n_sims)
+                    all_paths[:, t] = all_paths[:, t-1] * (1 + period_shocks)
 
             st.session_state["mc_paths"] = all_paths
             st.session_state["mc_target_name"] = mc_target
             st.session_state["mc_base"] = base_value
             st.session_state["mc_pct_saved"] = sorted(mc_percentiles) if mc_percentiles else [5, 50, 95]
-            log_event("analysis_run", {"type": "monte_carlo", "n_sims": mc_n_sims, "horizon": mc_horizon})
-            st.success(f"✅ {mc_n_sims:,} симуляций выполнено!")
+            log_event("analysis_run", {"type": "monte_carlo", "n_sims": mc_n_sims,
+                                        "horizon": mc_horizon, "method": mc_method})
+            st.success(f"✅ {mc_n_sims:,} симуляций выполнено ({mc_method})!")
 
     if "mc_paths" in st.session_state:
         all_paths = st.session_state["mc_paths"]
@@ -418,7 +436,13 @@ with tab_mc:
         cvar_95 = base_val - np.mean(final_vals[final_vals <= np.percentile(final_vals, 5)])
         prob_loss = (final_vals < base_val).mean() * 100
 
-        risk_col1, risk_col2, risk_col3 = st.columns(3)
+        # Maximum Drawdown (median path)
+        median_path = np.median(all_paths, axis=0)
+        running_max = np.maximum.accumulate(median_path)
+        drawdowns = (median_path - running_max) / np.where(running_max != 0, running_max, 1)
+        max_drawdown_pct = float(drawdowns.min()) * 100  # most negative value
+
+        risk_col1, risk_col2, risk_col3, risk_col4 = st.columns(4)
         risk_col1.metric("VaR (95%)", f"{var_95:,.1f}",
                           delta=f"{var_95/abs(base_val)*100:.1f}% от базы" if base_val != 0 else None,
                           delta_color="inverse")
@@ -426,6 +450,8 @@ with tab_mc:
                           delta="Ожидаемый убыток в худших 5%", delta_color="off")
         risk_col3.metric("Вероятность убытка", f"{prob_loss:.1f}%",
                           delta_color="inverse")
+        risk_col4.metric("Макс. просадка (медиана)", f"{max_drawdown_pct:.1f}%",
+                          delta="Пик → минимум медианного пути", delta_color="off")
 
         # Export
         paths_df = pd.DataFrame(all_paths, columns=[f"t{i}" for i in range(n_steps)])

@@ -114,6 +114,8 @@ def recommend_preprocessing(df: pd.DataFrame, qc: dict | None = None) -> list[di
         qc = check_upload(df)
 
     recs: list[dict] = []
+    # Track which columns already have a recommendation to avoid duplicates.
+    _recommended_cols: set[str] = set()
 
     # Drop null columns
     for col in qc.get("null_columns", []):
@@ -124,6 +126,7 @@ def recommend_preprocessing(df: pd.DataFrame, qc: dict | None = None) -> list[di
             "priority": "high",
             "auto_params": {"columns": [col]},
         })
+        _recommended_cols.add(col)
 
     # Drop duplicates
     dups = qc.get("duplicate_rows", 0)
@@ -136,8 +139,10 @@ def recommend_preprocessing(df: pd.DataFrame, qc: dict | None = None) -> list[di
             "auto_params": {},
         })
 
-    # Impute high-missing columns
+    # Impute high-missing columns (skip if already recommended for drop)
     for col in qc.get("high_missing_cols", []):
+        if col in _recommended_cols:
+            continue
         miss_pct = qc["missing_pct"].get(col, 0)
         is_num = col in qc.get("numeric_cols", [])
         method = "median" if is_num else "mode"
@@ -148,10 +153,11 @@ def recommend_preprocessing(df: pd.DataFrame, qc: dict | None = None) -> list[di
             "priority": "high" if miss_pct > 50 else "medium",
             "auto_params": {"column": col, "method": method},
         })
+        _recommended_cols.add(col)
 
     # Impute moderate-missing columns
     for col, pct in qc.get("missing_pct", {}).items():
-        if col in qc.get("null_columns", []) or col in qc.get("high_missing_cols", []):
+        if col in _recommended_cols:
             continue
         if pct > 5:
             is_num = col in qc.get("numeric_cols", [])
@@ -163,6 +169,7 @@ def recommend_preprocessing(df: pd.DataFrame, qc: dict | None = None) -> list[di
                 "priority": "low",
                 "auto_params": {"column": col, "method": method},
             })
+            _recommended_cols.add(col)
 
     # Outlier capping
     for col, rate in qc.get("outlier_cols", {}).items():
@@ -185,8 +192,10 @@ def recommend_preprocessing(df: pd.DataFrame, qc: dict | None = None) -> list[di
             "auto_params": {"column": col, "target_type": "numeric"},
         })
 
-    # Drop constant columns
+    # Drop constant columns (skip if already covered by drop_nullcol)
     for col in qc.get("constant_cols", []):
+        if col in _recommended_cols:
+            continue
         recs.append({
             "action": "drop_constant",
             "column": col,
@@ -194,6 +203,7 @@ def recommend_preprocessing(df: pd.DataFrame, qc: dict | None = None) -> list[di
             "priority": "low",
             "auto_params": {"columns": [col]},
         })
+        _recommended_cols.add(col)
 
     # Suggest date parsing if no datetime cols detected
     if not qc.get("datetime_cols") and not qc.get("numeric_cols") == []:

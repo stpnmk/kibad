@@ -513,7 +513,13 @@ with tab_pairplot:
             import plotly.express as px
             color_col = None if pp_color == "(нет)" else pp_color
             try:
-                plot_df = df[pp_cols + ([color_col] if color_col else [])].dropna()
+                _pp_source = df[pp_cols + ([color_col] if color_col else [])].dropna()
+                _pp_limit = 2000
+                if len(_pp_source) > _pp_limit:
+                    st.caption(f"⚡ Показано {_pp_limit:,} случайных строк из {len(_pp_source):,} для ускорения рендеринга.")
+                    plot_df = _pp_source.sample(_pp_limit, random_state=42).reset_index(drop=True)
+                else:
+                    plot_df = _pp_source
                 fig_pp = px.scatter_matrix(
                     plot_df,
                     dimensions=pp_cols,
