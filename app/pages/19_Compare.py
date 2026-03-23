@@ -273,7 +273,7 @@ if "_cmp_result" in st.session_state:
         st.dataframe(styled, use_container_width=True, height=350)
 
         # KPI summary cards
-        st.markdown("#### Ключевые отклонения:")
+        section_header("Ключевые отклонения", "📊")
         metric_cards = st.columns(min(len(selected_metrics), 4))
         for i, row in enumerate(cmp_df.itertuples()):
             col_idx = i % 4

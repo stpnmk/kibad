@@ -100,7 +100,7 @@ dt_cols = [c for c in df.columns if pd.api.types.is_datetime64_any_dtype(df[c])]
 num_cols = df.select_dtypes(include="number").columns.tolist()
 
 if not dt_cols:
-    st.warning("⚠️ Нет колонок с датами. Преобразуйте дату в разделе **Prepare**.")
+    st.warning("⚠️ Нет колонок с датами. Преобразуйте дату в разделе **Подготовка**.")
     st.stop()
 if not num_cols:
     st.warning("⚠️ Нет числовых колонок для прогнозирования.")

@@ -405,7 +405,7 @@ with tab_dist:
             st.plotly_chart(fig, use_container_width=True)
 
     with dist_tab_violin:
-        st.markdown("#### Скрипичный график (Violin)")
+        section_header("Скрипичный график (Violin)", "🎻")
         st.caption("Показывает форму распределения — лучше ящика с усами при наличии нескольких мод")
         if not num_cols:
             st.warning("Нет числовых столбцов.")

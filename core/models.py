@@ -519,13 +519,19 @@ def run_sarimax_forecast(
     if exog_cols:
         valid_exog = [c for c in exog_cols if c in df.columns]
         if valid_exog:
-            # Encode categorical columns safely
+            # Encode categorical columns safely via one-hot encoding
             exog_df = df[valid_exog].copy()
-            # Ensure string dtype for categoricals; fill NaN
-            for col in exog_df.columns:
-                if exog_df[col].dtype == object or str(exog_df[col].dtype) == "category":
-                    exog_df[col] = exog_df[col].astype(str).fillna("__missing__")
-            exog_train = exog_df.values.astype(float, errors="ignore")
+            cat_cols = [c for c in exog_df.columns
+                        if exog_df[c].dtype == object or str(exog_df[c].dtype) == "category"]
+            num_exog_cols = [c for c in exog_df.columns if c not in cat_cols]
+            # One-hot encode categoricals; drop first to avoid multicollinearity
+            if cat_cols:
+                exog_df[cat_cols] = exog_df[cat_cols].astype(str).fillna("__missing__")
+                exog_df = pd.get_dummies(exog_df, columns=cat_cols, drop_first=True,
+                                         dtype=float)
+            # Fill numeric NaNs with 0
+            exog_df = exog_df.fillna(0).astype(float)
+            exog_train = exog_df.values
             # For future, use last known row
             last_row = exog_df.iloc[-1:].values
             future_exog = np.tile(last_row, (horizon, 1))

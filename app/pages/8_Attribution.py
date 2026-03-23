@@ -134,7 +134,7 @@ segment_col = None if segment_col == "(none)" else segment_col
 # ---------------------------------------------------------------------------
 if st.button(t("run"), key="btn_attr", type="primary"):
     if not driver_cols or not driver_prev_cols:
-        st.error("Select at least one driver and its previous-value column.")
+        st.error("Выберите хотя бы один драйвер и его колонку предыдущего периода.")
         st.stop()
 
     method_map = {

@@ -306,7 +306,7 @@ with tab_profiles:
     else:
         profile_df = cluster_profiles(result)
 
-        st.markdown("#### Сводная таблица профилей")
+        section_header("Сводная таблица профилей", "📊")
         mean_cols = [c for c in profile_df.columns if c.endswith("_mean")]
 
         # Styled dataframe – highlight max per mean column
@@ -318,7 +318,7 @@ with tab_profiles:
         st.dataframe(styled, use_container_width=True)
 
         # --- Radar chart ---
-        st.markdown("#### Радарный график профилей кластеров")
+        section_header("Радарный график профилей кластеров", "🕸️")
         mean_df = profile_df[mean_cols].copy()
         mean_df.columns = [c.replace("_mean", "") for c in mean_df.columns]
 
@@ -356,7 +356,7 @@ with tab_profiles:
         st.plotly_chart(fig_radar, use_container_width=True)
 
         # --- Centroid heatmap ---
-        st.markdown("#### Тепловая карта центроидов кластеров")
+        section_header("Тепловая карта центроидов кластеров", "🌡️")
         centers = result.centers_df.copy()
         centers.index = [f"Кластер {i}" for i in centers.index]
 
@@ -471,11 +471,11 @@ with tab_results:
         st.info("Сначала запустите кластеризацию на вкладке **🎯 K-Means**.")
     else:
         # Preview of labelled data
-        st.markdown("#### Данные с метками кластеров (первые 50 строк)")
+        section_header("Данные с метками кластеров (первые 50 строк)", "📋")
         st.dataframe(result.df_with_labels.head(50), use_container_width=True)
 
         # Per-cluster statistics table
-        st.markdown("#### Статистика по кластерам (среднее и стд. откл.)")
+        section_header("Статистика по кластерам (среднее и стд. откл.)", "📈")
         try:
             valid = result.df_with_labels.dropna(subset=["cluster"])
             stats_mean = (

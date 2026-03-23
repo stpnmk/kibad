@@ -747,7 +747,7 @@ with tab_postgres:
     # Preview last result
     last_result = st.session_state.get("db_last_result")
     if last_result is not None:
-        st.markdown("#### Предварительный просмотр результата")
+        section_header("Предварительный просмотр результата", "👁️")
         st.dataframe(last_result.head(20), use_container_width=True)
         csv_bytes = last_result.to_csv(index=False).encode()
         st.download_button("⬇️ Скачать CSV", csv_bytes,
