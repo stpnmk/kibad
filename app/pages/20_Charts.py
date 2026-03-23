@@ -616,6 +616,29 @@ if not all_columns:
     st.stop()
 
 # ---------------------------------------------------------------------------
+# Top bar: chart type + build button in one row
+# ---------------------------------------------------------------------------
+
+top_col1, top_col2, top_col3 = st.columns([2, 2, 1])
+with top_col1:
+    chart_label = st.selectbox(
+        "Тип графика",
+        options=CHART_TYPES,
+        key="chart_type_sel",
+    )
+    chart_key = CHART_KEY[chart_label]
+with top_col2:
+    st.markdown("<div style='margin-top:4px'></div>", unsafe_allow_html=True)
+    st.caption(
+        "📊 Базовые · Распределения · Части целого · Специальные · Расширенные"
+    )
+with top_col3:
+    st.markdown("<div style='margin-top:28px'></div>", unsafe_allow_html=True)
+    build_btn_top = st.button("▶ Построить", type="primary", use_container_width=True, key="build_btn_top")
+
+st.divider()
+
+# ---------------------------------------------------------------------------
 # Two-column layout
 # ---------------------------------------------------------------------------
 
@@ -626,24 +649,6 @@ left, right = st.columns([1, 2])
 # ===========================================================================
 
 with left:
-    section_header("⚙️ Настройка графика")
-
-    # ---- Chart type ----
-    st.markdown("**Тип графика**")
-    st.markdown(
-        "<small style='color:#888'>📊 Базовые &nbsp;|&nbsp; Распределения &nbsp;|&nbsp; "
-        "Части целого &nbsp;|&nbsp; Специальные &nbsp;|&nbsp; Расширенные</small>",
-        unsafe_allow_html=True,
-    )
-    chart_label = st.selectbox(
-        "Тип графика:",
-        options=CHART_TYPES,
-        key="chart_type_sel",
-        label_visibility="collapsed",
-    )
-    chart_key = CHART_KEY[chart_label]
-
-    st.divider()
     st.markdown("**Данные**")
 
     # ---- Axis / field controls depending on chart type ----
@@ -807,8 +812,6 @@ with left:
                                      value=0, step=5, key="cfg_topn"))
         log_y = st.checkbox("Логарифмическая шкала Y", value=False, key="cfg_logy")
 
-    st.divider()
-
     # ---- Auto-chart suggestion ----
     _suggest_x = cfg.get("x") or cfg.get("col") or cfg.get("stage")
     _suggest_y = cfg.get("y") or cfg.get("y1") or cfg.get("val") or cfg.get("values")
@@ -817,7 +820,7 @@ with left:
         if _suggestion:
             st.info(_suggestion)
 
-    build_btn = st.button("▶ Построить график", type="primary", use_container_width=True)
+    build_btn = st.button("▶ Построить график", type="primary", use_container_width=True, key="build_btn_bottom")
 
 # ===========================================================================
 # RIGHT PANEL – Chart output
@@ -828,7 +831,7 @@ with right:
     fig_state: go.Figure | None = st.session_state.get("last_chart_fig")
     fig_df_state: pd.DataFrame | None = st.session_state.get("last_chart_df")
 
-    if build_btn:
+    if build_btn or build_btn_top:
         try:
             # Validate minimal config
             if chart_key in ("treemap", "sunburst") and not cfg.get("path"):
@@ -869,33 +872,19 @@ with right:
         st.plotly_chart(fig_state, use_container_width=True)
 
         # ---- Download buttons ----
-        dl_col1, dl_col2 = st.columns(2)
-
+        dl_col1, dl_col2, dl_col3 = st.columns([1, 1, 2])
         with dl_col1:
             try:
                 img_bytes = fig_state.to_image(format="png", scale=2)
-                st.download_button(
-                    label="📷 Скачать PNG",
-                    data=img_bytes,
-                    file_name="chart.png",
-                    mime="image/png",
-                    use_container_width=True,
-                )
+                st.download_button("📷 PNG", img_bytes, file_name="chart.png",
+                                   mime="image/png", use_container_width=True)
             except Exception:
-                st.info(
-                    "📷 PNG недоступен: установите kaleido → `pip install kaleido`",
-                )
-
+                st.caption("📷 PNG: `pip install kaleido`")
         with dl_col2:
             if fig_df_state is not None:
                 csv_bytes = fig_df_state.to_csv(index=False).encode("utf-8-sig")
-                st.download_button(
-                    label="📊 Скачать данные (CSV)",
-                    data=csv_bytes,
-                    file_name="chart_data.csv",
-                    mime="text/csv",
-                    use_container_width=True,
-                )
+                st.download_button("📊 CSV", csv_bytes, file_name="chart_data.csv",
+                                   mime="text/csv", use_container_width=True)
 
         # ---- Auto-insights ----
         saved_key = st.session_state.get("last_chart_key", chart_key)
@@ -908,12 +897,7 @@ with right:
                     st.markdown(f"- {line}")
 
     else:
-        # Placeholder before first build
-        st.markdown("<div style='height:60px'></div>", unsafe_allow_html=True)
         st.info(
-            "**📊 Готово к построению графика**\n\n"
-            "1. Выберите тип графика в левой панели\n"
-            "2. Настройте оси, цвет и группировку\n"
-            "3. Нажмите **▶ Построить график**\n\n"
-            "💡 *Авто-предложение подскажет подходящий тип графика на основе ваших данных*"
+            "Выберите тип графика и настройте оси → нажмите **▶ Построить** (кнопка вверху или внизу левой панели).\n\n"
+            "💡 *Авто-предложение подскажет подходящий тип на основе типов данных*"
         )

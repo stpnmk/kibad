@@ -257,54 +257,74 @@ with tab_scenario:
 
 with tab_mc:
     st.markdown("### 🎲 Монте-Карло: Распределение риска")
-    st.caption("Запустите N симуляций с случайными шоками, чтобы получить распределение возможных исходов.")
+
+    with st.expander("📖 Как работает Монте-Карло", expanded=False):
+        st.markdown("""
+**Метод Монте-Карло** запускает N независимых симуляций будущего, каждая из которых использует случайные шоки,
+распределённые нормально. Результат — **веер возможных сценариев** и вероятностные метрики риска.
+
+| Параметр | Назначение |
+|----------|------------|
+| **Целевой показатель** | Числовая переменная, последнее наблюдение которой служит стартовым значением |
+| **Количество симуляций (N)** | Чем больше, тем точнее распределение; рекомендуется ≥ 1 000 |
+| **Горизонт (периодов)** | Количество шагов вперёд (периодов прогноза) |
+| **Средний шок (%)** | Математическое ожидание случайного шока на каждом шаге (0 = нет тренда) |
+| **Волатильность шока (%)** | Стандартное отклонение шока — чем выше, тем шире веер |
+| **Сид случайности** | Фиксирует генератор псевдослучайных чисел для воспроизводимости; 0 = полностью случайный |
+| **Перцентили** | Границы доверительных зон на веере и в итоговой таблице (P5 — стресс, P95 — лучший сценарий) |
+
+**VaR (95%)** — максимальный убыток, который не будет превышен с вероятностью 95%.
+**CVaR / ES** — средний убыток в худших 5% сценариев (более консервативная мера).
+        """)
 
     mc_col1, mc_col2 = st.columns(2)
     with mc_col1:
-        mc_target = st.selectbox("Целевой показатель", num_cols, key="mc_target")
-        mc_n_sims = st.slider("Количество симуляций (N)", 100, 5000, 1000, step=100, key="mc_n_sims")
-        mc_horizon = st.slider("Горизонт (периодов)", 1, 36, 12, key="mc_horizon")
+        mc_target = st.selectbox("Целевой показатель", num_cols, key="mc_target",
+                                  help="Последнее значение этой колонки — стартовая точка всех симуляций")
+        mc_n_sims = st.slider("Количество симуляций (N)", 100, 5000, 1000, step=100, key="mc_n_sims",
+                               help="Больше симуляций = точнее распределение, но дольше расчёт")
+        mc_horizon = st.slider("Горизонт (периодов)", 1, 36, 12, key="mc_horizon",
+                                help="На сколько шагов вперёд моделировать")
     with mc_col2:
         mc_shock_mean = st.number_input("Средний шок (%)", value=0.0, step=1.0, key="mc_shock_mean",
-                                         help="Среднее значение случайного шока в % от базового уровня")
+                                         help="Среднее изменение на каждом шаге. 0 = нет направленного тренда")
         mc_shock_std = st.number_input("Волатильность шока (%)", value=5.0, step=0.5, min_value=0.1, key="mc_shock_std",
-                                        help="Стандартное отклонение шока")
-        mc_seed = st.number_input("Сид случайности (0 = случайный)", value=42, min_value=0, key="mc_seed")
+                                        help="Стандартное отклонение шока. Чем выше — тем шире веер сценариев")
+        mc_seed = st.number_input("Сид случайности (0 = случайный)", value=42, min_value=0, key="mc_seed",
+                                   help="Фиксирует результат для воспроизводимости. 0 = новый случайный каждый раз")
 
     mc_percentiles = st.multiselect("Показать перцентили",
-                                      [5, 10, 25, 50, 75, 90, 95],
-                                      default=[5, 50, 95], key="mc_percentiles")
+                                     [5, 10, 25, 50, 75, 90, 95],
+                                     default=[5, 50, 95], key="mc_pct_sel",
+                                     help="P5 = стресс-сценарий, P50 = медиана, P95 = оптимистичный")
 
     if st.button("▶ Запустить симуляции", type="primary", key="btn_mc"):
-        # get baseline series for the chosen column
         series = df[mc_target].dropna().values
         if len(series) < 2:
             st.error("Недостаточно данных для симуляции.")
-            st.stop()
+        else:
+            base_value = float(series[-1])
+            rng = np.random.default_rng(int(mc_seed) if mc_seed > 0 else None)
 
-        base_value = float(series[-1])
-        rng = np.random.default_rng(int(mc_seed) if mc_seed > 0 else None)
+            all_paths = np.zeros((mc_n_sims, mc_horizon + 1))
+            all_paths[:, 0] = base_value
 
-        # Run N simulations
-        all_paths = np.zeros((mc_n_sims, mc_horizon + 1))
-        all_paths[:, 0] = base_value
+            for t in range(1, mc_horizon + 1):
+                period_shocks = rng.normal(mc_shock_mean / 100, mc_shock_std / 100, size=mc_n_sims)
+                all_paths[:, t] = all_paths[:, t-1] * (1 + period_shocks)
 
-        for t in range(1, mc_horizon + 1):
-            shocks = rng.normal(mc_shock_mean / 100, mc_shock_std / 100, size=mc_n_sims)
-            all_paths[:, t] = all_paths[:, t-1] * (1 + shocks)
-
-        st.session_state["mc_paths"] = all_paths
-        st.session_state["mc_target_name"] = mc_target
-        st.session_state["mc_base"] = base_value
-        st.session_state["mc_percentiles"] = sorted(mc_percentiles)
-        log_event("analysis_run", {"type": "monte_carlo", "n_sims": mc_n_sims, "horizon": mc_horizon})
-        st.success(f"✅ {mc_n_sims:,} симуляций выполнено!")
+            st.session_state["mc_paths"] = all_paths
+            st.session_state["mc_target_name"] = mc_target
+            st.session_state["mc_base"] = base_value
+            st.session_state["mc_pct_saved"] = sorted(mc_percentiles) if mc_percentiles else [5, 50, 95]
+            log_event("analysis_run", {"type": "monte_carlo", "n_sims": mc_n_sims, "horizon": mc_horizon})
+            st.success(f"✅ {mc_n_sims:,} симуляций выполнено!")
 
     if "mc_paths" in st.session_state:
         all_paths = st.session_state["mc_paths"]
         target_name = st.session_state["mc_target_name"]
         base_val = st.session_state["mc_base"]
-        pcts = st.session_state["mc_percentiles"]
+        pcts = st.session_state.get("mc_pct_saved", [5, 50, 95])
 
         n_sims, n_steps = all_paths.shape
         periods = list(range(n_steps))
