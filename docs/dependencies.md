@@ -1,121 +1,55 @@
-# KIBAD Dependencies / Зависимости KIBAD
+# Зависимости KIBAD
 
-## Dependency Table / Таблица зависимостей
+## Таблица зависимостей
 
-| Package            | Version     | Purpose / Назначение                              |
-|--------------------|-------------|---------------------------------------------------|
-| streamlit          | >= 1.32.0   | Web UI framework / Веб-интерфейс                  |
-| pandas             | >= 2.1.0    | DataFrames, IO / Работа с таблицами               |
-| numpy              | >= 1.26.0   | Numeric operations / Числовые операции             |
-| plotly             | >= 5.18.0   | Interactive charts / Интерактивные графики         |
-| scipy              | >= 1.11.0   | Statistical tests / Статистические тесты          |
-| statsmodels        | >= 0.14.1   | Time series, regression / Временные ряды          |
-| scikit-learn       | >= 1.4.0    | ML utilities / Утилиты машинного обучения         |
-| openpyxl           | >= 3.1.2    | Excel xlsx read/write / Чтение/запись xlsx        |
-| xlrd               | >= 2.0.1    | Legacy xls read / Чтение старых xls               |
-| pyarrow            | >= 14.0.0   | Parquet support / Поддержка Parquet               |
-| psycopg2-binary    | >= 2.9.9    | PostgreSQL driver / Драйвер PostgreSQL            |
-| sqlalchemy         | >= 2.0.0    | SQL ORM / SQL-запросы через ORM                   |
-| weasyprint         | >= 61.0     | PDF generation / Генерация PDF                    |
-| jinja2             | >= 3.1.2    | HTML templates / HTML-шаблоны                     |
-| ruptures           | >= 1.1.8    | Change-point detection / Обнаружение точек разрыва|
-| kaleido            | >= 0.2.1    | Plotly static export / Экспорт графиков в PNG     |
-| pytest             | >= 7.4.0    | Test runner / Запуск тестов                       |
-| pytest-cov         | >= 4.1.0    | Coverage reports / Отчёты о покрытии              |
+| Пакет | Версия | Назначение |
+|-------|--------|------------|
+| streamlit | >= 1.32.0 | Веб-интерфейс приложения |
+| pandas | >= 2.1.0 | Работа с таблицами, ввод/вывод данных |
+| numpy | >= 1.26.0 | Числовые операции |
+| plotly | >= 5.18.0 | Интерактивные графики |
+| scipy | >= 1.11.0 | Статистические тесты |
+| statsmodels | >= 0.14.1 | Временные ряды, регрессия |
+| scikit-learn | >= 1.4.0 | Утилиты машинного обучения, кластеризация |
+| openpyxl | >= 3.1.2 | Чтение и запись файлов xlsx |
+| xlrd | >= 2.0.1 | Чтение устаревших файлов xls |
+| pyarrow | >= 14.0.0 | Поддержка формата Parquet |
+| psycopg2-binary | >= 2.9.9 | Драйвер PostgreSQL |
+| sqlalchemy | >= 2.0.0 | SQL-запросы через ORM |
+| weasyprint | >= 61.0 | Генерация PDF-отчётов |
+| jinja2 | >= 3.1.2 | HTML-шаблоны для отчётов |
+| ruptures | >= 1.1.8 | Обнаружение точек изменения тренда |
+| kaleido | >= 0.2.1 | Экспорт графиков Plotly в PNG/SVG |
+| pytest | >= 7.4.0 | Запуск тестов |
+| pytest-cov | >= 4.1.0 | Отчёты о покрытии кода тестами |
 
-## Vendoring Strategy / Стратегия вендоринга
+---
 
-### Download wheels / Скачивание пакетов
+## Версия Python
 
-Create a local wheel cache for offline installation:
+KIBAD требует Python 3.10 или новее. Рекомендуется Python 3.11.
 
-```bash
-# Download all dependencies into ./wheels
-# Скачать все зависимости в ./wheels
-pip download -d ./wheels -r requirements.txt
+---
 
-# For a specific platform (e.g., Linux x86_64)
-# Для конкретной платформы (например, Linux x86_64)
-pip download -d ./wheels -r requirements.txt \
-    --platform manylinux2014_x86_64 \
-    --python-version 3.11 \
-    --only-binary=:all:
-```
-
-### Offline Install / Установка без интернета
+## Настройка виртуального окружения
 
 ```bash
-# Install from local wheel cache
-# Установка из локального кэша
-pip install --no-index --find-links=./wheels -r requirements.txt
-```
-
-### Verifying the cache / Проверка кэша
-
-```bash
-# Check all requirements are satisfied from the cache
-# Проверить, что все зависимости доступны в кэше
-pip install --no-index --find-links=./wheels --dry-run -r requirements.txt
-```
-
-## Graceful Degradation / Деградация при отсутствии библиотек
-
-If a dependency is unavailable, the following features degrade:
-
-| Missing Package     | Affected Feature / Затронутый функционал       | Behavior / Поведение                          |
-|---------------------|------------------------------------------------|-----------------------------------------------|
-| weasyprint          | PDF report export / Экспорт PDF                | Falls back to HTML-only export                |
-| kaleido             | Static chart images / Статические изображения  | Charts render interactively only              |
-| psycopg2-binary     | PostgreSQL import / Импорт из PostgreSQL       | SQL tab is hidden; file upload still works    |
-| xlrd                | Legacy .xls files / Старые файлы .xls          | Only .xlsx and .csv supported                 |
-| pyarrow             | Parquet file support / Поддержка Parquet        | Parquet option hidden in upload dialog        |
-| ruptures            | Change-point detection / Точки разрыва          | Feature disabled on TimeSeries page           |
-| scikit-learn        | Regression attribution / Регрессионная атрибуция| Only additive/multiplicative methods available|
-
-Each optional import is wrapped in a try/except block with a warning shown to
-the user when a feature is unavailable.
-
-## Telemetry / Телеметрия
-
-KIBAD makes **zero external network calls**. Streamlit telemetry is explicitly
-disabled.
-
-**KIBAD не выполняет никаких внешних сетевых запросов.** Телеметрия Streamlit
-явно отключена.
-
-Configuration in `.streamlit/config.toml`:
-
-```toml
-[browser]
-gatherUsageStats = false
-
-[server]
-enableStaticServing = false
-```
-
-## Python Version / Версия Python
-
-KIBAD requires Python 3.10 or later. Recommended: Python 3.11.
-
-KIBAD требует Python 3.10 или новее. Рекомендуется: Python 3.11.
-
-## Virtual Environment Setup / Настройка виртуального окружения
-
-```bash
-# Create and activate / Создать и активировать
+# Создать и активировать виртуальное окружение
 python3.11 -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate      # macOS/Linux
+# или
+.venv\Scripts\activate          # Windows
 
-# Online install / Установка с интернетом
+# Установка с доступом к интернету
 pip install -r requirements.txt
 
-# Offline install / Установка без интернета
+# Установка без интернета (из локального кэша)
 pip install --no-index --find-links=./wheels -r requirements.txt
 ```
 
-## System Dependencies / Системные зависимости
+---
 
-WeasyPrint requires system-level libraries for PDF rendering:
+## Системные зависимости
 
 WeasyPrint требует системных библиотек для рендеринга PDF:
 
@@ -130,16 +64,85 @@ sudo apt-get install libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0
 sudo yum install pango gdk-pixbuf2
 ```
 
-## Updating Dependencies / Обновление зависимостей
+При отсутствии системных библиотек экспорт PDF недоступен; приложение автоматически откатывается к экспорту в HTML.
+
+---
+
+## Офлайн-установка
+
+### Скачивание пакетов в локальный кэш
 
 ```bash
-# Check for outdated packages / Проверить устаревшие пакеты
+# Скачать все зависимости в ./wheels
+pip download -d ./wheels -r requirements.txt
+
+# Для конкретной платформы (например, Linux x86_64)
+pip download -d ./wheels -r requirements.txt \
+    --platform manylinux2014_x86_64 \
+    --python-version 3.11 \
+    --only-binary=:all:
+```
+
+### Установка из локального кэша
+
+```bash
+pip install --no-index --find-links=./wheels -r requirements.txt
+```
+
+### Проверка кэша
+
+```bash
+pip install --no-index --find-links=./wheels --dry-run -r requirements.txt
+```
+
+---
+
+## Деградация при отсутствии библиотек
+
+Если зависимость недоступна, соответствующая функциональность деградирует:
+
+| Отсутствующий пакет | Затронутый функционал | Поведение |
+|---------------------|----------------------|-----------|
+| weasyprint | Экспорт PDF | Откат к экспорту только в HTML |
+| kaleido | Статические изображения графиков | Графики остаются только интерактивными |
+| psycopg2-binary | Импорт из PostgreSQL | Вкладка SQL скрыта; загрузка файлов работает |
+| xlrd | Устаревшие файлы .xls | Поддерживаются только .xlsx и .csv |
+| pyarrow | Поддержка Parquet | Опция Parquet скрыта в диалоге загрузки |
+| ruptures | Обнаружение точек разрыва | Функция отключена на странице временных рядов |
+| scikit-learn | Регрессионная атрибуция, кластеризация | Доступны только аддитивный и мультипликативный методы |
+
+Каждый опциональный импорт обёрнут в блок try/except; при недоступности функции пользователю отображается предупреждение.
+
+---
+
+## Телеметрия
+
+KIBAD не выполняет никаких внешних сетевых запросов. Телеметрия Streamlit явно отключена.
+
+Конфигурация в `.streamlit/config.toml`:
+
+```toml
+[browser]
+gatherUsageStats = false
+
+[server]
+enableStaticServing = false
+```
+
+---
+
+## Обновление зависимостей
+
+```bash
+# Проверить устаревшие пакеты
 pip list --outdated
 
-# Update requirements.txt after testing / Обновить после тестирования
+# Обновить файл зависимостей после тестирования
 pip freeze > requirements.lock
 ```
 
-Always run the full test suite after updating any dependency.
+Всегда запускайте полный набор тестов после обновления любой зависимости:
 
-Всегда запускайте полный набор тестов после обновления любой зависимости.
+```bash
+python -m pytest tests/ -v
+```

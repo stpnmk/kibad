@@ -1,24 +1,23 @@
-# KIBAD Security
+# Безопасность KIBAD
 
-## Principles
+## Принципы
 
-KIBAD is designed for use in environments with strict data security requirements.
-All data processing happens locally. There are no external network calls, no
-telemetry, and no data exfiltration paths.
+KIBAD разработан для использования в средах с высокими требованиями к безопасности данных. Вся обработка данных выполняется локально. Нет внешних сетевых вызовов, телеметрии и каналов утечки данных.
 
-## Network Isolation
+---
 
-### No outbound connections
+## Сетевая изоляция
 
-- Streamlit telemetry is disabled: `gatherUsageStats = false` in
-  `.streamlit/config.toml`.
-- No analytics, tracking, or crash-reporting services.
-- No CDN-hosted assets -- all static resources are bundled locally.
-- No auto-update mechanisms.
+### Отсутствие исходящих соединений
 
-### Verification
+- Телеметрия Streamlit отключена: `gatherUsageStats = false` в `.streamlit/config.toml`.
+- Нет аналитических сервисов, трекеров или систем отчётов об ошибках.
+- Нет внешних CDN-ресурсов — все статические файлы включены локально.
+- Нет механизмов автоматического обновления.
 
-To verify KIBAD makes no network calls, monitor outbound traffic while running:
+### Проверка
+
+Для проверки отсутствия сетевых вызовов KIBAD можно мониторить исходящий трафик во время работы приложения:
 
 ```bash
 # macOS
@@ -28,94 +27,86 @@ sudo lsof -i -P | grep python
 ss -tnp | grep python
 ```
 
-The only listening socket should be the Streamlit server on localhost.
+Единственный прослушиваемый сокет — сервер Streamlit на localhost.
 
-## Data Locality
+---
 
-All data remains on the local machine:
+## Локальность данных
 
-- Uploaded files are read into memory as pandas DataFrames and stored in
-  `st.session_state`. They are never written to disk unless the user explicitly
-  exports them.
-- Temporary files (if any) are created in the system temp directory and deleted
-  after use.
-- Generated reports (PDF/HTML) are offered as downloads, not stored permanently.
-- PostgreSQL connections are made directly to the user-specified host; no proxy
-  or intermediary is involved.
+Все данные остаются на локальной машине:
 
-## Audit Logging
+- Загруженные файлы читаются в память как pandas DataFrames и хранятся в `st.session_state`. Они никогда не записываются на диск, если пользователь явно не экспортирует их.
+- Временные файлы (при наличии) создаются в системном временном каталоге и удаляются после использования.
+- Сгенерированные отчёты (PDF/HTML) предлагаются для скачивания, но не хранятся постоянно.
+- Подключения к PostgreSQL устанавливаются напрямую к указанному пользователем хосту — без прокси или промежуточных серверов.
 
-The `core/audit.py` module maintains an append-only in-session audit log that
-records every significant operation:
+---
 
-| Event Type        | Logged Fields                                       |
-|-------------------|-----------------------------------------------------|
-| File load         | Filename, format, row count, column count, timestamp |
-| Data transform    | Operation name, parameters, rows affected, timestamp |
-| Analysis run      | Test/model name, parameters, result summary, timestamp|
-| Export            | Format (CSV/PDF/HTML), filename, timestamp           |
-| Error             | Operation, error message, traceback summary, timestamp|
+## Аудит-лог
 
-The audit log is available on the Report page and can be exported as part of
-the analysis report. It provides a full trace of how results were derived from
-raw data.
+Модуль `core/audit.py` ведёт append-only аудит-лог сессии, фиксирующий каждую значимую операцию:
 
-## File Handling
+| Тип события | Логируемые поля |
+|-------------|----------------|
+| Загрузка файла | Имя файла, формат, количество строк, количество колонок, временная метка |
+| Трансформация данных | Название операции, параметры, затронутые строки, временная метка |
+| Запуск анализа | Название теста/модели, параметры, краткий результат, временная метка |
+| Экспорт | Формат (CSV/PDF/HTML), имя файла, временная метка |
+| Ошибка | Операция, сообщение об ошибке, краткий трейсбэк, временная метка |
 
-### Accepted formats
+Аудит-лог доступен на странице «Отчёт» и может быть включён в аналитический отчёт. Он предоставляет полный след того, как результаты были получены из исходных данных.
 
-| Format   | Extension       | Library     |
-|----------|-----------------|-------------|
-| CSV      | .csv            | pandas      |
-| Excel    | .xlsx           | openpyxl    |
-| Excel    | .xls            | xlrd        |
-| Parquet  | .parquet        | pyarrow     |
+---
 
-### Validation checks
+## Обработка файлов
 
-- **Extension whitelist**: only the formats listed above are accepted. Files with
-  other extensions are rejected with a clear error message.
-- **Size limit**: files larger than 200 MB are rejected to prevent memory
-  exhaustion. The limit is configurable but defaults to 200 MB.
-- **Content validation**: after loading, the file must parse into a valid
-  DataFrame with at least one column and one row.
-- **Encoding detection**: CSV files are read with UTF-8 by default, with
-  fallback to cp1251 (common for Russian-locale files) and latin-1.
+### Поддерживаемые форматы
 
-### What is NOT done
+| Формат | Расширение | Библиотека |
+|--------|------------|------------|
+| CSV | .csv | pandas |
+| Excel | .xlsx | openpyxl |
+| Excel (устаревший) | .xls | xlrd |
+| Parquet | .parquet | pyarrow |
 
-- No file is executed as code.
-- No macros in Excel files are evaluated.
-- No embedded objects or external references in Excel are followed.
+### Проверки валидации
 
-## Input Sanitization
+- **Белый список расширений**: принимаются только перечисленные выше форматы. Файлы с другими расширениями отклоняются с понятным сообщением об ошибке.
+- **Ограничение размера**: файлы размером более 200 МБ отклоняются во избежание исчерпания памяти. Лимит настраиваем, по умолчанию — 200 МБ.
+- **Валидация содержимого**: после загрузки файл должен успешно распарситься в DataFrame с как минимум одной колонкой и одной строкой.
+- **Определение кодировки**: CSV-файлы читаются в UTF-8 по умолчанию, с последовательным откатом к cp1251 (для файлов в русской локали) и latin-1.
 
-### Numeric parsing
+### Что не выполняется
 
-All numeric parsing uses safe coercion:
+- Ни один файл не исполняется как код.
+- Макросы в Excel-файлах не выполняются.
+- Встроенные объекты и внешние ссылки в Excel-файлах не обрабатываются.
+
+---
+
+## Санитизация ввода
+
+### Парсинг чисел
+
+Весь парсинг чисел использует безопасное приведение:
 
 ```python
-pd.to_numeric(series, errors="coerce")  # invalid values become NaN
+pd.to_numeric(series, errors="coerce")  # некорректные значения становятся NaN
 ```
 
-- No `eval()` or `exec()` is used on user-provided strings.
-- Currency symbols, whitespace, and thousand separators are stripped with
-  explicit regex patterns before parsing.
-- Results are always checked for NaN after conversion.
+- Нет `eval()` или `exec()` для пользовательских строк.
+- Символы валют, пробелы и разделители тысяч удаляются явными шаблонами регулярных выражений перед парсингом.
+- Результаты всегда проверяются на NaN после преобразования.
 
-### Date parsing
+### Парсинг дат
 
-- Dates are parsed with explicit format strings or `pd.to_datetime` with
-  `errors="coerce"`.
-- Bounds checking: dates before 1900-01-01 or after 2100-12-31 trigger a
-  warning.
-- No timezone assumptions -- all dates are treated as naive unless the user
-  specifies a timezone.
+- Даты парсятся с явными форматными строками или через `pd.to_datetime` с `errors="coerce"`.
+- Проверка диапазона: даты до 01.01.1900 или после 31.12.2100 вызывают предупреждение.
+- Нет предположений о часовом поясе — все даты обрабатываются как «наивные», если пользователь не указал часовой пояс явно.
 
-### KPI Formulas
+### Пользовательские формулы KPI
 
-Users can define custom KPI formulas on the Explore page. These are evaluated
-in a restricted namespace:
+Пользователи могут определять собственные формулы KPI. Они вычисляются в ограниченном пространстве имён:
 
 ```python
 ALLOWED_NAMES = {
@@ -124,45 +115,43 @@ ALLOWED_NAMES = {
 }
 ```
 
-- No access to `__builtins__`, `import`, `open`, `exec`, `eval`, or any
-  system functions.
-- The formula string is parsed with Python's `ast` module to verify it contains
-  only allowed operations before evaluation.
-- Maximum formula length: 500 characters.
+- Нет доступа к `__builtins__`, `import`, `open`, `exec`, `eval` и любым системным функциям.
+- Строка формулы парсится модулем `ast` Python для проверки допустимости операций перед вычислением.
+- Максимальная длина формулы: 500 символов.
 
-## PostgreSQL Connection Security
+---
 
-- Database credentials are entered by the user in the UI and stored only in
-  `st.session_state` for the duration of the session. They are never written to
-  disk, logged, or included in reports.
-- All queries use SQLAlchemy's parameterized query interface to prevent SQL
-  injection:
+## Безопасность подключения к PostgreSQL
+
+- Учётные данные вводятся пользователем в интерфейсе и хранятся только в `st.session_state` на время сессии. Они никогда не записываются на диск, не логируются и не включаются в отчёты.
+- Все запросы используют параметризованный интерфейс SQLAlchemy для предотвращения SQL-инъекций:
 
 ```python
 with engine.connect() as conn:
     result = conn.execute(text("SELECT * FROM :table"), {"table": table_name})
 ```
 
-- Connection strings are built programmatically -- never concatenated from
-  user input.
-- The application uses read-only queries (`SELECT` only). No `INSERT`,
-  `UPDATE`, `DELETE`, or DDL statements are issued.
+- Строки подключения формируются программно — никогда через конкатенацию пользовательского ввода.
+- Приложение использует только запросы на чтение (`SELECT`). Операции `INSERT`, `UPDATE`, `DELETE` и DDL-команды не выполняются.
 
-## Session Security
+---
 
-- Each Streamlit session is isolated. There is no shared state between users.
-- Session data is stored in memory and garbage-collected when the session ends.
-- No cookies, tokens, or authentication mechanisms are used (Streamlit handles
-  session management internally).
+## Безопасность сессии
 
-## Threat Model Summary
+- Каждая сессия Streamlit изолирована. Между пользователями нет общего состояния.
+- Данные сессии хранятся в памяти и освобождаются при завершении сессии.
+- Файлы cookies, токены и механизмы аутентификации не используются (управление сессиями обеспечивается Streamlit).
 
-| Threat                    | Mitigation                                       |
-|---------------------------|--------------------------------------------------|
-| Data exfiltration         | No network calls, all data local                 |
-| Malicious file upload     | Extension whitelist, size limit, no macro eval    |
-| SQL injection             | Parameterized queries via SQLAlchemy              |
-| Code injection via KPI    | AST-based formula validation, restricted namespace|
-| Memory exhaustion         | 200 MB file size limit                           |
-| Credential leakage        | In-memory only, never logged or exported         |
-| Cross-session data leak   | Isolated session state, no shared storage        |
+---
+
+## Модель угроз
+
+| Угроза | Защитная мера |
+|--------|---------------|
+| Утечка данных | Нет сетевых вызовов, все данные локальны |
+| Вредоносная загрузка файла | Белый список расширений, ограничение размера, макросы не выполняются |
+| SQL-инъекция | Параметризованные запросы через SQLAlchemy |
+| Инъекция кода через формулы | Валидация на основе AST, ограниченное пространство имён |
+| Исчерпание памяти | Ограничение размера файла: 200 МБ |
+| Утечка учётных данных | Только в памяти, никогда не логируются и не экспортируются |
+| Утечка данных между сессиями | Изолированное состояние сессии, нет общего хранилища |

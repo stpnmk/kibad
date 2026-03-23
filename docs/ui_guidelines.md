@@ -1,92 +1,100 @@
-# KIBAD UI/UX Guidelines
+# Руководство по UI/UX — KIBAD
 
-## Design Philosophy
+## Философия дизайна
 
-KIBAD follows a bank-friendly minimalistic design: clean layouts, neutral colors,
-professional typography, and no visual clutter. The interface should feel like an
-internal analytical tool used by business analysts, not a consumer web app.
+KIBAD придерживается минималистичного корпоративного стиля: чистые макеты, нейтральные цвета, профессиональная типографика, отсутствие визуального шума. Интерфейс должен восприниматься как внутренний аналитический инструмент для бизнес-аналитиков, а не как потребительское веб-приложение.
 
-## Color Palette
+---
 
-| Role           | Hex Code   | Usage                                      |
-|----------------|------------|--------------------------------------------|
-| Primary        | `#3498db`  | Buttons, links, active tab indicators      |
-| Background     | `#fafafa`  | Page background, card backgrounds          |
-| Text           | `#2c3e50`  | Body text, headings                        |
-| Secondary text | `#7f8c8d`  | Labels, captions, placeholder text         |
-| Success        | `#27ae60`  | Positive results, passed validations       |
-| Warning        | `#f39c12`  | Warnings, borderline results               |
-| Danger         | `#e74c3c`  | Errors, failed validations, p < 0.05       |
-| Surface        | `#ffffff`  | Cards, panels, modal backgrounds           |
-| Border         | `#ecf0f1`  | Dividers, table borders, card outlines     |
+## Цветовая палитра
 
-## Typography
+| Роль | Hex-код | Применение |
+|------|---------|------------|
+| Основной | `#3498db` | Кнопки, ссылки, индикаторы активной вкладки |
+| Фон страницы | `#fafafa` | Фон страницы, фон карточек |
+| Текст | `#2c3e50` | Основной текст, заголовки |
+| Вторичный текст | `#7f8c8d` | Метки, подписи, текст-заменитель |
+| Успех | `#27ae60` | Положительные результаты, пройденные проверки |
+| Предупреждение | `#f39c12` | Предупреждения, пограничные результаты |
+| Ошибка | `#e74c3c` | Ошибки, непройденные проверки, p < 0,05 |
+| Поверхность | `#ffffff` | Карточки, панели, фон модальных окон |
+| Граница | `#ecf0f1` | Разделители, границы таблиц, контуры карточек |
 
-- **Headings**: System sans-serif stack (system-ui, -apple-system, Segoe UI).
-  Page titles use `st.title()`, section headers use `st.header()` and
-  `st.subheader()`.
-- **Body text**: 14-16px, `#2c3e50` color, 1.5 line height.
-- **Monospace**: Used for numeric values in tables and code blocks.
-- **No decorative fonts**: consistency and readability are prioritized.
+---
 
-## Page Layout
+## Типографика
 
-### Navigation
+- **Заголовки**: системный стек без засечек (system-ui, -apple-system, Segoe UI). Заголовки страниц — `st.title()`, разделы — `st.header()` и `st.subheader()`.
+- **Основной текст**: 14–16px, цвет `#2c3e50`, межстрочный интервал 1,5.
+- **Моноширинный шрифт**: используется для числовых значений в таблицах и блоках кода.
+- **Декоративных шрифтов нет**: приоритет — единообразие и читаемость.
 
-The left sidebar contains navigation to all 10 pages in logical workflow order:
+---
 
-```
-1. Data             -- Load data
-2. Prepare          -- Clean & transform
-3. GroupAggregate    -- Aggregate
-4. Explore          -- Visual EDA
-5. Tests            -- Hypothesis testing
-6. TimeSeries       -- Time series analysis
-7. Attribution      -- Factor attribution
-8. Simulation       -- What-if scenarios
-9. Report           -- Export results
-10. Help            -- Documentation
-```
+## Структура страницы
 
-This order reflects the natural analysis workflow: load, clean, transform,
-analyze, export.
+### Навигация
 
-### Main Workspace
-
-Each page follows a consistent layout pattern:
+Левая боковая панель содержит навигацию ко всем 20 страницам в логическом порядке рабочего процесса анализа данных:
 
 ```
-+--sidebar--+------------------main area-------------------+
-|            |                                              |
-| Settings   |  [Tab 1] [Tab 2] [Tab 3]                    |
-| & config   |  +------------------------------------------+|
-|            |  |                                          ||
-| Parameters |  |  Content area                            ||
-|            |  |  (charts, tables, results)               ||
-| Filters    |  |                                          ||
-|            |  +------------------------------------------+|
-| Actions    |  |  Status bar / messages                   ||
-+------------+----------------------------------------------+
+0.  Старт              — Начало работы
+1.  Данные             — Загрузка данных
+2.  Подготовка         — Очистка и трансформация
+3.  Группировка        — Агрегация
+4.  Объединение        — Слияние датасетов
+5.  Исследование       — Визуальный EDA
+6.  Тесты              — Статистические тесты
+7.  Временные ряды     — Анализ временных рядов
+8.  Атрибуция          — Факторный анализ
+9.  Моделирование      — Сценарный анализ
+10. Отчёт              — Экспорт результатов
+11. Справка            — Документация
+12. Кластеризация      — Кластерный анализ
+14. Roll-Rate          — Матрицы переходов
+19. Сравнение          — Сравнение периодов
+20. Графики            — Конструктор визуализаций
+21. Пайплайн           — Автоматизация
+22. Текстовая аналитика — Анализ текстов
+24. Шаблоны            — Пошаговые сценарии
+25. Авто-аналитик      — Анализ одним кликом
 ```
 
-### Sidebar Usage
+### Основная рабочая область
 
-The sidebar is reserved for:
+Каждая страница следует единому шаблону компоновки:
 
-- **Settings**: parameters that affect the entire page (column selections,
-  date ranges, method choices).
-- **Filters**: data filters that apply to the current view.
-- **Actions**: buttons that trigger operations (run analysis, export).
-- **Status**: dataset info (row count, column count, data source).
+```
++--боковая панель--+------------------основная область-------------------+
+|                  |                                                      |
+| Настройки        |  [Вкладка 1] [Вкладка 2] [Вкладка 3]               |
+| и конфигурация   |  +----------------------------------------------------+|
+|                  |  |                                                  ||
+| Параметры        |  |  Рабочая область                                 ||
+|                  |  |  (графики, таблицы, результаты)                  ||
+| Фильтры          |  |                                                  ||
+|                  |  +----------------------------------------------------+|
+| Действия         |  |  Строка статуса / сообщения                     ||
++------------------+------------------------------------------------------+
+```
 
-Content and results always appear in the main area, never in the sidebar.
+### Использование боковой панели
 
-### Tab Pattern
+Боковая панель предназначена только для:
 
-Pages with multiple views use `st.tabs()`:
+- **Настроек**: параметры, влияющие на всю страницу (выбор колонок, диапазоны дат, выбор метода).
+- **Фильтров**: фильтры данных, применяемые к текущему представлению.
+- **Действий**: кнопки запуска операций (выполнить анализ, экспорт).
+- **Статуса**: информация о датасете (количество строк, столбцов, источник данных).
+
+Контент и результаты всегда отображаются в основной области, никогда — в боковой панели.
+
+### Шаблон вкладок
+
+Страницы с несколькими представлениями используют `st.tabs()`:
 
 ```python
-tab_chart, tab_table, tab_stats = st.tabs(["Chart", "Table", "Statistics"])
+tab_chart, tab_table, tab_stats = st.tabs(["График", "Таблица", "Статистика"])
 
 with tab_chart:
     st.plotly_chart(fig, use_container_width=True)
@@ -98,77 +106,78 @@ with tab_stats:
     st.write(summary_stats)
 ```
 
-## Component Patterns
+---
 
-### Buttons
+## Паттерны компонентов
 
-- **Primary action**: `st.button("Run Analysis", type="primary")` -- one per
-  page, placed prominently in the sidebar or at the top of the main area.
-- **Secondary actions**: `st.button("Reset")` -- default styling.
-- **Destructive actions**: red text or icon, always with confirmation.
+### Кнопки
 
-### Form Layout
+- **Основное действие**: `st.button("Запустить анализ", type="primary")` — одна на страницу, размещается заметно в боковой панели или вверху основной области.
+- **Вторичные действия**: `st.button("Сбросить")` — стиль по умолчанию.
+- **Деструктивные действия**: красный текст или иконка, всегда с подтверждением.
 
-Group related inputs using `st.form()` to prevent premature reruns:
+### Компоновка форм
+
+Группируйте связанные элементы ввода с помощью `st.form()` для предотвращения преждевременных перерисовок:
 
 ```python
 with st.form("analysis_form"):
-    metric = st.selectbox("Metric", options=numeric_cols)
-    group = st.selectbox("Group by", options=categorical_cols)
-    alpha = st.slider("Significance level", 0.01, 0.10, 0.05)
-    submitted = st.form_submit_button("Run", type="primary")
+    metric = st.selectbox("Метрика", options=numeric_cols)
+    group = st.selectbox("Группировать по", options=categorical_cols)
+    alpha = st.slider("Уровень значимости", 0.01, 0.10, 0.05)
+    submitted = st.form_submit_button("Запустить", type="primary")
 ```
 
-### Data Display
+### Отображение данных
 
-- **DataFrames**: use `st.dataframe()` with `use_container_width=True`.
-  Highlight key columns with `column_config`.
-- **Metrics**: use `st.metric()` for single KPIs with delta indicators.
-- **Charts**: use `st.plotly_chart()` with `use_container_width=True`. Set
-  consistent Plotly template across all pages.
+- **DataFrames**: используйте `st.dataframe()` с `use_container_width=True`. Выделяйте ключевые колонки через `column_config`.
+- **Метрики**: используйте `st.metric()` для отдельных KPI с индикаторами изменения.
+- **Графики**: используйте `st.plotly_chart()` с `use_container_width=True`. Применяйте единый шаблон Plotly на всех страницах.
 
-### Status Messages
+### Статусные сообщения
 
-| Type      | Component             | Usage                            |
-|-----------|-----------------------|----------------------------------|
-| Success   | `st.success()`        | Operation completed              |
-| Warning   | `st.warning()`        | Non-critical issue               |
-| Error     | `st.error()`          | Operation failed                 |
-| Info      | `st.info()`           | Neutral information              |
+| Тип | Компонент | Применение |
+|-----|-----------|------------|
+| Успех | `st.success()` | Операция выполнена успешно |
+| Предупреждение | `st.warning()` | Некритическая проблема |
+| Ошибка | `st.error()` | Операция не выполнена |
+| Информация | `st.info()` | Нейтральная информация |
 
-### Expanders
+### Раскрывающиеся блоки
 
-Use `st.expander()` for optional details that should not clutter the main view:
+Используйте `st.expander()` для опциональных деталей, которые не должны перегружать основной вид:
 
-- Methodology explanations.
-- Full statistical output.
-- Debug information.
+- Пояснения методологии.
+- Полный статистический вывод.
+- Отладочная информация.
 
-## Localization (i18n)
+---
 
-KIBAD supports Russian as the primary language with English fallback. All
-user-facing strings are managed through `core/i18n.py`.
+## Локализация (i18n)
 
-### Rules
+KIBAD поддерживает русский язык как основной с английским в качестве резервного. Все строки интерфейса управляются через `core/i18n.py`.
 
-- All UI labels, button texts, messages, and tooltips use translated strings.
-- Error messages include both a user-friendly description and a technical detail
-  in an expander.
-- Column names from user data are displayed as-is (not translated).
-- Chart axis labels use the original column names.
+### Правила
 
-### Implementation
+- Все метки элементов управления, тексты кнопок, сообщения и подсказки используют переводимые строки.
+- Сообщения об ошибках содержат как понятное пользователю описание, так и технические детали в раскрывающемся блоке.
+- Названия колонок из пользовательских данных отображаются как есть (не переводятся).
+- Подписи осей графиков используют исходные имена колонок.
+
+### Реализация
 
 ```python
 from core.i18n import t
 
-st.header(t("explore.title"))  # Returns Russian or English string
+st.header(t("explore.title"))  # Возвращает строку на русском или английском
 st.button(t("common.run"))
 ```
 
-## Chart Styling
+---
 
-All Plotly charts use a consistent theme:
+## Стилизация графиков
+
+Все графики Plotly используют единую тему:
 
 ```python
 CHART_TEMPLATE = {
@@ -183,38 +192,42 @@ CHART_TEMPLATE = {
 }
 ```
 
-### Chart rules
+### Правила для графиков
 
-- Always set `use_container_width=True` for responsive sizing.
-- Include axis labels with units where applicable.
-- Use hover tooltips for detailed information.
-- Limit the number of series to 8-10 for readability.
-- Export capability via kaleido (PNG/SVG) for reports.
+- Всегда устанавливайте `use_container_width=True` для адаптивного размера.
+- Включайте подписи осей с единицами измерения где применимо.
+- Используйте всплывающие подсказки для детальной информации.
+- Ограничивайте количество рядов данных до 8–10 для читаемости.
+- Экспорт через kaleido (PNG/SVG) для включения в отчёты.
 
-## Responsive Behavior
+---
 
-Streamlit handles responsiveness natively. Follow these guidelines:
+## Адаптивность
 
-- Avoid fixed pixel widths -- use `use_container_width=True`.
-- Use `st.columns()` for side-by-side layouts (2-3 columns maximum).
-- On narrow screens, columns stack vertically automatically.
-- Test the interface at 1280px and 1920px widths.
+Streamlit обеспечивает адаптивность нативно. Следуйте этим правилам:
 
-## Accessibility
+- Избегайте фиксированных значений в пикселях — используйте `use_container_width=True`.
+- Используйте `st.columns()` для компоновки бок о бок (максимум 2–3 колонки).
+- На узких экранах колонки автоматически выстраиваются вертикально.
+- Тестируйте интерфейс при ширинах 1280px и 1920px.
 
-- Use descriptive labels on all form elements.
-- Provide alt text context in chart titles and descriptions.
-- Maintain sufficient color contrast (WCAG AA: 4.5:1 for text).
-- Do not rely on color alone to convey information -- use shapes, labels,
-  or patterns as secondary indicators.
+---
 
-## Anti-Patterns
+## Доступность
 
-Avoid these common mistakes:
+- Используйте описательные метки для всех элементов форм.
+- Указывайте контекст в заголовках и описаниях графиков.
+- Обеспечивайте достаточный контраст цветов (WCAG AA: 4,5:1 для текста).
+- Не полагайтесь только на цвет для передачи информации — используйте формы, метки или паттерны в качестве дополнительных индикаторов.
 
-- Placing results in the sidebar (sidebar is for inputs only).
-- Using more than 3 levels of nesting (tabs within expanders within columns).
-- Showing raw tracebacks to users (wrap in try/except, show friendly message).
-- Auto-running expensive computations on every widget change (use forms or
-  explicit run buttons).
-- Using custom CSS/HTML injection unless absolutely necessary.
+---
+
+## Антипаттерны
+
+Избегайте следующих распространённых ошибок:
+
+- Размещение результатов в боковой панели (боковая панель только для элементов управления).
+- Более трёх уровней вложенности (вкладки внутри раскрывающихся блоков внутри колонок).
+- Показ пользователю необработанных трейсбэков (оборачивайте в try/except, выводите понятное сообщение).
+- Автоматический запуск затратных вычислений при каждом изменении виджета (используйте формы или явные кнопки запуска).
+- Внедрение кастомного CSS/HTML, если без этого можно обойтись.
