@@ -47,9 +47,10 @@ all_cols = list(df.columns)
 show_pending_notification()
 st.markdown(f"**Размер:** {df.shape[0]:,} строк × {df.shape[1]} колонок")
 
-tab_auto, tab_quality, tab_ts, tab_dist, tab_corr, tab_pairplot, tab_pivot, tab_waterfall, tab_stl, tab_kpi, tab_profile = st.tabs([
+tab_auto, tab_quality, tab_ts, tab_dist, tab_corr, tab_pairplot, tab_pivot, tab_waterfall, tab_stl, tab_kpi, tab_profile, tab_pareto, tab_yoy = st.tabs([
     "🤖 Авто-анализ", "🏥 Качество данных",
     "⏱️ Временные ряды", "📊 Распределения", "🔗 Корреляции", "🔀 Попарные графики", "📋 Сводная таблица", "🌊 Водопад", "📈 STL-декомпозиция", "🎯 KPI-треккер", "📋 Профиль данных",
+    "📊 Парето-анализ", "📅 YoY / MoM",
 ])
 
 # ---------------------------------------------------------------------------
@@ -849,3 +850,226 @@ with tab_profile:
                     fig_vc.update_layout(template="plotly_white", height=250,
                                          margin=dict(l=10, r=10, t=35, b=10))
                     st.plotly_chart(fig_vc, use_container_width=True)
+
+# ---------------------------------------------------------------------------
+# Pareto Analysis (80/20)
+# ---------------------------------------------------------------------------
+with tab_pareto:
+    section_header("Парето-анализ (правило 80/20)")
+    st.markdown(
+        "Парето-анализ помогает выявить немногие ключевые категории, которые вносят "
+        "наибольший вклад в общий результат (принцип 80/20)."
+    )
+
+    if not cat_cols:
+        st.info("Для Парето-анализа необходим хотя бы один категориальный столбец.")
+    elif not num_cols:
+        st.info("Для Парето-анализа необходим хотя бы один числовой столбец.")
+    else:
+        _par_c1, _par_c2 = st.columns(2)
+        with _par_c1:
+            pareto_cat = st.selectbox("Категориальный столбец", cat_cols, key="pareto_cat")
+        with _par_c2:
+            pareto_val = st.selectbox("Числовой столбец (значение)", num_cols, key="pareto_val")
+
+        if st.button("Построить Парето-анализ", type="primary", key="btn_pareto"):
+            # Group, sum, sort descending
+            pareto_df = (
+                df.groupby(pareto_cat, dropna=False)[pareto_val]
+                .sum()
+                .reset_index()
+                .sort_values(pareto_val, ascending=False)
+                .reset_index(drop=True)
+            )
+            pareto_df.columns = ["Категория", "Значение"]
+            total = pareto_df["Значение"].sum()
+
+            if total == 0:
+                st.warning("Суммарное значение равно нулю — Парето-анализ невозможен.")
+            else:
+                pareto_df["Кумулятивная сумма"] = pareto_df["Значение"].cumsum()
+                pareto_df["Кумулятивный %"] = (pareto_df["Кумулятивная сумма"] / total * 100).round(2)
+                pareto_df["В пределах 80%"] = pareto_df["Кумулятивный %"].shift(1, fill_value=0) < 80
+
+                # Count categories making up 80%
+                n_in_80 = int(pareto_df["В пределах 80%"].sum())
+                n_total_cats = len(pareto_df)
+                pct_cats = round(n_in_80 / n_total_cats * 100, 1) if n_total_cats > 0 else 0
+
+                # Pareto chart: bars + cumulative line
+                fig_pareto = go.Figure()
+                colors = [
+                    "#2ecc71" if in80 else "#bdc3c7"
+                    for in80 in pareto_df["В пределах 80%"]
+                ]
+                fig_pareto.add_trace(go.Bar(
+                    x=pareto_df["Категория"].astype(str),
+                    y=pareto_df["Значение"],
+                    name="Значение",
+                    marker_color=colors,
+                    yaxis="y",
+                ))
+                fig_pareto.add_trace(go.Scatter(
+                    x=pareto_df["Категория"].astype(str),
+                    y=pareto_df["Кумулятивный %"],
+                    name="Кумулятивный %",
+                    mode="lines+markers",
+                    line=dict(color="#e74c3c", width=2),
+                    marker=dict(size=5),
+                    yaxis="y2",
+                ))
+                # 80% threshold line
+                fig_pareto.add_hline(
+                    y=80, line_dash="dash", line_color="#3498db",
+                    opacity=0.7, yref="y2",
+                    annotation_text="80%", annotation_position="top right",
+                )
+                fig_pareto.update_layout(
+                    template="plotly_white",
+                    title=f"Парето-анализ: {pareto_cat} по {pareto_val}",
+                    yaxis=dict(title="Значение"),
+                    yaxis2=dict(
+                        title="Кумулятивный %",
+                        overlaying="y",
+                        side="right",
+                        range=[0, 105],
+                    ),
+                    xaxis=dict(title="Категория"),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                    height=500,
+                )
+                st.plotly_chart(fig_pareto, use_container_width=True)
+
+                # Interpretation
+                interpretation_box(
+                    "Интерпретация Парето-анализа",
+                    f"**{n_in_80} категорий из {n_total_cats} ({pct_cats}%)** составляют 80% "
+                    f"от общего значения столбца «{pareto_val}».\n\n"
+                    f"Зелёные столбцы — категории, входящие в 80% порог. "
+                    f"Красная линия — кумулятивный процент."
+                )
+
+                st.divider()
+
+                # Table
+                section_header("Таблица Парето")
+                display_df = pareto_df.copy()
+                display_df["В пределах 80%"] = display_df["В пределах 80%"].map({True: "✅", False: ""})
+                st.dataframe(display_df, use_container_width=True)
+
+                st.download_button(
+                    "⬇ Скачать Парето CSV",
+                    pareto_df.to_csv(index=False).encode(),
+                    file_name="pareto_analysis.csv",
+                )
+
+# ---------------------------------------------------------------------------
+# YoY / MoM Comparison
+# ---------------------------------------------------------------------------
+with tab_yoy:
+    section_header("Сравнение по периодам (YoY / MoM)")
+    st.markdown(
+        "Сравнение значений по годам (Year-over-Year) или месяцам (Month-over-Month) "
+        "для выявления трендов роста и спада."
+    )
+
+    if not dt_cols:
+        st.info("Для анализа YoY/MoM необходим хотя бы один столбец с датой. "
+                "Распознайте дату на странице **Подготовка**.")
+    elif not num_cols:
+        st.info("Для анализа YoY/MoM необходим хотя бы один числовой столбец.")
+    else:
+        _yoy_c1, _yoy_c2, _yoy_c3 = st.columns(3)
+        with _yoy_c1:
+            yoy_date_col = st.selectbox("Столбец даты", dt_cols, key="yoy_date")
+        with _yoy_c2:
+            yoy_val_col = st.selectbox("Числовой столбец", num_cols, key="yoy_val")
+        with _yoy_c3:
+            yoy_period = st.selectbox("Тип периода", ["Год (YoY)", "Месяц (MoM)"], key="yoy_period")
+
+        yoy_agg = st.selectbox("Агрегация", ["sum", "mean", "count", "median"], key="yoy_agg")
+
+        if st.button("Построить сравнение", type="primary", key="btn_yoy"):
+            _yoy_df = df[[yoy_date_col, yoy_val_col]].dropna().copy()
+            _yoy_df[yoy_date_col] = pd.to_datetime(_yoy_df[yoy_date_col], errors="coerce")
+            _yoy_df = _yoy_df.dropna(subset=[yoy_date_col])
+
+            if len(_yoy_df) < 2:
+                st.warning("Недостаточно данных для сравнения периодов.")
+            else:
+                if yoy_period == "Год (YoY)":
+                    _yoy_df["_period"] = _yoy_df[yoy_date_col].dt.year
+                    period_label = "Год"
+                else:
+                    _yoy_df["_period"] = _yoy_df[yoy_date_col].dt.to_period("M").astype(str)
+                    period_label = "Месяц"
+
+                agg_series = _yoy_df.groupby("_period")[yoy_val_col].agg(yoy_agg).reset_index()
+                agg_series.columns = [period_label, "Значение"]
+                agg_series = agg_series.sort_values(period_label).reset_index(drop=True)
+
+                # Compute changes
+                agg_series["Предыдущий период"] = agg_series["Значение"].shift(1)
+                agg_series["Абс. изменение"] = agg_series["Значение"] - agg_series["Предыдущий период"]
+                agg_series["% изменение"] = (
+                    (agg_series["Абс. изменение"] / agg_series["Предыдущий период"] * 100)
+                    .round(2)
+                )
+
+                # Bar chart with color-coded changes
+                fig_yoy = go.Figure()
+                colors = []
+                for _, row in agg_series.iterrows():
+                    change = row["Абс. изменение"]
+                    if pd.isna(change):
+                        colors.append("#95a5a6")  # grey for first period
+                    elif change >= 0:
+                        colors.append("#2ecc71")  # green
+                    else:
+                        colors.append("#e74c3c")  # red
+
+                fig_yoy.add_trace(go.Bar(
+                    x=agg_series[period_label].astype(str),
+                    y=agg_series["Значение"],
+                    marker_color=colors,
+                    text=agg_series["% изменение"].apply(
+                        lambda v: f"{v:+.1f}%" if pd.notna(v) else ""
+                    ),
+                    textposition="outside",
+                    name="Значение",
+                ))
+                fig_yoy.update_layout(
+                    template="plotly_white",
+                    title=f"{'YoY' if yoy_period == 'Год (YoY)' else 'MoM'} сравнение: {yoy_val_col} ({yoy_agg})",
+                    xaxis=dict(title=period_label),
+                    yaxis=dict(title=f"{yoy_val_col} ({yoy_agg})"),
+                    height=500,
+                )
+                st.plotly_chart(fig_yoy, use_container_width=True)
+
+                # Interpretation
+                valid_changes = agg_series["% изменение"].dropna()
+                if len(valid_changes) > 0:
+                    avg_change = valid_changes.mean()
+                    interpretation_box(
+                        "Интерпретация",
+                        f"Средний рост за период: **{avg_change:+.2f}%**\n\n"
+                        f"Зелёные столбцы — рост по сравнению с предыдущим периодом, "
+                        f"красные — снижение, серый — первый период (нет данных для сравнения)."
+                    )
+
+                st.divider()
+
+                # Comparison table
+                section_header("Таблица сравнения")
+                display_yoy = agg_series.copy()
+                display_yoy["Значение"] = display_yoy["Значение"].round(2)
+                display_yoy["Предыдущий период"] = display_yoy["Предыдущий период"].round(2)
+                display_yoy["Абс. изменение"] = display_yoy["Абс. изменение"].round(2)
+                st.dataframe(display_yoy, use_container_width=True)
+
+                st.download_button(
+                    "⬇ Скачать сравнение CSV",
+                    agg_series.to_csv(index=False).encode(),
+                    file_name="yoy_mom_comparison.csv",
+                )
