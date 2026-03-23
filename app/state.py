@@ -85,16 +85,16 @@ def add_dataset(name: str, df: pd.DataFrame) -> None:
         st.session_state["active_ds"] = name
 
 
-def dataset_selectbox(label: str = "Select dataset", key: str = "ds_select") -> str | None:
+def dataset_selectbox(label: str = "Select dataset", key: str = "ds_select", help: str | None = None) -> str | None:
     """Render a selectbox for choosing a dataset and return its name."""
     names = list_dataset_names()
     if not names:
-        st.info("No datasets loaded yet. Go to the **Data** page to upload one.")
+        st.info("Датасеты не загружены. Перейдите на страницу **Данные** для загрузки.")
         return None
     idx = 0
     active = st.session_state.get("active_ds")
     if active in names:
         idx = names.index(active)
-    chosen = st.selectbox(label, names, index=idx, key=key)
+    chosen = st.selectbox(label, names, index=idx, key=key, help=help)
     st.session_state["active_ds"] = chosen
     return chosen
