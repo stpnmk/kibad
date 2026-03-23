@@ -26,7 +26,8 @@ st.set_page_config(page_title="KIBAD – Прогнозирование", layout
 init_state()
 inject_all_css()
 
-page_header("7. Временные ряды", "Прогнозирование и анализ динамики", "📈")
+page_header("7. Временные ряды", "Прогнозирование и анализ динамики", "📈",
+            next_page="pages/10_Report.py", next_label="Генерация отчёта")
 
 # ---------------------------------------------------------------------------
 # Method guide

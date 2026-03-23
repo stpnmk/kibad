@@ -22,7 +22,8 @@ st.set_page_config(page_title="KIBAD – Данные", layout="wide")
 init_state()
 inject_all_css()
 
-page_header("1. Данные", "Загрузка и подключение источников данных", "📥")
+page_header("1. Данные", "Загрузка и подключение источников данных", "📥",
+            next_page="pages/2_Prepare.py", next_label="Подготовка данных")
 
 # ---------------------------------------------------------------------------
 # Upload tab

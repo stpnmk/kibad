@@ -31,6 +31,7 @@ def init_state() -> None:
         "acf_sarimax_suggestion": None,
         "pending_prepare_actions": {},
         "auto_scan_done": set(),
+        "onboarding_done": False,
     }
     for key, val in defaults.items():
         if key not in st.session_state:
@@ -83,6 +84,50 @@ def add_dataset(name: str, df: pd.DataFrame) -> None:
     st.session_state["prepared_dfs"][name] = df
     if st.session_state.get("active_ds") is None:
         st.session_state["active_ds"] = name
+
+
+def invalidate_dataset_cache(ds_name: str) -> None:
+    """Remove all cached analysis artefacts for *ds_name*.
+
+    Centralises cache invalidation so pages don't need scattered .pop() calls.
+    """
+    for cache_key in (
+        "data_quality_reports",
+        "quality_scores",
+        "auto_insights",
+        "auto_analysis",
+    ):
+        st.session_state.get(cache_key, {}).pop(ds_name, None)
+
+
+def has_unsaved_prepared(ds_name: str) -> bool:
+    """Return True if *ds_name* has a prepared version that differs from raw.
+
+    Used to warn users before switching datasets so they don't lose prepare work.
+    """
+    raw = st.session_state.get("datasets", {}).get(ds_name)
+    prep = st.session_state.get("prepared_dfs", {}).get(ds_name)
+    if raw is None or prep is None:
+        return False
+    # Different shape or content means unsaved preparation work
+    if raw.shape != prep.shape:
+        return True
+    return False
+
+
+def clear_analysis_results(ds_name: str) -> None:
+    """Drop forecast/test/attribution results that reference *ds_name*.
+
+    Call when a dataset is replaced or significantly modified so stale
+    analysis results aren't shown alongside new data.
+    """
+    for key in ("forecast_results", "test_results", "attribution_results"):
+        results = st.session_state.get(key, [])
+        st.session_state[key] = [
+            r for r in results
+            if not (isinstance(r, dict) and r.get("dataset") == ds_name)
+        ]
+    invalidate_dataset_cache(ds_name)
 
 
 def dataset_selectbox(label: str = "Select dataset", key: str = "ds_select", help: str | None = None) -> str | None:

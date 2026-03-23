@@ -10,91 +10,71 @@ ROOT = Path(__file__).parent.parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import numpy as np
+import pandas as pd
 import streamlit as st
-from app.state import init_state, list_dataset_names
+from app.state import init_state, list_dataset_names, store_dataset
 from app.styles import inject_all_css
 
 st.set_page_config(page_title="KIBAD – Старт", layout="wide")
 init_state()
 inject_all_css()
 
+
 # ---------------------------------------------------------------------------
-# Extra page-specific CSS
+# Onboarding banner for first-time users
 # ---------------------------------------------------------------------------
-st.markdown("""
-<style>
-@keyframes float-dot {
-  0%, 100% { transform: translateY(0); opacity: 0.15; }
-  50% { transform: translateY(-12px); opacity: 0.35; }
-}
-.hero-dot {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.6);
-  animation: float-dot 4s ease-in-out infinite;
-}
-.start-tile {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 22px 20px;
-  box-shadow: 0 2px 12px rgba(31,56,100,0.08);
-  height: 100%;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-}
-.start-tile:hover {
-  box-shadow: 0 8px 24px rgba(31,56,100,0.15);
-  transform: translateY(-2px);
-}
-.start-tile-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.3rem;
-  margin-bottom: 12px;
-}
-.start-tile-title {
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 5px;
-  font-family: Inter, sans-serif;
-}
-.start-tile-desc {
-  font-size: 0.81rem;
-  color: #64748b;
-  line-height: 1.5;
-  font-family: Inter, sans-serif;
-}
-.changelog-item {
-  display: flex;
-  gap: 14px;
-  padding: 14px 0;
-  border-bottom: 1px solid #f1f5f9;
-  align-items: flex-start;
-}
-.changelog-dot {
-  width: 10px;
-  height: 10px;
-  min-width: 10px;
-  border-radius: 50%;
-  margin-top: 5px;
-}
-.workflow-card {
-  background: linear-gradient(135deg, #f8faff 0%, #eff6ff 100%);
-  border: 1px solid #dbeafe;
-  border-radius: 12px;
-  padding: 20px 18px;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-}
-.workflow-card:hover {
-  box-shadow: 0 6px 20px rgba(37,99,235,0.12);
-  transform: translateY(-2px);
-}
-</style>
+if not st.session_state.get("onboarding_done", False) and not list_dataset_names():
+    st.markdown("""
+<div class="kibad-onboarding">
+  <div style="font-size:1.05rem;font-weight:800;color:#1e293b;margin-bottom:4px;font-family:Inter,sans-serif">
+    👋 Добро пожаловать в KIBAD!
+  </div>
+  <div style="font-size:0.88rem;color:#475569;margin-bottom:16px;font-family:Inter,sans-serif">
+    Три простых шага для первого анализа:
+  </div>
+  <div class="kibad-onboarding-step">
+    <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#1F3864 0%,#2563eb 100%);
+         color:white;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;flex-shrink:0">1</div>
+    <div><b>Загрузите данные</b> — CSV или Excel-файл на странице <b>1. Данные</b></div>
+  </div>
+  <div class="kibad-onboarding-step">
+    <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#7c3aed 0%,#a78bfa 100%);
+         color:white;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;flex-shrink:0">2</div>
+    <div><b>Очистите данные</b> — удалите дубликаты, заполните пропуски на странице <b>2. Подготовка</b></div>
+  </div>
+  <div class="kibad-onboarding-step">
+    <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#059669 0%,#10b981 100%);
+         color:white;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;flex-shrink:0">3</div>
+    <div><b>Запустите анализ</b> — одним кликом на странице <b>25. Авто-аналитик</b></div>
+  </div>
+</div>
 """, unsafe_allow_html=True)
+
+    _ob_c1, _ob_c2, _ob_c3 = st.columns([1, 1, 3])
+    with _ob_c1:
+        if st.button("📥 Загрузить данные", use_container_width=True, type="primary"):
+            st.switch_page("pages/1_Data.py")
+    with _ob_c2:
+        if st.button("🎲 Попробовать демо-данные", use_container_width=True):
+            # Generate a small sales demo dataset inline
+            _t = np.arange(24)
+            _df_demo = pd.DataFrame({
+                "date": pd.date_range("2022-01-01", periods=24, freq="MS"),
+                "revenue": np.round(1000 + 12 * _t + 200 * np.sin(2 * np.pi * _t / 12) + np.random.normal(0, 50, 24), 2),
+                "units": np.round(80 + 0.5 * _t + 15 * np.sin(2 * np.pi * _t / 12) + np.random.normal(0, 5, 24)).astype(int),
+                "segment": np.where(_t < 12, "Старый", "Новый"),
+            })
+            store_dataset("demo_sales", _df_demo, source="demo")
+            st.session_state["onboarding_done"] = True
+            st.success("✅ Демо-датасет «demo_sales» загружен (24 строки). Перейдите к анализу!")
+            st.rerun()
+    with _ob_c3:
+        if st.button("✕ Закрыть", use_container_width=False, help="Скрыть онбординг"):
+            st.session_state["onboarding_done"] = True
+            st.rerun()
+
+    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
 # Hero with gradient background and animated dots

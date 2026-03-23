@@ -554,6 +554,116 @@ hr {
     border-radius: 2px;
     opacity: 0.5;
 }
+
+/* ── Start page tiles ── */
+@keyframes float-dot {
+  0%, 100% { transform: translateY(0); opacity: 0.15; }
+  50% { transform: translateY(-12px); opacity: 0.35; }
+}
+.hero-dot {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.6);
+  animation: float-dot 4s ease-in-out infinite;
+}
+.start-tile {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 22px 20px;
+  box-shadow: 0 2px 12px rgba(31,56,100,0.08);
+  height: 100%;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.start-tile:hover {
+  box-shadow: 0 8px 24px rgba(31,56,100,0.15);
+  transform: translateY(-2px);
+}
+.start-tile-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  margin-bottom: 12px;
+}
+.start-tile-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 5px;
+  font-family: Inter, sans-serif;
+}
+.start-tile-desc {
+  font-size: 0.81rem;
+  color: #64748b;
+  line-height: 1.5;
+  font-family: Inter, sans-serif;
+}
+
+/* Changelog timeline */
+.changelog-item {
+  display: flex;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid #f1f5f9;
+  align-items: flex-start;
+}
+.changelog-dot {
+  width: 10px;
+  height: 10px;
+  min-width: 10px;
+  border-radius: 50%;
+  margin-top: 5px;
+}
+
+/* Workflow card */
+.workflow-card {
+  background: linear-gradient(135deg, #f8faff 0%, #eff6ff 100%);
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  padding: 20px 18px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.workflow-card:hover {
+  box-shadow: 0 6px 20px rgba(37,99,235,0.12);
+  transform: translateY(-2px);
+}
+
+/* Onboarding banner */
+.kibad-onboarding {
+  background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  padding: 24px 28px;
+  margin-bottom: 20px;
+}
+.kibad-onboarding-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e2e8f0;
+  font-family: Inter, sans-serif;
+}
+.kibad-onboarding-step:last-child {
+  border-bottom: none;
+}
+
+/* Next-step navigation bar */
+.kibad-next-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f0f4f8;
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: #475569;
+  font-family: Inter, sans-serif;
+}
 </style>
 """
 
@@ -697,8 +807,23 @@ def inject_all_css() -> None:
     st.markdown(_GLOBAL_CSS + _SIDEBAR_CSS, unsafe_allow_html=True)
 
 
-def page_header(title: str, subtitle: str = "", icon: str = "") -> None:
-    """Render a premium gradient-bordered page header with optional subtitle and breadcrumb style."""
+def page_header(
+    title: str,
+    subtitle: str = "",
+    icon: str = "",
+    next_page: str | None = None,
+    next_label: str | None = None,
+) -> None:
+    """Render a premium gradient-bordered page header.
+
+    Parameters
+    ----------
+    title:      Page title text.
+    subtitle:   Optional subtitle/description line.
+    icon:       Emoji icon shown before the title.
+    next_page:  Streamlit page path for the "next step" link (e.g. ``"pages/2_Prepare.py"``).
+    next_label: Label for the next-step button. Falls back to next_page basename.
+    """
     icon_html = f"<span style='margin-right:10px;font-size:1.5rem;vertical-align:middle'>{icon}</span>" if icon else ""
     sub_html = (
         f"<p style='margin:6px 0 0 0;font-size:0.92rem;color:#64748b;font-weight:400;"
@@ -706,7 +831,7 @@ def page_header(title: str, subtitle: str = "", icon: str = "") -> None:
         if subtitle else ""
     )
     st.markdown(
-        f"""<div style='margin-bottom:24px;padding-bottom:16px;
+        f"""<div style='margin-bottom:16px;padding-bottom:16px;
         border-bottom:2px solid transparent;
         background-image:linear-gradient(#f0f4f8,#f0f4f8),linear-gradient(135deg,#1F3864 0%,#2563eb 100%);
         background-origin:border-box;background-clip:padding-box,border-box;
@@ -716,6 +841,9 @@ def page_header(title: str, subtitle: str = "", icon: str = "") -> None:
         {icon_html}{title}</h1>{sub_html}</div>""",
         unsafe_allow_html=True,
     )
+    if next_page:
+        label = next_label or f"→ {next_page.split('/')[-1].split('_', 1)[-1].replace('.py', '')}"
+        st.page_link(next_page, label=f"➡ Следующий шаг: {label}")
 
 
 def section_header(title: str, icon: str = "") -> None:

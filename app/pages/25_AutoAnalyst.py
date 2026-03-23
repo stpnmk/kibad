@@ -30,7 +30,12 @@ except ImportError:
 
 from app.state import init_state, dataset_selectbox, get_active_df, store_prepared
 from app.styles import inject_all_css, page_header, section_header
-from app.components.ux import apply_recommendation_notification, queue_recommendation_notification, show_pending_notification
+from app.components.ux import (
+    apply_recommendation_notification,
+    queue_recommendation_notification,
+    show_pending_notification,
+    quality_score_badge,
+)
 
 # ---------------------------------------------------------------------------
 # Page config
@@ -105,22 +110,6 @@ def _zscore_outlier_count(s: pd.Series, threshold: float = 3.0) -> int:
     if sigma == 0:
         return 0
     return int(((vals - mu).abs() > threshold * sigma).sum())
-
-
-def _quality_badge(score: float) -> str:
-    if score >= 80:
-        return "Хорошее"
-    if score >= 50:
-        return "Требует внимания"
-    return "Проблемное"
-
-
-def _badge_color(score: float) -> str:
-    if score >= 80:
-        return "#28a745"
-    if score >= 50:
-        return "#ffc107"
-    return "#dc3545"
 
 
 def _card_html(text: str, color: str = "#17a2b8") -> str:
@@ -381,14 +370,7 @@ def _render_section2(df: pd.DataFrame, res: dict) -> None:
     """Раздел 2: Качество данных"""
     with st.expander("2. Качество данных", expanded=True):
         score = res["quality_score"]
-        badge = _quality_badge(score)
-        color = _badge_color(score)
-        st.markdown(
-            f'<div style="display:inline-block;background:{color};color:white;'
-            f'font-weight:700;font-size:1.1rem;padding:6px 18px;border-radius:20px;margin-bottom:12px;">'
-            f'Качество: {badge} ({score:.0f}/100)</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown(quality_score_badge(score), unsafe_allow_html=True)
 
         # Missing values chart
         missing = res["missing_per_col"]
@@ -726,7 +708,8 @@ def _render_section7(df: pd.DataFrame, res: dict) -> None:
 # Page layout
 # ---------------------------------------------------------------------------
 
-page_header("25. Авто-аналитик", "Полный анализ данных в один клик — без настройки", "🤖")
+page_header("25. Авто-аналитик", "Полный анализ данных в один клик — без настройки", "🤖",
+            next_page="pages/10_Report.py", next_label="Генерация отчёта")
 
 # Dataset selector
 ds_name = dataset_selectbox("Датасет", key="auto_analyst_ds")
@@ -782,8 +765,14 @@ cached = st.session_state["auto_analysis"].get(cache_key)
 if run_btn or cached is not None:
     if run_btn or cached is None:
         t0 = time.perf_counter()
+        _progress = st.progress(0, text="Инициализация анализа…")
+        _progress.progress(10, text="Профилирование данных…")
         with st.spinner("Выполняется авто-анализ…"):
+            _progress.progress(30, text="Вычисление статистик и корреляций…")
             result = run_analysis(df_active, depth=depth, focus=focus)
+            _progress.progress(80, text="Генерация рекомендаций…")
+        _progress.progress(100, text="Готово!")
+        _progress.empty()
         elapsed = time.perf_counter() - t0
         st.session_state["auto_analysis"][cache_key] = {
             "result": result,

@@ -28,7 +28,8 @@ from app.styles import inject_all_css, page_header, section_header
 st.set_page_config(page_title="KIBAD – Анализ", layout="wide")
 init_state()
 inject_all_css()
-page_header("5. Анализ данных", "Авто-инсайты, распределения, корреляции и профилирование", "🔎")
+page_header("5. Анализ данных", "Авто-инсайты, распределения, корреляции и профилирование", "🔎",
+            next_page="pages/6_Tests.py", next_label="Статистические тесты")
 
 chosen = dataset_selectbox("Датасет", key="explore_ds_sel")
 if not chosen:

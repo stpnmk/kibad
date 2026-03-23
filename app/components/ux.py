@@ -371,3 +371,113 @@ def show_pending_notification() -> None:
 def apply_recommendation_notification(action: str, df_before, df_after, ds_name: str) -> None:
     """Kept for backwards compat — queues notification for display after rerun."""
     queue_recommendation_notification(action, df_before, df_after, ds_name)
+
+
+def before_after_card(df_before: "pd.DataFrame", df_after: "pd.DataFrame", operation: str) -> None:
+    """Show a before/after comparison card after a data transformation.
+
+    Displays row/column/null/duplicate counts with colour-coded deltas.
+    Extracted from 2_Prepare.py to avoid code duplication.
+    """
+    import pandas as pd
+
+    r_before, c_before = df_before.shape
+    r_after, c_after = df_after.shape
+    null_before = int(df_before.isnull().sum().sum())
+    null_after = int(df_after.isnull().sum().sum())
+    dup_before = int(df_before.duplicated().sum())
+    dup_after = int(df_after.duplicated().sum())
+
+    r_delta = r_after - r_before
+    c_delta = c_after - c_before
+    null_delta = null_after - null_before
+
+    def _fmt_delta(d: int, positive_is_good: bool = False) -> str:
+        if d == 0:
+            return "<span style='color:#6c757d'>без изменений</span>"
+        color = "#198754" if (d < 0) == (not positive_is_good) else "#dc3545"
+        sign = "+" if d > 0 else ""
+        return f"<span style='color:{color};font-weight:600'>{sign}{d:,}</span>"
+
+    st.markdown(
+        f"""<div style='background:#f8f9fa;border:1px solid #dee2e6;border-left:4px solid #1F3864;
+        border-radius:8px;padding:14px 18px;margin:10px 0'>
+        <div style='font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;
+        color:#1F3864;margin-bottom:10px'>📊 Результат операции: {operation}</div>
+        <div style='display:grid;grid-template-columns:repeat(4,1fr);gap:12px'>
+        <div><div style='font-size:0.72rem;color:#6c757d;text-transform:uppercase;letter-spacing:0.05em'>Строки</div>
+        <div style='font-size:1.1rem;font-weight:700'>{r_after:,}</div>
+        <div style='font-size:0.82rem'>было: {r_before:,} → {_fmt_delta(r_delta)}</div></div>
+        <div><div style='font-size:0.72rem;color:#6c757d;text-transform:uppercase;letter-spacing:0.05em'>Колонки</div>
+        <div style='font-size:1.1rem;font-weight:700'>{c_after}</div>
+        <div style='font-size:0.82rem'>было: {c_before} → {_fmt_delta(c_delta, positive_is_good=True)}</div></div>
+        <div><div style='font-size:0.72rem;color:#6c757d;text-transform:uppercase;letter-spacing:0.05em'>Пропуски</div>
+        <div style='font-size:1.1rem;font-weight:700'>{null_after:,}</div>
+        <div style='font-size:0.82rem'>было: {null_before:,} → {_fmt_delta(null_delta)}</div></div>
+        <div><div style='font-size:0.72rem;color:#6c757d;text-transform:uppercase;letter-spacing:0.05em'>Дубликаты</div>
+        <div style='font-size:1.1rem;font-weight:700'>{dup_after:,}</div>
+        <div style='font-size:0.82rem'>было: {dup_before:,} → {_fmt_delta(dup_after - dup_before)}</div></div>
+        </div></div>""",
+        unsafe_allow_html=True,
+    )
+
+
+def quality_score_badge(score: float) -> str:
+    """Return an HTML badge string for a data quality score (0–100).
+
+    Usage::
+
+        st.markdown(quality_score_badge(87.5), unsafe_allow_html=True)
+    """
+    if score >= 80:
+        label, color = "Хорошее", "#28a745"
+    elif score >= 50:
+        label, color = "Требует внимания", "#ffc107"
+    else:
+        label, color = "Проблемное", "#dc3545"
+    return (
+        f'<div style="display:inline-block;background:{color};color:white;'
+        f'font-weight:700;font-size:1.1rem;padding:6px 18px;border-radius:20px;margin-bottom:12px;">'
+        f'Качество: {label} ({score:.0f}/100)</div>'
+    )
+
+
+def dataframe_preview(df: "pd.DataFrame", max_rows: int = 5, caption: str = "") -> None:
+    """Render a compact dataset preview: 4 key metrics + head() table + schema.
+
+    Replaces repeated preview patterns across 1_Data.py and 25_AutoAnalyst.py.
+    """
+    import pandas as pd
+
+    if df is None or df.empty:
+        st.info("Датасет пуст.")
+        return
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Строк", f"{len(df):,}")
+    c2.metric("Столбцов", len(df.columns))
+    c3.metric("Числовых", len(df.select_dtypes(include="number").columns))
+    c4.metric("Пропусков", f"{df.isnull().sum().sum():,}")
+
+    if caption:
+        st.caption(caption)
+    st.dataframe(df.head(max_rows), use_container_width=True)
+
+
+def no_data_placeholder(data_page: str = "pages/1_Data.py") -> None:
+    """Render a consistent empty-state message when no dataset is loaded.
+
+    Replaces scattered st.info / st.warning / st.stop() patterns across pages.
+    Call this and then ``st.stop()`` to halt page rendering.
+    """
+    st.markdown(
+        """<div style='text-align:center;padding:48px 24px'>
+        <div style='font-size:3rem;line-height:1;margin-bottom:16px;opacity:0.5'>📂</div>
+        <div style='font-size:1.05rem;font-weight:600;color:#475569;margin-bottom:8px;
+             font-family:Inter,sans-serif'>Данные не загружены</div>
+        <div style='font-size:0.88rem;color:#94a3b8;font-family:Inter,sans-serif'>
+          Перейдите на страницу <b>1. Данные</b>, загрузите CSV/Excel-файл и возвращайтесь сюда.
+        </div></div>""",
+        unsafe_allow_html=True,
+    )
+    st.page_link(data_page, label="📥 Перейти к загрузке данных", use_container_width=False)

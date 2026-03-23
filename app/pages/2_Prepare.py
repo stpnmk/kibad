@@ -12,10 +12,10 @@ import pandas as pd
 import streamlit as st
 from datetime import datetime
 
-from app.state import init_state, dataset_selectbox, get_active_df, store_prepared
+from app.state import init_state, dataset_selectbox, get_active_df, store_prepared, invalidate_dataset_cache
 from core.data import apply_type_overrides
 from core.autoqc import recommend_preprocessing
-from app.components.ux import recommendation_card, show_pending_notification
+from app.components.ux import recommendation_card, show_pending_notification, before_after_card
 from core.prepare import (
     parse_dates, resample_timeseries, impute_missing, remove_outliers,
     deduplicate, add_lags, add_rolling, add_ema, add_buckets, normalize,
@@ -28,48 +28,6 @@ init_state()
 inject_all_css()
 
 
-def _before_after_card(df_before, df_after, operation: str) -> None:
-    """Show a before/after comparison card after a transformation."""
-    import pandas as pd
-    r_before, c_before = df_before.shape
-    r_after, c_after = df_after.shape
-    null_before = int(df_before.isnull().sum().sum())
-    null_after = int(df_after.isnull().sum().sum())
-    dup_before = int(df_before.duplicated().sum())
-    dup_after = int(df_after.duplicated().sum())
-
-    r_delta = r_after - r_before
-    c_delta = c_after - c_before
-    null_delta = null_after - null_before
-
-    def _fmt_delta(d, positive_is_good=False):
-        if d == 0:
-            return "<span style='color:#6c757d'>без изменений</span>"
-        color = "#198754" if (d < 0) == (not positive_is_good) else "#dc3545"
-        sign = "+" if d > 0 else ""
-        return f"<span style='color:{color};font-weight:600'>{sign}{d:,}</span>"
-
-    st.markdown(
-        f"""<div style='background:#f8f9fa;border:1px solid #dee2e6;border-left:4px solid #1F3864;
-        border-radius:8px;padding:14px 18px;margin:10px 0'>
-        <div style='font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;
-        color:#1F3864;margin-bottom:10px'>📊 Результат операции: {operation}</div>
-        <div style='display:grid;grid-template-columns:repeat(4,1fr);gap:12px'>
-        <div><div style='font-size:0.72rem;color:#6c757d;text-transform:uppercase;letter-spacing:0.05em'>Строки</div>
-        <div style='font-size:1.1rem;font-weight:700'>{r_after:,}</div>
-        <div style='font-size:0.82rem'>было: {r_before:,} → {_fmt_delta(r_delta)}</div></div>
-        <div><div style='font-size:0.72rem;color:#6c757d;text-transform:uppercase;letter-spacing:0.05em'>Колонки</div>
-        <div style='font-size:1.1rem;font-weight:700'>{c_after}</div>
-        <div style='font-size:0.82rem'>было: {c_before} → {_fmt_delta(c_delta, positive_is_good=True)}</div></div>
-        <div><div style='font-size:0.72rem;color:#6c757d;text-transform:uppercase;letter-spacing:0.05em'>Пропуски</div>
-        <div style='font-size:1.1rem;font-weight:700'>{null_after:,}</div>
-        <div style='font-size:0.82rem'>было: {null_before:,} → {_fmt_delta(null_delta)}</div></div>
-        <div><div style='font-size:0.72rem;color:#6c757d;text-transform:uppercase;letter-spacing:0.05em'>Дубликаты</div>
-        <div style='font-size:1.1rem;font-weight:700'>{dup_after:,}</div>
-        <div style='font-size:0.82rem'>было: {dup_before:,} → {_fmt_delta(dup_after - dup_before)}</div></div>
-        </div></div>""",
-        unsafe_allow_html=True,
-    )
 
 with st.sidebar:
     st.divider()
@@ -97,7 +55,8 @@ with st.sidebar:
             unsafe_allow_html=True,
         )
 
-page_header("2. Подготовка данных", "Очистка, трансформация и обогащение", "🔧")
+page_header("2. Подготовка данных", "Очистка, трансформация и обогащение", "🔧",
+            next_page="pages/5_Explore.py", next_label="Разведочный анализ")
 show_pending_notification()
 
 chosen = dataset_selectbox("Датасет для обработки", key="prep_ds_sel")
@@ -227,10 +186,7 @@ if qc and qc.get("severity") != "ok":
                     except Exception:
                         pass
                 store_prepared(chosen, df_work)
-                # Invalidate caches
-                st.session_state.get("data_quality_reports", {}).pop(chosen, None)
-                st.session_state.get("quality_scores", {}).pop(chosen, None)
-                st.session_state.get("auto_insights", {}).pop(chosen, None)
+                invalidate_dataset_cache(chosen)
                 # Log
                 if "transform_logs" not in st.session_state:
                     st.session_state["transform_logs"] = {}
@@ -276,9 +232,7 @@ if qc and qc.get("severity") != "ok":
                     df_before = work_df.copy()
                     df_work = _apply_single_rec(work_df.copy(), rec)
                     store_prepared(chosen, df_work)
-                    st.session_state.get("data_quality_reports", {}).pop(chosen, None)
-                    st.session_state.get("quality_scores", {}).pop(chosen, None)
-                    st.session_state.get("auto_insights", {}).pop(chosen, None)
+                    invalidate_dataset_cache(chosen)
                     st.session_state["transform_logs"].setdefault(chosen, []).append({
                         "operation": f"{action_label}{col_label}",
                         "rows_before": len(df_before),
@@ -338,7 +292,7 @@ with st.expander("2. 🔠 Применение переопределений т
             work_df = apply_type_overrides(work_df, overrides)
             store_prepared(chosen, work_df)
             st.success(f"Применено {len(overrides)} переопределений типов.")
-            _before_after_card(_work_df_snapshot, work_df, "Переопределение типов данных")
+            before_after_card(_work_df_snapshot, work_df, "Переопределение типов данных")
             st.dataframe(work_df.dtypes.rename("dtype").reset_index(), use_container_width=True)
     else:
         st.info("Переопределения типов не заданы. Перейдите в раздел **Данные → Переопределения типов**.")
@@ -356,7 +310,7 @@ with st.expander("3. 📅 Парсинг дат", expanded=False):
             work_df = parse_dates(work_df, dcol, tz_strip=tz_strip)
             store_prepared(chosen, work_df)
             st.success(f"Столбец '{dcol}' распознан. dtype={work_df[dcol].dtype}")
-            _before_after_card(_work_df_snapshot, work_df, f"Парсинг дат: {dcol}")
+            before_after_card(_work_df_snapshot, work_df, f"Парсинг дат: {dcol}")
         except Exception as e:
             st.error(f"Ошибка парсинга дат: {e}")
 
@@ -383,7 +337,7 @@ with st.expander("4. 🩹 Заполнение пропущенных значе
             work_df = impute_missing(work_df, columns=impute_cols, method=method_map[impute_method])
             store_prepared(chosen, work_df)
             st.success(f"Заполнение выполнено ({impute_method}). Форма: {work_df.shape}")
-            _before_after_card(_work_df_snapshot, work_df, f"Заполнение пропусков ({impute_method})")
+            before_after_card(_work_df_snapshot, work_df, f"Заполнение пропусков ({impute_method})")
         except Exception as e:
             st.error(f"Ошибка заполнения пропусков: {e}")
 
@@ -404,7 +358,7 @@ with st.expander("5. 🎯 Удаление выбросов", expanded=False):
                                              iqr_multiplier=out_mult, zscore_threshold=out_mult)
             store_prepared(chosen, work_df)
             st.success(f"Удалено {n_rem} строк с выбросами. Осталось: {work_df.shape[0]:,}")
-            _before_after_card(_work_df_snapshot, work_df, f"Удаление выбросов ({out_method})")
+            before_after_card(_work_df_snapshot, work_df, f"Удаление выбросов ({out_method})")
         except Exception as e:
             st.error(f"Ошибка удаления выбросов: {e}")
 
@@ -422,7 +376,7 @@ with st.expander("6. 🔂 Дедупликация", expanded=False):
                                      keep="first" if keep_opt == "Первое" else "last")
         store_prepared(chosen, work_df)
         st.success(f"Удалено {n_dup} дублирующихся строк. Осталось: {work_df.shape[0]:,}")
-        _before_after_card(_work_df_snapshot, work_df, "Дедупликация")
+        before_after_card(_work_df_snapshot, work_df, "Дедупликация")
 
 # ---------------------------------------------------------------------------
 # 7. Resampling
@@ -454,7 +408,7 @@ with st.expander("7. ⏱️ Ресэмплинг временного ряда",
                 store_prepared(chosen, resampled)
                 work_df = resampled
                 st.success(f"Ресэмплинг до {rs_freq_label}. Форма: {resampled.shape}")
-                _before_after_card(_work_df_snapshot, work_df, f"Ресэмплинг ({rs_freq_label})")
+                before_after_card(_work_df_snapshot, work_df, f"Ресэмплинг ({rs_freq_label})")
                 st.dataframe(resampled.head(10), use_container_width=True)
             except Exception as e:
                 st.error(f"Ошибка ресэмплинга: {e}")
@@ -482,7 +436,7 @@ with st.expander("8. ⚙️ Инженерия признаков", expanded=Fal
                 work_df = add_lags(work_df, lag_col, lags, group_col=grp)
                 store_prepared(chosen, work_df)
                 st.success(f"Добавлены лаги: {lags}. Форма: {work_df.shape}")
-                _before_after_card(_work_df_snapshot, work_df, f"Добавление лаг-признаков ({lag_col})")
+                before_after_card(_work_df_snapshot, work_df, f"Добавление лаг-признаков ({lag_col})")
             except Exception as e:
                 st.error(f"Ошибка лагов: {e}")
 
@@ -499,7 +453,7 @@ with st.expander("8. ⚙️ Инженерия признаков", expanded=Fal
                 work_df = add_rolling(work_df, roll_col, wins, func=roll_func, group_col=grp)
                 store_prepared(chosen, work_df)
                 st.success(f"Добавлены скользящие окна: {wins}. Форма: {work_df.shape}")
-                _before_after_card(_work_df_snapshot, work_df, f"Скользящие признаки ({roll_col}, {roll_func})")
+                before_after_card(_work_df_snapshot, work_df, f"Скользящие признаки ({roll_col}, {roll_func})")
             except Exception as e:
                 st.error(f"Ошибка скользящих признаков: {e}")
 
@@ -513,7 +467,7 @@ with st.expander("8. ⚙️ Инженерия признаков", expanded=Fal
                 work_df = add_ema(work_df, ema_col, spans)
                 store_prepared(chosen, work_df)
                 st.success(f"Добавлены EMA-периоды: {spans}. Форма: {work_df.shape}")
-                _before_after_card(_work_df_snapshot, work_df, f"Добавление EMA-признаков ({ema_col})")
+                before_after_card(_work_df_snapshot, work_df, f"Добавление EMA-признаков ({ema_col})")
             except Exception as e:
                 st.error(f"Ошибка EMA: {e}")
 
@@ -527,7 +481,7 @@ with st.expander("8. ⚙️ Инженерия признаков", expanded=Fal
                 work_df = add_buckets(work_df, bkt_col, n_quantiles=bkt_n, new_col=bkt_newcol)
                 store_prepared(chosen, work_df)
                 st.success(f"Добавлен бакет-столбец '{bkt_newcol}'. Форма: {work_df.shape}")
-                _before_after_card(_work_df_snapshot, work_df, f"Бакетизация: {bkt_newcol}")
+                before_after_card(_work_df_snapshot, work_df, f"Бакетизация: {bkt_newcol}")
             except Exception as e:
                 st.error(f"Ошибка бакетизации: {e}")
 
@@ -539,7 +493,7 @@ with st.expander("8. ⚙️ Инженерия признаков", expanded=Fal
             work_df = normalize(work_df, norm_cols, method=norm_method)
             store_prepared(chosen, work_df)
             st.success(f"Нормализовано {len(norm_cols)} столбцов.")
-            _before_after_card(_work_df_snapshot, work_df, f"Нормализация ({norm_method})")
+            before_after_card(_work_df_snapshot, work_df, f"Нормализация ({norm_method})")
 
     with fe_tab_interact:
         if len(num_cols_fe) >= 2:
@@ -553,7 +507,7 @@ with st.expander("8. ⚙️ Инженерия признаков", expanded=Fal
                     work_df = add_interaction(work_df, ia_a, ia_b, op=ia_op, new_col=ia_name)
                     store_prepared(chosen, work_df)
                     st.success(f"Добавлен столбец взаимодействия '{ia_name}'. Форма: {work_df.shape}")
-                    _before_after_card(_work_df_snapshot, work_df, f"Признак взаимодействия: {ia_name}")
+                    before_after_card(_work_df_snapshot, work_df, f"Признак взаимодействия: {ia_name}")
                 except Exception as e:
                     st.error(f"Ошибка взаимодействия: {e}")
         else:
@@ -680,7 +634,7 @@ with st.expander("9. ➕ Формулы — Построитель вычисл�
                     store_prepared(chosen, work_df)
                     _log_formula(chosen, arith_new_col, _rows_b, len(work_df))
                     st.success(f"Столбец '{arith_new_col}' добавлен. Форма: {work_df.shape}")
-                    _before_after_card(_work_df_snapshot, work_df, f"Вычисляемая колонка: {arith_new_col}")
+                    before_after_card(_work_df_snapshot, work_df, f"Вычисляемая колонка: {arith_new_col}")
                     _prev_cols = list(work_df.columns[:-4]) if len(work_df.columns) > 4 else list(work_df.columns[:-1])
                     _show_cols = list(work_df.columns[-3:]) + [arith_new_col] if arith_new_col not in list(work_df.columns[-3:]) else list(work_df.columns[-3:])
                     st.dataframe(work_df[_show_cols].head(5), use_container_width=True)
@@ -797,7 +751,7 @@ with st.expander("9. ➕ Формулы — Построитель вычисл�
                     store_prepared(chosen, work_df)
                     _log_formula(chosen, cond_new_col, _rows_b, len(work_df))
                     st.success(f"Столбец '{cond_new_col}' добавлен. Форма: {work_df.shape}")
-                    _before_after_card(_work_df_snapshot, work_df, f"Условная колонка: {cond_new_col}")
+                    before_after_card(_work_df_snapshot, work_df, f"Условная колонка: {cond_new_col}")
                     _show_cols = list(work_df.columns[-3:])
                     if cond_new_col not in _show_cols:
                         _show_cols = _show_cols[-2:] + [cond_new_col]
@@ -854,7 +808,7 @@ with st.expander("9. ➕ Формулы — Построитель вычисл�
                         for _nc in _added:
                             _log_formula(chosen, _nc, _rows_b, len(work_df))
                         st.success(f"Добавлено {len(_added)} колонок: {', '.join(_added)}. Форма: {work_df.shape}")
-                        _before_after_card(_work_df_snapshot, work_df, f"Дата → Признаки ({dt_src_col})")
+                        before_after_card(_work_df_snapshot, work_df, f"Дата → Признаки ({dt_src_col})")
                         st.dataframe(work_df[_added].head(5), use_container_width=True)
                         st.rerun()
                     except Exception as _e:
@@ -927,7 +881,7 @@ with st.expander("9. ➕ Формулы — Построитель вычисл�
                         store_prepared(chosen, work_df)
                         _log_formula(chosen, txt_new_col, _rows_b, len(work_df))
                         st.success(f"Столбец '{txt_new_col}' добавлен. Форма: {work_df.shape}")
-                        _before_after_card(_work_df_snapshot, work_df, f"Текст → Признак: {txt_new_col}")
+                        before_after_card(_work_df_snapshot, work_df, f"Текст → Признак: {txt_new_col}")
                         _show_cols = ([txt_src_col] if txt_src_col in work_df.columns else []) + [txt_new_col]
                         st.dataframe(work_df[_show_cols].head(5), use_container_width=True)
                         st.rerun()
@@ -983,7 +937,7 @@ with st.expander("9. ➕ Формулы — Построитель вычисл�
                         store_prepared(chosen, work_df)
                         _log_formula(chosen, par_new_col, _rows_b, len(work_df))
                         st.success(f"Столбец '{par_new_col}' добавлен. Форма: {work_df.shape}")
-                        _before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {par_new_col} (PAR)")
+                        before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {par_new_col} (PAR)")
                         st.dataframe(work_df[[par_overdue, par_total, par_new_col]].head(5), use_container_width=True)
                         st.rerun()
                     except Exception as _e: st.error(f"Ошибка вычисления: {_e}")
@@ -1006,7 +960,7 @@ with st.expander("9. ➕ Формулы — Построитель вычисл�
                         store_prepared(chosen, work_df)
                         _log_formula(chosen, npl_new_col, _rows_b, len(work_df))
                         st.success(f"Столбец '{npl_new_col}' добавлен. Форма: {work_df.shape}")
-                        _before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {npl_new_col} (Флаг NPL)")
+                        before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {npl_new_col} (Флаг NPL)")
                         st.dataframe(work_df[[npl_dpd_col, npl_new_col]].head(5), use_container_width=True)
                         st.rerun()
                     except Exception as _e: st.error(f"Ошибка вычисления: {_e}")
@@ -1031,7 +985,7 @@ with st.expander("9. ➕ Формулы — Построитель вычисл�
                         store_prepared(chosen, work_df)
                         _log_formula(chosen, dpd_new_col, _rows_b, len(work_df))
                         st.success(f"Столбец '{dpd_new_col}' добавлен. Форма: {work_df.shape}")
-                        _before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {dpd_new_col} (DPD Бакеты)")
+                        before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {dpd_new_col} (DPD Бакеты)")
                         st.dataframe(work_df[[dpd_col, dpd_new_col]].head(10), use_container_width=True)
                         st.rerun()
                     except Exception as _e: st.error(f"Ошибка вычисления: {_e}")
@@ -1058,7 +1012,7 @@ with st.expander("9. ➕ Формулы — Построитель вычисл�
                         store_prepared(chosen, work_df)
                         _log_formula(chosen, mi_new_col, _rows_b, len(work_df))
                         st.success(f"Столбец '{mi_new_col}' добавлен. Форма: {work_df.shape}")
-                        _before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {mi_new_col} (Процентный доход)")
+                        before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {mi_new_col} (Процентный доход)")
                         st.dataframe(work_df[[mi_bal_col, mi_rate_col, mi_new_col]].head(5), use_container_width=True)
                         st.rerun()
                     except Exception as _e: st.error(f"Ошибка вычисления: {_e}")
@@ -1083,7 +1037,7 @@ with st.expander("9. ➕ Формулы — Построитель вычисл�
                         store_prepared(chosen, work_df)
                         _log_formula(chosen, ltv_new_col, _rows_b, len(work_df))
                         st.success(f"Столбец '{ltv_new_col}' добавлен. Форма: {work_df.shape}")
-                        _before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {ltv_new_col} (LTV)")
+                        before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {ltv_new_col} (LTV)")
                         st.dataframe(work_df[[ltv_loan_col, ltv_coll_col, ltv_new_col]].head(5), use_container_width=True)
                         st.rerun()
                     except Exception as _e: st.error(f"Ошибка вычисления: {_e}")
@@ -1108,7 +1062,7 @@ with st.expander("9. ➕ Формулы — Построитель вычисл�
                         store_prepared(chosen, work_df)
                         _log_formula(chosen, rr_new_col, _rows_b, len(work_df))
                         st.success(f"Столбец '{rr_new_col}' добавлен. Форма: {work_df.shape}")
-                        _before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {rr_new_col} (Recovery Rate)")
+                        before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {rr_new_col} (Recovery Rate)")
                         st.dataframe(work_df[[rr_rec_col, rr_def_col, rr_new_col]].head(5), use_container_width=True)
                         st.rerun()
                     except Exception as _e: st.error(f"Ошибка вычисления: {_e}")
@@ -1133,7 +1087,7 @@ with st.expander("9. ➕ Формулы — Построитель вычисл�
                         store_prepared(chosen, work_df)
                         _log_formula(chosen, cti_new_col, _rows_b, len(work_df))
                         st.success(f"Столбец '{cti_new_col}' добавлен. Форма: {work_df.shape}")
-                        _before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {cti_new_col} (CTI)")
+                        before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {cti_new_col} (CTI)")
                         st.dataframe(work_df[[cti_cost_col, cti_inc_col, cti_new_col]].head(5), use_container_width=True)
                         st.rerun()
                     except Exception as _e: st.error(f"Ошибка вычисления: {_e}")
@@ -1157,7 +1111,7 @@ with st.expander("9. ➕ Формулы — Построитель вычисл�
                         store_prepared(chosen, work_df)
                         _log_formula(chosen, rank_new_col, _rows_b, len(work_df))
                         st.success(f"Столбец '{rank_new_col}' добавлен. Форма: {work_df.shape}")
-                        _before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {rank_new_col} (Ранг)")
+                        before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {rank_new_col} (Ранг)")
                         st.dataframe(work_df[[rank_col, rank_new_col]].head(5), use_container_width=True)
                         st.rerun()
                     except Exception as _e: st.error(f"Ошибка вычисления: {_e}")
@@ -1180,7 +1134,7 @@ with st.expander("9. ➕ Формулы — Построитель вычисл�
                         store_prepared(chosen, work_df)
                         _log_formula(chosen, ma_new_col, _rows_b, len(work_df))
                         st.success(f"Столбец '{ma_new_col}' добавлен. Форма: {work_df.shape}")
-                        _before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {ma_new_col} (Скользящее среднее)")
+                        before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {ma_new_col} (Скользящее среднее)")
                         st.dataframe(work_df[[ma_col, ma_new_col]].head(5), use_container_width=True)
                         st.rerun()
                     except Exception as _e: st.error(f"Ошибка вычисления: {_e}")
@@ -1202,7 +1156,7 @@ with st.expander("9. ➕ Формулы — Построитель вычисл�
                         store_prepared(chosen, work_df)
                         _log_formula(chosen, cs_new_col, _rows_b, len(work_df))
                         st.success(f"Столбец '{cs_new_col}' добавлен. Форма: {work_df.shape}")
-                        _before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {cs_new_col} (Кумулятивная сумма)")
+                        before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {cs_new_col} (Кумулятивная сумма)")
                         st.dataframe(work_df[[cs_col, cs_new_col]].head(5), use_container_width=True)
                         st.rerun()
                     except Exception as _e: st.error(f"Ошибка вычисления: {_e}")
@@ -1255,7 +1209,7 @@ with st.expander("9. ➕ Формулы — Построитель вычисл�
                         n2 = int(_vc.get(2, 0))
                         n3 = int(_vc.get(3, 0))
                         st.success(f"Стейджинг выполнен: Stage 1: {n1}, Stage 2: {n2}, Stage 3: {n3}")
-                        _before_after_card(_work_df_snapshot, work_df, f"IFRS 9 Стейджинг ({ifrs_out_col})")
+                        before_after_card(_work_df_snapshot, work_df, f"IFRS 9 Стейджинг ({ifrs_out_col})")
                         st.bar_chart(work_df[ifrs_out_col].value_counts().sort_index())
                         st.rerun()
                     except Exception as _e: st.error(f"Ошибка вычисления: {_e}")
@@ -1283,7 +1237,7 @@ with st.expander("9. ➕ Формулы — Построитель вычисл�
                         _log_formula(chosen, sicr_out_col, _rows_b, len(work_df))
                         _n_sicr = int(work_df[sicr_out_col].sum())
                         st.success(f"Столбец '{sicr_out_col}' добавлен. SICR = 1: {_n_sicr} строк ({_n_sicr/len(work_df)*100:.1f}%)")
-                        _before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {sicr_out_col} (Флаг SICR)")
+                        before_after_card(_work_df_snapshot, work_df, f"Банковская формула: {sicr_out_col} (Флаг SICR)")
                         st.dataframe(work_df[[sicr_dpd_col, sicr_dpd_prev_col, sicr_out_col]].head(5), use_container_width=True)
                         st.rerun()
                     except Exception as _e: st.error(f"Ошибка вычисления: {_e}")
