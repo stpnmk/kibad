@@ -75,7 +75,7 @@ with st.expander("⚙️ Настройки кластеризации", expande
         scale_features = st.checkbox("Нормализовать признаки (StandardScaler)", value=True, key="cluster_scale",
                                      help="Рекомендуется включить, если признаки имеют разные единицы измерения.")
         random_state = st.slider(
-            "Random state",
+            "Случайное состояние",
             min_value=0,
             max_value=100,
             value=42,

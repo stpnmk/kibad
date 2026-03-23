@@ -258,12 +258,12 @@ with tabs[1]:
 | > 0.8 | Большой |
 """)
 
-        st.markdown("---")
+        st.divider()
         st.markdown("**Cramér's V** (для хи-квадрат) — нормированная мера ассоциации категориальных переменных:")
         st.latex(r"V = \sqrt{\frac{\chi^2}{N \cdot (\min(r, c) - 1)}}")
         st.markdown("Диапазон: 0 (нет связи) до 1 (полная связь).")
 
-        st.markdown("---")
+        st.divider()
         st.markdown("**Cliff's delta** (для Манна–Уитни) — вероятностный размер эффекта:")
         st.latex(r"\delta = \frac{U_1 - U_2}{n_1 \cdot n_2}")
         st.markdown("""
@@ -603,12 +603,12 @@ S(t) растёт со скоростью μ, а не μ + σ²/2. Без неё
         st.latex(r"\text{VaR}_{\alpha} = P_{\alpha}(S_T)")
         st.markdown("Например, VaR₅% — это 5-й процентиль итогового значения. С вероятностью 95% потери не превысят эту величину.")
 
-        st.markdown("---")
+        st.divider()
         st.markdown("**Conditional VaR (CVaR)** — среднее значение в хвосте хуже VaR:")
         st.latex(r"\text{CVaR}_{\alpha} = \mathbb{E}[S_T \mid S_T \leq \text{VaR}_{\alpha}]")
         st.markdown("CVaR всегда хуже VaR и показывает «средний сценарий катастрофы».")
 
-        st.markdown("---")
+        st.divider()
         st.markdown("**Maximum Drawdown** — максимальное падение от пика до дна (на каждом пути):")
         st.latex(r"\text{MDD} = \max_{0 \leq t_1 \leq t_2 \leq T} \frac{S(t_1) - S(t_2)}{S(t_1)}")
         st.markdown("""

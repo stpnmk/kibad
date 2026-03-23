@@ -18,7 +18,7 @@ from core.autoqc import check_upload
 from app.components.ux import data_quality_banner
 from app.styles import inject_all_css, page_header, section_header
 
-st.set_page_config(page_title="KIBAD – Data", layout="wide")
+st.set_page_config(page_title="KIBAD – Данные", layout="wide")
 init_state()
 inject_all_css()
 

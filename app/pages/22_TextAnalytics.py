@@ -80,7 +80,7 @@ tabs = st.tabs([
 # TAB 1 — Statistics
 # ===========================================================================
 with tabs[0]:
-    st.markdown("### Обзор текстового столбца")
+    section_header("Обзор текстового столбца")
 
     c1, c2, c3, c4 = st.columns(4)
     avg_len = series.str.len().mean()
@@ -115,7 +115,7 @@ with tabs[0]:
 # TAB 2 — Word frequency
 # ===========================================================================
 with tabs[1]:
-    st.markdown("### Частота слов")
+    section_header("Частота слов")
 
     wf1, wf2 = st.columns(2)
     with wf1:
@@ -169,7 +169,7 @@ with tabs[1]:
                                file_name="word_freq.csv", mime="text/csv")
 
         # Bigrams
-        st.markdown("### Биграммы (пары слов)")
+        section_header("Биграммы (пары слов)")
 
         @st.cache_data(show_spinner=False)
         def get_bigrams(texts: tuple, min_len: int, sw: frozenset) -> list:
@@ -195,7 +195,7 @@ with tabs[1]:
 # TAB 3 — Search & Filter
 # ===========================================================================
 with tabs[2]:
-    st.markdown("### Поиск по ключевым словам")
+    section_header("Поиск по ключевым словам")
     st.caption("Найдите строки, содержащие определённые слова или фразы")
 
     s1, s2 = st.columns(2)
@@ -243,7 +243,7 @@ with tabs[2]:
 
     # Multi-keyword filter
     st.divider()
-    st.markdown("### Мультиключевой фильтр")
+    section_header("Мультиключевой фильтр")
     multi_kw = st.text_area("Ключевые слова (каждое с новой строки):", height=100,
                              key="txt_multi_kw",
                              placeholder="кредит\nпросрочка\nжалоба")
@@ -270,7 +270,7 @@ with tabs[2]:
 # TAB 4 — Keyword Categorization (KILLER FEATURE for banks)
 # ===========================================================================
 with tabs[3]:
-    st.markdown("### Категоризация по ключевым словам")
+    section_header("Категоризация по ключевым словам")
     st.caption(
         "Разметьте строки по категориям автоматически — "
         "укажите ключевые слова для каждой категории и получите новый столбец с метками."
@@ -349,7 +349,7 @@ with tabs[3]:
 # TAB 5 — String lengths
 # ===========================================================================
 with tabs[4]:
-    st.markdown("### Распределение длин строк")
+    section_header("Распределение длин строк")
 
     lengths = series.str.len()
 

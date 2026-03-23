@@ -36,7 +36,7 @@ with st.sidebar:
         key="lang_selector",
     )
     st.session_state["lang"] = lang
-    st.markdown("---")
+    st.divider()
     st.caption("v3.0 · Аналитика без кода")
 
 # ---------------------------------------------------------------------------

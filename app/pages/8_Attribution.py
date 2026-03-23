@@ -25,7 +25,7 @@ from core.attribution import (
 )
 from core.explore import plot_waterfall
 
-st.set_page_config(page_title="KIBAD – Factor Attribution", layout="wide")
+st.set_page_config(page_title="KIBAD – Атрибуция", layout="wide")
 init_state()
 inject_all_css()
 

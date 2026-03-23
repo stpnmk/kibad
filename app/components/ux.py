@@ -232,7 +232,7 @@ def dataset_stats_sidebar(df: "pd.DataFrame", ds_name: str = "") -> None:
         return
 
     with st.sidebar:
-        st.markdown("---")
+        st.divider()
         with st.expander(f"📊 Статистика: {ds_name or 'датасет'}", expanded=False):
             num_cols = df.select_dtypes(include="number").columns.tolist()
             cat_cols = df.select_dtypes(include=["object", "category"]).columns.tolist()

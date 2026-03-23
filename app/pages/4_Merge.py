@@ -19,7 +19,7 @@ from core.merge import (
 )
 from core.audit import log_event
 
-st.set_page_config(page_title="KIBAD – Merge", layout="wide")
+st.set_page_config(page_title="KIBAD – Объединение", layout="wide")
 init_state()
 inject_all_css()
 
