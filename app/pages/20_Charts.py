@@ -619,7 +619,7 @@ if not all_columns:
 # Top bar: chart type + build button in one row
 # ---------------------------------------------------------------------------
 
-top_col1, top_col2, top_col3 = st.columns([2, 2, 1])
+top_col1, top_col2 = st.columns([3, 1])
 with top_col1:
     chart_label = st.selectbox(
         "Тип графика",
@@ -628,11 +628,6 @@ with top_col1:
     )
     chart_key = CHART_KEY[chart_label]
 with top_col2:
-    st.markdown("<div style='margin-top:4px'></div>", unsafe_allow_html=True)
-    st.caption(
-        "📊 Базовые · Распределения · Части целого · Специальные · Расширенные"
-    )
-with top_col3:
     st.markdown("<div style='margin-top:28px'></div>", unsafe_allow_html=True)
     build_btn_top = st.button("▶ Построить", type="primary", use_container_width=True, key="build_btn_top")
 
@@ -897,6 +892,6 @@ with right:
 
     else:
         st.info(
-            "Выберите тип графика и настройте оси → нажмите **▶ Построить** (кнопка вверху или внизу левой панели).\n\n"
+            "Выберите тип графика и настройте оси → нажмите **▶ Построить** вверху страницы.\n\n"
             "💡 *Авто-предложение подскажет подходящий тип на основе типов данных*"
         )

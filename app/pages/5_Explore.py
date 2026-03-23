@@ -181,6 +181,7 @@ with tab_auto:
                     store_prepared(chosen, _df_new)
                     st.session_state.get("quality_scores", {}).pop(chosen, None)
                     st.session_state.get("auto_insights", {}).pop(chosen, None)
+                    st.session_state.get("data_quality_reports", {}).pop(chosen, None)
                     queue_recommendation_notification(_ai_rec["action"], _df_before, _df_new, chosen)
                     st.rerun()
 

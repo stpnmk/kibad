@@ -15,7 +15,7 @@ from datetime import datetime
 from app.state import init_state, dataset_selectbox, get_active_df, store_prepared
 from core.data import apply_type_overrides
 from core.autoqc import recommend_preprocessing
-from app.components.ux import recommendation_card
+from app.components.ux import recommendation_card, show_pending_notification
 from core.prepare import (
     parse_dates, resample_timeseries, impute_missing, remove_outliers,
     deduplicate, add_lags, add_rolling, add_ema, add_buckets, normalize,
@@ -98,6 +98,7 @@ with st.sidebar:
         )
 
 page_header("2. Подготовка данных", "Очистка, трансформация и обогащение", "🔧")
+show_pending_notification()
 
 chosen = dataset_selectbox("Датасет для обработки", key="prep_ds_sel")
 if not chosen:
@@ -142,6 +143,70 @@ if logs:
             st.markdown(f"- **{op}**: {rows_b} → {rows_a} строк  <small>{ts}</small>", unsafe_allow_html=True)
 
 # --- Recommendation Panel ---
+def _apply_single_rec(df_in: pd.DataFrame, rec: dict) -> pd.DataFrame:
+    """Apply a single recommendation and return modified DataFrame."""
+    action = rec["action"]
+    params = rec.get("auto_params", {})
+    col = rec.get("column")
+
+    if action == "drop_nullcol":
+        cols_to_drop = params.get("columns", [col] if col else [])
+        return df_in.drop(columns=[c for c in cols_to_drop if c in df_in.columns])
+
+    elif action == "drop_duplicates":
+        return df_in.drop_duplicates().reset_index(drop=True)
+
+    elif action == "impute":
+        target_col = params.get("column", col)
+        method = params.get("method", "median")
+        if target_col and target_col in df_in.columns:
+            if method == "median" and pd.api.types.is_numeric_dtype(df_in[target_col]):
+                df_in[target_col] = df_in[target_col].fillna(df_in[target_col].median())
+            elif method == "mean" and pd.api.types.is_numeric_dtype(df_in[target_col]):
+                df_in[target_col] = df_in[target_col].fillna(df_in[target_col].mean())
+            elif method == "mode":
+                mv = df_in[target_col].mode()
+                if len(mv) > 0:
+                    df_in[target_col] = df_in[target_col].fillna(mv[0])
+            elif method in ("ffill", "bfill"):
+                df_in[target_col] = df_in[target_col].fillna(method=method)
+            elif method == "zero":
+                df_in[target_col] = df_in[target_col].fillna(0)
+            elif method == "drop":
+                df_in = df_in.dropna(subset=[target_col]).reset_index(drop=True)
+        return df_in
+
+    elif action == "outlier_cap":
+        target_col = params.get("column", col)
+        threshold = params.get("threshold", 1.5)
+        if target_col and target_col in df_in.columns and pd.api.types.is_numeric_dtype(df_in[target_col]):
+            s = df_in[target_col].dropna()
+            q1, q3 = s.quantile(0.25), s.quantile(0.75)
+            iqr = q3 - q1
+            lower = q1 - threshold * iqr
+            upper = q3 + threshold * iqr
+            df_in[target_col] = df_in[target_col].clip(lower=lower, upper=upper)
+        return df_in
+
+    elif action == "type_cast":
+        target_col = params.get("column", col)
+        if target_col and target_col in df_in.columns:
+            df_in[target_col] = pd.to_numeric(df_in[target_col], errors="coerce")
+        return df_in
+
+    elif action == "drop_constant":
+        cols_to_drop = params.get("columns", [col] if col else [])
+        return df_in.drop(columns=[c for c in cols_to_drop if c in df_in.columns])
+
+    elif action == "parse_dates":
+        target_col = params.get("column", col)
+        if target_col and target_col in df_in.columns:
+            df_in[target_col] = pd.to_datetime(df_in[target_col], errors="coerce")
+        return df_in
+
+    return df_in
+
+
 qc = st.session_state.get("data_quality_reports", {}).get(chosen, None)
 if qc and qc.get("severity") != "ok":
     recs = recommend_preprocessing(raw_df, qc)
@@ -150,6 +215,43 @@ if qc and qc.get("severity") != "ok":
             st.caption(f"Обнаружено {len(recs)} рекомендаций. Вы можете применить их по одной или все сразу.")
 
             apply_all = st.button("✨ Применить все рекомендации (авто)", type="primary", key="btn_apply_all_recs")
+
+            if apply_all:
+                df_before = work_df.copy()
+                df_work = work_df.copy()
+                applied = []
+                for rec in recs:
+                    try:
+                        df_work = _apply_single_rec(df_work, rec)
+                        applied.append(rec["action"])
+                    except Exception:
+                        pass
+                store_prepared(chosen, df_work)
+                # Invalidate caches
+                st.session_state.get("data_quality_reports", {}).pop(chosen, None)
+                st.session_state.get("quality_scores", {}).pop(chosen, None)
+                st.session_state.get("auto_insights", {}).pop(chosen, None)
+                # Log
+                if "transform_logs" not in st.session_state:
+                    st.session_state["transform_logs"] = {}
+                st.session_state["transform_logs"].setdefault(chosen, []).append({
+                    "operation": f"Авто-применение {len(applied)} рекомендаций",
+                    "rows_before": len(df_before),
+                    "rows_after": len(df_work),
+                    "ts": datetime.now().strftime("%H:%M:%S"),
+                })
+                st.session_state["_rec_notify"] = {
+                    "action": f"Применено {len(applied)} рекомендаций ({', '.join(set(applied))})",
+                    "rows_before": len(df_before),
+                    "rows_after": len(df_work),
+                    "rows_delta": len(df_work) - len(df_before),
+                    "nulls_before": int(df_before.isnull().sum().sum()),
+                    "nulls_after": int(df_work.isnull().sum().sum()),
+                    "nulls_delta": int(df_work.isnull().sum().sum()) - int(df_before.isnull().sum().sum()),
+                    "ds_name": chosen,
+                }
+                st.rerun()
+
             st.divider()
 
             for i, rec in enumerate(recs):
@@ -163,12 +265,37 @@ if qc and qc.get("severity") != "ok":
                     "drop_constant": "Удалить константную колонку",
                     "parse_dates": "Распознать дату",
                 }.get(rec["action"], rec["action"])
-                recommendation_card(
+                clicked = recommendation_card(
                     action_label=f"{action_label}{col_label}",
                     reason=rec["reason"],
                     priority=rec["priority"],
+                    on_apply=True,
                     key=f"rec_{i}",
                 )
+                if clicked:
+                    df_before = work_df.copy()
+                    df_work = _apply_single_rec(work_df.copy(), rec)
+                    store_prepared(chosen, df_work)
+                    st.session_state.get("data_quality_reports", {}).pop(chosen, None)
+                    st.session_state.get("quality_scores", {}).pop(chosen, None)
+                    st.session_state.get("auto_insights", {}).pop(chosen, None)
+                    st.session_state["transform_logs"].setdefault(chosen, []).append({
+                        "operation": f"{action_label}{col_label}",
+                        "rows_before": len(df_before),
+                        "rows_after": len(df_work),
+                        "ts": datetime.now().strftime("%H:%M:%S"),
+                    })
+                    st.session_state["_rec_notify"] = {
+                        "action": f"{action_label}{col_label}",
+                        "rows_before": len(df_before),
+                        "rows_after": len(df_work),
+                        "rows_delta": len(df_work) - len(df_before),
+                        "nulls_before": int(df_before.isnull().sum().sum()),
+                        "nulls_after": int(df_work.isnull().sum().sum()),
+                        "nulls_delta": int(df_work.isnull().sum().sum()) - int(df_before.isnull().sum().sum()),
+                        "ds_name": chosen,
+                    }
+                    st.rerun()
 
 # ---------------------------------------------------------------------------
 # 1. Column Mapping
