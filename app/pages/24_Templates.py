@@ -275,7 +275,7 @@ for row in rows:
 # Selected template detail
 # ---------------------------------------------------------------------------
 if selected_template and selected_template in TEMPLATES:
-    st.markdown("---")
+    st.divider()
     tmpl = TEMPLATES[selected_template]
 
     st.markdown(f"## {selected_template}")
@@ -442,7 +442,7 @@ if selected_template and selected_template in TEMPLATES:
     n_done = len(completed_steps)
     pct = n_done / n_total if n_total > 0 else 0
 
-    st.markdown("---")
+    st.divider()
     prog_col1, prog_col2 = st.columns([3, 1])
     with prog_col1:
         st.progress(pct, text=f"Выполнено {n_done} из {n_total} шагов")
@@ -487,7 +487,7 @@ if selected_template and selected_template in TEMPLATES:
             st.rerun()
 
     # Related templates
-    st.markdown("---")
+    st.divider()
     st.markdown("### 💡 Похожие шаблоны")
     current_tags = set(tmpl["tags"])
     related = []
@@ -511,7 +511,7 @@ if selected_template and selected_template in TEMPLATES:
 
 else:
     # No template selected yet — show tips
-    st.markdown("---")
+    st.divider()
     st.markdown("### 💡 Как использовать шаблоны")
     tip_col1, tip_col2, tip_col3 = st.columns(3)
     with tip_col1:

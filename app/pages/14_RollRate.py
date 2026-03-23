@@ -244,7 +244,7 @@ with tab_matrix:
 
             net_flow = avg_rf - avg_cr
 
-            st.subheader("Ключевые метрики")
+            section_header("Ключевые метрики")
             st.metric("Средняя ставка ухудшения", f"{avg_rf:.1f}%")
             st.metric("Средняя ставка улучшения (cure)", f"{avg_cr:.1f}%")
             st.metric("Приток в списание (90+ → Списан)", f"{wo_rate:.1f}%")
@@ -257,7 +257,7 @@ with tab_matrix:
             )
 
         # Raw matrices
-        st.subheader("Матрицы (абсолютные и ставки)")
+        section_header("Матрицы (абсолютные и ставки)")
         c1, c2 = st.columns(2)
         with c1:
             st.markdown("**Количество переходов**")
@@ -362,7 +362,7 @@ with tab_forecast:
                 icon="📉",
             )
 
-            st.subheader("Таблица проекции")
+            section_header("Таблица проекции")
             st.dataframe(proj_df.round(2), use_container_width=True)
 
         except Exception as exc:
@@ -434,10 +434,10 @@ with tab_table:
         count_m = rr_result["count_m"]
         rate_m = rr_result["rate_m"]
 
-        st.subheader("Матрица переходов: количество")
+        section_header("Матрица переходов: количество")
         st.dataframe(count_m.astype(int), use_container_width=True)
 
-        st.subheader("Матрица переходов: ставки (%)")
+        section_header("Матрица переходов: ставки (%)")
         st.dataframe((rate_m * 100).round(2), use_container_width=True)
 
         csv_bytes = rate_m.to_csv().encode("utf-8")

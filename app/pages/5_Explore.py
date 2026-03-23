@@ -23,13 +23,12 @@ from core.explore import (
     build_pivot, plot_pivot_bar, plot_waterfall, plot_stl_decomposition, compute_kpi,
 )
 from core.insights import analyze_dataset, format_insights_markdown, get_chart_recommendation, score_data_quality
-from app.styles import inject_all_css
+from app.styles import inject_all_css, page_header, section_header
 
 st.set_page_config(page_title="KIBAD – Explore", layout="wide")
 init_state()
 inject_all_css()
-
-st.title("5. Анализ данных")
+page_header("5. Анализ данных", "Авто-инсайты, распределения, корреляции и профилирование", "🔎")
 
 chosen = dataset_selectbox("Dataset", key="explore_ds_sel")
 if not chosen:
@@ -56,7 +55,7 @@ tab_auto, tab_quality, tab_ts, tab_dist, tab_corr, tab_pairplot, tab_pivot, tab_
 # Auto-Insights
 # ---------------------------------------------------------------------------
 with tab_auto:
-    st.subheader("Автоматический анализ датасета")
+    section_header("Автоматический анализ датасета")
     st.markdown(
         "Движок авто-инсайтов сканирует датасет и выявляет ключевые паттерны, "
         "аномалии и рекомендации без какой-либо настройки."
@@ -83,7 +82,7 @@ with tab_auto:
     md = format_insights_markdown(insights)
     st.markdown(md)
 
-    st.markdown("---")
+    st.divider()
 
     # Expandable: Correlation heatmap
     with st.expander("Корреляционная матрица", expanded=False):
@@ -151,8 +150,8 @@ with tab_auto:
     # Recommendations section
     _ai_recs = insights.get("recommendations", [])
     if _ai_recs:
-        st.markdown("---")
-        st.subheader("Рекомендуемые следующие шаги")
+        st.divider()
+        section_header("Рекомендуемые следующие шаги")
         for _ai_i, _ai_rec in enumerate(_ai_recs):
             recommendation_card(
                 action_label=_ai_rec["action"],
@@ -162,8 +161,8 @@ with tab_auto:
             )
 
     # Smart page links based on what was found
-    st.markdown("---")
-    st.subheader("Следующие шаги")
+    st.divider()
+    section_header("Следующие шаги")
     _ai_summary = insights.get("summary", {})
     _ai_corrs = insights.get("correlations", [])
     _ai_next_cols = st.columns(1)
@@ -178,7 +177,7 @@ with tab_auto:
         st.page_link("pages/6_Tests.py", label="🔬 Сравните группы → 6. Статистические тесты")
 
     # Download auto-analysis report
-    st.markdown("---")
+    st.divider()
     report_text = format_insights_markdown(insights)
     st.download_button(
         "⬇ Скачать отчёт (Markdown)",
@@ -192,7 +191,7 @@ with tab_auto:
 # Data Quality
 # ---------------------------------------------------------------------------
 with tab_quality:
-    st.subheader("Качество данных")
+    section_header("Качество данных")
     st.markdown(
         "Комплексная оценка качества датасета по четырём измерениям: "
         "полнота, уникальность, согласованность и общий балл."
@@ -232,7 +231,7 @@ with tab_quality:
         value=f"{_qs_overall:.1f} / 100",
     )
 
-    st.markdown("---")
+    st.divider()
 
     # Sub-score cards
     _qs_c1, _qs_c2, _qs_c3 = st.columns(3)
@@ -249,8 +248,8 @@ with tab_quality:
     # Issues list grouped by level
     _qs_issues = _qs.get("issues", [])
     if _qs_issues:
-        st.markdown("---")
-        st.subheader("Обнаруженные проблемы")
+        st.divider()
+        section_header("Обнаруженные проблемы")
 
         for _qs_level, _qs_icon, _qs_level_label in [
             ("error", "❌", "Ошибки"),
@@ -275,8 +274,8 @@ with tab_quality:
         st.success("Проблем с качеством данных не обнаружено.")
 
     # Auto-fix suggestions
-    st.markdown("---")
-    st.subheader("🔧 Авто-исправления")
+    st.divider()
+    section_header("🔧 Авто-исправления")
     _qs_has_missing = any(i["level"] in ("error", "warning") and "пропущен" in i["message"] for i in _qs_issues)
     _qs_has_dups = any("дублир" in i["message"] for i in _qs_issues)
 
@@ -325,7 +324,7 @@ with tab_quality:
 # Time Series
 # ---------------------------------------------------------------------------
 with tab_ts:
-    st.subheader("График временного ряда")
+    section_header("График временного ряда")
     if not dt_cols:
         st.warning("Столбцы с датами не найдены. Распознайте дату в разделе **Подготовка**.")
     else:
@@ -351,7 +350,7 @@ with tab_ts:
 # Distributions
 # ---------------------------------------------------------------------------
 with tab_dist:
-    st.subheader("Распределения")
+    section_header("Распределения")
     dist_tab_hist, dist_tab_box, dist_tab_violin = st.tabs(["Гистограмма + KDE", "Ящик с усами", "Скрипичный график"])
 
     with dist_tab_hist:
@@ -404,7 +403,7 @@ with tab_dist:
 # Correlation
 # ---------------------------------------------------------------------------
 with tab_corr:
-    st.subheader("Тепловая карта корреляций")
+    section_header("Тепловая карта корреляций")
     if len(num_cols) < 2:
         st.warning("Необходимо минимум 2 числовых столбца.")
     else:
@@ -466,7 +465,7 @@ with tab_corr:
 # Pairplot / Scatter Matrix
 # ---------------------------------------------------------------------------
 with tab_pairplot:
-    st.subheader("Pairplot — матрица диаграмм рассеивания")
+    section_header("Pairplot — матрица диаграмм рассеивания")
     st.markdown(
         "Scatter matrix (pairplot) показывает попарные зависимости между числовыми переменными. "
         "На диагонали — гистограммы распределения, вне диагонали — точечные диаграммы."
@@ -532,7 +531,7 @@ with tab_pairplot:
 # Pivot aggregation builder
 # ---------------------------------------------------------------------------
 with tab_pivot:
-    st.subheader("Построитель сводной таблицы")
+    section_header("Построитель сводной таблицы")
     if not all_cols:
         st.warning("Нет данных.")
     else:
@@ -562,7 +561,7 @@ with tab_pivot:
 # Waterfall chart
 # ---------------------------------------------------------------------------
 with tab_waterfall:
-    st.subheader("Водопад — вклад факторов")
+    section_header("Водопад — вклад факторов")
     st.markdown(
         "Введите названия факторов и их числовые вклады (дельты). "
         "Положительный = рост, отрицательный = снижение."
@@ -584,7 +583,7 @@ with tab_waterfall:
         st.plotly_chart(fig, use_container_width=True)
 
     # Auto waterfall from column deltas
-    st.markdown("---")
+    st.divider()
     st.markdown("**Авто-водопад** — вычислить дельты период-к-периоду по числовым столбцам.")
     if num_cols and dt_cols:
         aw_date = st.selectbox("Столбец даты", dt_cols, key="aw_date")
@@ -603,7 +602,7 @@ with tab_waterfall:
 # STL Decomposition
 # ---------------------------------------------------------------------------
 with tab_stl:
-    st.subheader("STL-декомпозиция сезонности")
+    section_header("STL-декомпозиция сезонности")
     if not dt_cols:
         st.warning("Столбцы с датами не найдены. Распознайте дату в разделе Подготовка.")
     elif not num_cols:
@@ -626,7 +625,7 @@ with tab_stl:
 # KPI Builder
 # ---------------------------------------------------------------------------
 with tab_kpi:
-    st.subheader("KPI-конструктор")
+    section_header("KPI-конструктор")
     st.markdown(
         "Задавайте формулы KPI, используя имена столбцов как переменные. Пример: `revenue / sessions`"
     )
@@ -641,7 +640,7 @@ with tab_kpi:
         st.success(f"KPI '{kpi_label}' добавлен.")
 
     if kpi_defs:
-        st.subheader("KPI-дашборд")
+        section_header("KPI-дашборд")
         kpi_cols = st.columns(min(len(kpi_defs), 4))
         for i, kd in enumerate(kpi_defs):
             try:
@@ -668,7 +667,7 @@ with tab_profile:
     import plotly.express as px
     import numpy as np
 
-    st.subheader("📋 Автоматический профиль данных")
+    section_header("📋 Автоматический профиль данных")
     st.markdown(
         "Быстрый обзор качества и структуры датасета: пропуски, дубликаты, "
         "выбросы, распределения, уникальность — всё в одном месте."
@@ -692,10 +691,10 @@ with tab_profile:
             pc4.metric("Пропусков (всего)", f"{n_null:,}",
                        delta=f"{null_rate:.1f}%", delta_color="inverse" if null_rate > 5 else "off")
 
-            st.markdown("---")
+            st.divider()
 
             # --- Per-column profile ---
-            st.subheader("Профиль по колонкам")
+            section_header("Профиль по колонкам")
             profile_rows = []
             for col in df.columns:
                 s = df[col]
@@ -745,10 +744,10 @@ with tab_profile:
                 file_name="data_profile.csv",
             )
 
-            st.markdown("---")
+            st.divider()
 
             # --- Missing values heatmap ---
-            st.subheader("Тепловая карта пропущенных значений")
+            section_header("Тепловая карта пропущенных значений")
             if n_null > 0:
                 missing_matrix = df.isna().astype(int)
                 # Downsample if too large
@@ -772,8 +771,8 @@ with tab_profile:
 
             # --- Numeric distributions grid ---
             if num_cols:
-                st.markdown("---")
-                st.subheader("Распределения числовых переменных")
+                st.divider()
+                section_header("Распределения числовых переменных")
                 grid_cols = min(3, len(num_cols))
                 rows_g = (len(num_cols) + grid_cols - 1) // grid_cols
                 for row_i in range(rows_g):
@@ -807,8 +806,8 @@ with tab_profile:
 
             # --- Categorical value counts ---
             if cat_cols:
-                st.markdown("---")
-                st.subheader("Топ значений категориальных переменных")
+                st.divider()
+                section_header("Топ значений категориальных переменных")
                 for c in cat_cols[:5]:  # limit to 5 cat cols
                     vc = df[c].value_counts().head(10)
                     fig_vc = px.bar(

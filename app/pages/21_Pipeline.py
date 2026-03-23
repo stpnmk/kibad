@@ -165,7 +165,7 @@ tab_templates, tab_build, tab_run, tab_manage = st.tabs([
 # TAB 1 — Templates
 # ===========================================================================
 with tab_templates:
-    st.subheader("Готовые шаблоны пайплайнов")
+    section_header("Готовые шаблоны пайплайнов")
     st.caption("Выберите шаблон, чтобы быстро загрузить набор шагов в текущий пайплайн.")
 
     template_names = list(PIPELINE_TEMPLATES.keys())
@@ -209,7 +209,7 @@ with tab_build:
 
     # --- LEFT: dataset + step builder ---
     with left:
-        st.subheader("1. Выберите датасет")
+        section_header("1. Выберите датасет")
         ds_name = dataset_selectbox("Датасет для построения пайплайна", key="pipe_ds")
 
         df = get_active_df() if ds_name else None
@@ -217,8 +217,8 @@ with tab_build:
         if df is not None:
             st.success(f"**{ds_name}**: {df.shape[0]:,} × {df.shape[1]}")
 
-        st.markdown("---")
-        st.subheader("2. Добавьте шаг")
+        st.divider()
+        section_header("2. Добавьте шаг")
 
         step_type = st.selectbox(
             "Тип операции:",
@@ -410,7 +410,7 @@ with tab_build:
 
     # --- RIGHT: pipeline view ---
     with right:
-        st.subheader("3. Текущий пайплайн")
+        section_header("3. Текущий пайплайн")
 
         pipeline = st.session_state["current_pipeline"]
 
@@ -439,7 +439,7 @@ with tab_build:
                 st.rerun()
 
         # Share / export pipeline JSON inline
-        st.markdown("---")
+        st.divider()
         if pipeline:
             pipe_name_share = st.session_state.get("pipe_save_name", "Мой пайплайн")
             pipe_json_str = json.dumps(
@@ -454,7 +454,7 @@ with tab_build:
 # TAB 3 — Run
 # ===========================================================================
 with tab_run:
-    st.subheader("4. Запустить пайплайн")
+    section_header("4. Запустить пайплайн")
 
     pipeline = st.session_state["current_pipeline"]
 
@@ -692,7 +692,7 @@ with tab_run:
 # TAB 4 — Manage
 # ===========================================================================
 with tab_manage:
-    st.subheader("5. Управление пайплайнами")
+    section_header("5. Управление пайплайнами")
 
     pipeline = st.session_state["current_pipeline"]
 

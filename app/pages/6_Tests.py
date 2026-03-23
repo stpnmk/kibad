@@ -29,6 +29,7 @@ except Exception:
 from app.state import init_state, dataset_selectbox, get_active_df
 from core.interpret import interpret_pvalue, interpret_effect_size
 from app.components.ux import interpretation_box
+from app.styles import inject_all_css, page_header, section_header
 from core.tests import (
     ttest_independent, mann_whitney, chi_square_independence,
     correlation_test, bootstrap_test, ab_test, bh_correction,
@@ -38,12 +39,8 @@ from core.tests import (
 
 st.set_page_config(page_title="KIBAD – Статистические тесты", layout="wide")
 init_state()
-
-st.title("6. Статистические тесты")
-st.markdown(
-    "Проверка гипотез с визуализацией: t-тест, Манна-Уитни, хи-квадрат, "
-    "корреляция, бутстрап, A/B и поправка на множественные сравнения."
-)
+inject_all_css()
+page_header("6. Статистические тесты", "Проверка гипотез: t-тест, Манна-Уитни, хи-квадрат, корреляция, бутстрап, A/B", "🔬")
 
 chosen = dataset_selectbox("Датасет", key="tests_ds_sel")
 if not chosen:
@@ -83,7 +80,7 @@ cfg_col5.metric(
     help="Текущий выбранный уровень значимости",
 )
 
-st.markdown("---")
+st.divider()
 
 with st.expander("🧭 Быстрый справочник: какой тест выбрать?", expanded=False):
     st.markdown("""
@@ -213,7 +210,7 @@ tab_diag, tab_ttest, tab_mw, tab_chi2, tab_corr, tab_boot, tab_ab, tab_multi, ta
 # Diagnostics (Step 1)
 # ===========================================================================
 with tab_diag:
-    st.subheader("Диагностика данных перед выбором теста")
+    section_header("Диагностика данных перед выбором теста")
     st.info(
         "**Зачем это нужно?** Выбор корректного статистического теста зависит от структуры данных. "
         "Здесь вы оцениваете нормальность каждой группы и однородность дисперсий — "
@@ -259,7 +256,7 @@ with tab_diag:
         b_s = st.session_state["diag_b"]
         label_a, label_b, val_col = st.session_state["diag_labels"]
 
-        st.markdown("---")
+        st.divider()
 
         # ── Recommendation card ────────────────────────────────────────────
         rec_color = {
@@ -518,7 +515,7 @@ border-radius:10px;padding:12px 16px;margin:8px 0'>
 # t-Test
 # ===========================================================================
 with tab_ttest:
-    st.subheader("Независимые выборки — t-тест Уэлча")
+    section_header("Независимые выборки — t-тест Уэлча")
     st.info(
         "**H₀:** Средние двух групп равны. "
         "Тест Уэлча не требует равенства дисперсий. "
@@ -585,7 +582,7 @@ with tab_ttest:
 # Mann-Whitney
 # ===========================================================================
 with tab_mw:
-    st.subheader("U-тест Манна-Уитни (непараметрический)")
+    section_header("U-тест Манна-Уитни (непараметрический)")
     st.info(
         "**H₀:** Случайная вероятность превосходства группы A над B равна 0.5. "
         "Не предполагает нормальности. Cliff's δ показывает размер эффекта."
@@ -646,7 +643,7 @@ with tab_mw:
 # Chi-Square
 # ===========================================================================
 with tab_chi2:
-    st.subheader("Хи-квадрат тест независимости")
+    section_header("Хи-квадрат тест независимости")
     st.info("**H₀:** Две категориальные переменные независимы (нет ассоциации).")
     if len(cat_cols) < 2:
         st.warning("Нужно минимум 2 категориальные колонки.")
@@ -697,7 +694,7 @@ with tab_chi2:
 # Correlation
 # ===========================================================================
 with tab_corr:
-    st.subheader("Тест значимости корреляции")
+    section_header("Тест значимости корреляции")
     st.info(
         "**H₀:** Корреляция между переменными равна нулю. "
         "Пирсон — линейная связь. Спирмен — ранговая, устойчива к выбросам."
@@ -753,7 +750,7 @@ with tab_corr:
 # Bootstrap
 # ===========================================================================
 with tab_boot:
-    st.subheader("Бутстрап / Перестановочный тест")
+    section_header("Бутстрап / Перестановочный тест")
     st.info(
         "Непараметрические тесты без допущений о распределении. "
         "**Перестановка**: перемешивает метки групп N раз и смотрит, "
@@ -824,7 +821,7 @@ with tab_boot:
 # A/B Test
 # ===========================================================================
 with tab_ab:
-    st.subheader("A/B тестирование — комплексный анализ")
+    section_header("A/B тестирование — комплексный анализ")
     st.info(
         "Запускает t-тест, Манна-Уитни и бутстрап одновременно. "
         "Согласованность 3/3 тестов — признак надёжного результата."
@@ -870,7 +867,7 @@ with tab_ab:
                         st.plotly_chart(_ci_bars(df, ab_grp, ab_val, ab_ctrl, ab_trt),
                                         use_container_width=True)
 
-                    st.subheader("Детали трёх тестов")
+                    section_header("Детали трёх тестов")
                     for sub_res in [res["ttest"], res["mann_whitney"], res["bootstrap"]]:
                         with st.expander(f"{'✅' if sub_res.significant else '❌'} {sub_res.name}"):
                             _result_card(sub_res)
@@ -893,7 +890,7 @@ with tab_ab:
 # Multiple Comparisons
 # ===========================================================================
 with tab_multi:
-    st.subheader("Поправка на множественные сравнения (BH/FDR)")
+    section_header("Поправка на множественные сравнения (BH/FDR)")
     st.info(
         "При N тестах вероятность хотя бы одного ложного позитива растёт. "
         "**Бенджамини-Хохберг (BH)** контролирует ожидаемую долю ложных открытий (FDR). "
@@ -964,7 +961,7 @@ with tab_multi:
 # Power Analysis
 # ===========================================================================
 with tab_power:
-    st.subheader("⚡ Анализ мощности (Power Analysis)")
+    section_header("⚡ Анализ мощности (Power Analysis)")
     st.markdown(
         "Рассчитайте **необходимый размер выборки**, **мощность теста** или "
         "**минимально обнаруживаемый эффект (MDE)** для корректного планирования экспериментов."
@@ -1153,7 +1150,7 @@ with tab_power:
                 # ================================================================
                 # VISUALIZATIONS
                 # ================================================================
-                st.markdown("---")
+                st.divider()
                 viz_tab1, viz_tab2, viz_tab3 = st.tabs([
                     "📈 Кривая мощности", "🔢 Тепловая карта n×эффект", "📊 Сравнение α"
                 ])
@@ -1283,7 +1280,7 @@ with tab_power:
                 st.error(f"Ошибка расчёта: {e}. Проверьте параметры — некоторые комбинации (например, эффект=0) не допустимы.")
 
         # --- auto-suggest from data ---
-        st.markdown("---")
+        st.divider()
         st.markdown("#### 🔎 Автооценка эффекта по данным")
         st.caption("Выберите две группы из датасета — KIBAD рассчитает реальный размер эффекта и оценит мощность.")
 
@@ -1342,7 +1339,7 @@ with tab_power:
 # History
 # ===========================================================================
 with tab_history:
-    st.subheader("История тестов (сессия)")
+    section_header("История тестов (сессия)")
     results = st.session_state.get("test_results", [])
     if results:
         hist_df = pd.DataFrame([{

@@ -626,7 +626,7 @@ left, right = st.columns([1, 2])
 # ===========================================================================
 
 with left:
-    st.subheader("⚙️ Настройка графика")
+    section_header("⚙️ Настройка графика")
 
     # ---- Chart type ----
     st.markdown("**Тип графика**")
@@ -643,7 +643,7 @@ with left:
     )
     chart_key = CHART_KEY[chart_label]
 
-    st.markdown("---")
+    st.divider()
     st.markdown("**Данные**")
 
     # ---- Axis / field controls depending on chart type ----
@@ -781,7 +781,7 @@ with left:
         cfg["color"] = None if color_sel == "(нет)" else color_sel
 
     # ---- Customization ----
-    st.markdown("---")
+    st.divider()
     with st.expander("🎨 Оформление", expanded=False):
         auto_title = chart_label.split(" ", 1)[-1]
         chart_title = st.text_input("Заголовок графика", value=auto_title, key="cfg_title")
@@ -807,7 +807,7 @@ with left:
                                      value=0, step=5, key="cfg_topn"))
         log_y = st.checkbox("Логарифмическая шкала Y", value=False, key="cfg_logy")
 
-    st.markdown("---")
+    st.divider()
 
     # ---- Auto-chart suggestion ----
     _suggest_x = cfg.get("x") or cfg.get("col") or cfg.get("stage")

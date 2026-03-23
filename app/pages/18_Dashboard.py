@@ -532,7 +532,7 @@ elif not date_col:
 # Section: Download
 # ---------------------------------------------------------------------------
 
-st.markdown("---")
+st.divider()
 st.markdown("### 💾 Экспорт")
 
 export_rows = []

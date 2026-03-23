@@ -242,7 +242,7 @@ with tabs[2]:
             st.warning(f"По запросу «{search_query}» ничего не найдено.")
 
     # Multi-keyword filter
-    st.markdown("---")
+    st.divider()
     st.markdown("### Мультиключевой фильтр")
     multi_kw = st.text_area("Ключевые слова (каждое с новой строки):", height=100,
                              key="txt_multi_kw",

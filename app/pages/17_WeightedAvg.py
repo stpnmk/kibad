@@ -298,7 +298,7 @@ with tab_summary:
 
         # Duration metrics
         if duration_result:
-            st.subheader("Дюрация портфеля")
+            section_header("Дюрация портфеля")
             d1, d2, d3 = st.columns(3)
             d1.metric(
                 "Модифицированная дюрация",
@@ -404,7 +404,7 @@ with tab_breakdown:
                         # Full table with color coding
                         all_wa_cols = [f"{m}_wa" for m in mc if f"{m}_wa" in breakdown_stats.columns]
                         display_df = breakdown_stats[[selected_dim] + all_wa_cols].copy()
-                        st.subheader("Таблица разбивки")
+                        section_header("Таблица разбивки")
 
                         try:
                             styled = display_df.style.background_gradient(
@@ -435,7 +435,7 @@ with tab_compare:
         ds_b_name = wa_result["ds_b_name"]
         df_b = get_dataset(ds_b_name)
 
-        st.subheader(f"Сравнение: {chosen} vs {ds_b_name}")
+        section_header(f"Сравнение: {chosen} vs {ds_b_name}")
 
         # Side-by-side metric cards
         cols_a = st.columns(len(mc))
@@ -464,7 +464,7 @@ with tab_compare:
                     decomp_df = mix_rate_decomposition(df, df_b, wc, first_metric, gc)
 
                     if not decomp_df.empty:
-                        st.subheader(f"Декомпозиция: {first_metric} — эффект структуры и ставки")
+                        section_header(f"Декомпозиция: {first_metric} — эффект структуры и ставки")
 
                         # Waterfall chart
                         measures = []
@@ -501,7 +501,7 @@ with tab_compare:
                         )
                         st.plotly_chart(fig_wf, use_container_width=True)
 
-                        st.subheader("Таблица декомпозиции")
+                        section_header("Таблица декомпозиции")
                         st.dataframe(decomp_df.round(4), use_container_width=True, hide_index=True)
 
             except Exception as exc:

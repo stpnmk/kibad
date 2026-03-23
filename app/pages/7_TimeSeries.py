@@ -637,8 +637,8 @@ with tab_anomaly:
             st.error(f"Ошибка: {e}")
 
     # Trigger Rules
-    st.markdown("---")
-    st.subheader("🚨 Правила-триггеры (алерты)")
+    st.divider()
+    section_header("🚨 Правила-триггеры (алерты)")
     st.info("Задайте условия, при нарушении которых генерируется предупреждение.")
 
     with st.expander("➕ Добавить правило"):
