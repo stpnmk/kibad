@@ -197,6 +197,16 @@ for col, args in zip(analysis2_cols, _ANALYSIS2):
     with col:
         _tile(*args)
 
+analysis3_cols = st.columns(3)
+_ANALYSIS3 = [
+    ("👥", "#059669", "Когортный анализ", "Удержание, отток, LTV. Тепловая карта ретеншена по когортам.", "pages/13_Cohort.py"),
+    ("🏷️", "#7c3aed", "ABC-XYZ анализ", "Классификация по вкладу и стабильности. Кросс-матрица 9 сегментов.", "pages/15_ABC.py"),
+    ("🔻", "#dc2626", "Воронка конверсий", "Этапы процесса: конверсия, потери, узкие места. Из данных или вручную.", "pages/16_Funnel.py"),
+]
+for col, args in zip(analysis3_cols, _ANALYSIS3):
+    with col:
+        _tile(*args)
+
 # --- Отчёты ---
 _cat_header("Отчёты и экспорт", "linear-gradient(135deg,#d97706 0%,#fbbf24 100%)")
 report_cols = st.columns(3)

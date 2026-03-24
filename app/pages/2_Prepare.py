@@ -31,7 +31,7 @@ inject_all_css()
 
 with st.sidebar:
     st.divider()
-    st.markdown("### 📍 Порядок обработки")
+    st.markdown("**📍 Порядок обработки**")
     steps_info = [
         ("1", "Типы данных"),
         ("2", "Маппинг колонок"),

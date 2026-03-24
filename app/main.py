@@ -37,7 +37,7 @@ with st.sidebar:
     )
     st.session_state["lang"] = lang
     st.divider()
-    st.caption("v3.0 · Аналитика без кода")
+    st.caption("v4.0 · Аналитика без кода")
 
 # ---------------------------------------------------------------------------
 # Hero section
@@ -51,7 +51,7 @@ st.markdown("""
         <div style="font-size:2rem;font-weight:900;color:#ffffff;letter-spacing:-0.03em;
              line-height:1;font-family:Inter,sans-serif">KIBAD</div>
         <div style="font-size:0.75rem;font-weight:600;color:#93c5fd;text-transform:uppercase;
-             letter-spacing:0.12em;font-family:Inter,sans-serif">Analytics Studio v3</div>
+             letter-spacing:0.12em;font-family:Inter,sans-serif">Analytics Studio v4</div>
       </div>
     </div>
     <div style="font-size:1.35rem;font-weight:700;color:#ffffff;margin-bottom:6px;
@@ -234,6 +234,9 @@ _ANALYSIS_MODULES = [
     ("📈", "#2563eb", "Временные ряды", "Prophet, ARIMA, ETS. ACF/PACF. Детекция аномалий. Настройка алертов.", "pages/7_TimeSeries.py"),
     ("⚖️", "#7c3aed", "Факторный анализ", "Декомпозиция: вклад каждого фактора в изменение показателя. Водопадный график, сегментация.", "pages/8_Attribution.py"),
     ("🎲", "#0369a1", "Сценарное моделирование", "Что если? Шоковые сценарии по ключевым параметрам. Расчёт воздействия на целевые метрики.", "pages/9_Simulation.py"),
+    ("👥", "#059669", "Когортный анализ", "Удержание клиентов, отток, LTV по когортам. Тепловая карта ретеншена. Customer Lifetime Value.", "pages/13_Cohort.py"),
+    ("🏷️", "#7c3aed", "ABC-XYZ анализ", "Классификация объектов по вкладу (Парето) и стабильности. Кросс-матрица 9 сегментов с рекомендациями.", "pages/15_ABC.py"),
+    ("🔻", "#dc2626", "Воронка конверсий", "Визуализация этапов процесса: конверсия, потери, узкие места. Ввод из данных или вручную.", "pages/16_Funnel.py"),
 ]
 
 for row_start in range(0, len(_ANALYSIS_MODULES), 3):
@@ -356,7 +359,7 @@ st.markdown("""
      display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
   <div style="font-size:0.78rem;color:#94a3b8;font-family:Inter,sans-serif">
     <span style="font-weight:700;color:#475569">KIBAD Analytics Studio</span>
-    &nbsp;·&nbsp; v3.0
+    &nbsp;·&nbsp; v4.0
     &nbsp;·&nbsp; Профессиональная аналитика без кода
   </div>
   <div style="font-size:0.75rem;color:#cbd5e1;font-family:Inter,sans-serif">
