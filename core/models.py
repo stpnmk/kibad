@@ -178,7 +178,10 @@ def run_naive_forecast(
     # residual std for CI (exclude NaN predictions to avoid bias)
     in_sample = model.predict(len(y))[-len(y):]
     valid_mask = ~np.isnan(in_sample)
-    resid = y[valid_mask] - in_sample[valid_mask] if valid_mask.any() else y - in_sample
+    if valid_mask.any():
+        resid = y[valid_mask] - in_sample[valid_mask]
+    else:
+        resid = np.zeros(len(y))  # no valid in-sample: use zero residuals → wide CI
     resid_std = float(np.nanstd(resid))
     z = float(_norm.ppf(1 - (1 - confidence) / 2))
     lower = preds - z * resid_std

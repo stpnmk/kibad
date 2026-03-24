@@ -613,6 +613,8 @@ def plot_acf_pacf(
     from statsmodels.tsa.stattools import acf, pacf
 
     s = pd.to_numeric(series, errors="coerce").dropna().values
+    if len(s) < 4:
+        raise ValueError("Ряд слишком короткий для ACF/PACF (минимум 4 наблюдения)")
     if len(s) < nlags + 1:
         nlags = max(1, len(s) // 2)
 

@@ -220,10 +220,14 @@ def group_aggregate(
         grouped = work.groupby(actual_group_cols, as_index=False, dropna=False)
         result = grouped.agg(agg_dict)
         # Flatten multi-level columns
-        result.columns = [
-            f"{col}_{func}" if isinstance(func, str) and func else f"{col}_{i}"
-            for i, (col, func) in enumerate(result.columns)
-        ]
+        def _col_name(col: str, func, idx: int) -> str:
+            if isinstance(func, str) and func:
+                return f"{col}_{func}"
+            if callable(func) and hasattr(func, "__name__"):
+                return f"{col}_{func.__name__}"
+            return f"{col}_{idx}"
+
+        result.columns = [_col_name(col, func, i) for i, (col, func) in enumerate(result.columns)]
         # Fix group col names (they got a blank second level)
         for i, gc in enumerate(actual_group_cols):
             old_name = result.columns[i]

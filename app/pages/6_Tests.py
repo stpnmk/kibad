@@ -328,7 +328,7 @@ border-radius:10px;padding:12px 16px;margin:8px 0'>
             st.warning(w)
 
         # ── Per-group normality ────────────────────────────────────────────
-        st.markdown("### 📊 Тест нормальности по группам")
+        section_header("Тест нормальности по группам", "📊")
 
         def _norm_card(nr: NormalityResult, series: "pd.Series") -> None:
             icon = "✅" if nr.is_normal else "❌"
@@ -359,7 +359,7 @@ border-radius:10px;padding:12px 16px;margin:8px 0'>
             _norm_card(diag["norm_b"], b_s)
 
         # ── Levene test ────────────────────────────────────────────────────
-        st.markdown("### ⚖️ Однородность дисперсий (тест Левена)")
+        section_header("Однородность дисперсий (тест Левена)", "⚖️")
         lev = diag["levene"]
         lev_icon = "❌" if lev.significant else "✅"
         lev_color = "#f8d7da" if lev.significant else "#d1e7dd"
@@ -410,7 +410,7 @@ border-radius:10px;padding:12px 16px;margin:8px 0'>
         )
 
         # ── Visual diagnostics ────────────────────────────────────────────
-        st.markdown("### 📉 Визуальная диагностика")
+        section_header("Визуальная диагностика", "📉")
 
         viz_tabs = st.tabs(["QQ-графики", "Гистограммы + норм. кривая", "Box Plot"])
 
@@ -493,7 +493,7 @@ border-radius:10px;padding:12px 16px;margin:8px 0'>
             st.plotly_chart(fig_box, use_container_width=True)
 
         # ── Summary table ─────────────────────────────────────────────────
-        st.markdown("### 📋 Сводная таблица диагностики")
+        section_header("Сводная таблица диагностики", "📋")
         summary_rows = []
         for nr, lbl in [(diag["norm_a"], label_a), (diag["norm_b"], label_b)]:
             summary_rows.append({
@@ -1281,7 +1281,7 @@ with tab_power:
 
         # --- auto-suggest from data ---
         st.divider()
-        st.markdown("#### 🔎 Автооценка эффекта по данным")
+        section_header("Автооценка эффекта по данным", "🔎")
         st.caption("Выберите две группы из датасета — KIBAD рассчитает реальный размер эффекта и оценит мощность.")
 
         ae_col1, ae_col2, ae_col3 = st.columns(3)

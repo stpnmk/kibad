@@ -256,7 +256,7 @@ with tab_scenario:
                                file_name="scenario_presets.json", mime="application/json")
 
 with tab_mc:
-    st.markdown("### 🎲 Монте-Карло: Распределение риска")
+    section_header("Монте-Карло: Распределение риска", "🎲")
 
     with st.expander("📖 Как работает Монте-Карло", expanded=False):
         st.markdown("""
@@ -418,7 +418,7 @@ with tab_mc:
         st.plotly_chart(fig_hist, use_container_width=True)
 
         # Summary table
-        st.markdown("#### 📊 Сводка по симуляциям")
+        section_header("Сводка по симуляциям", "📊")
         summary_rows = []
         for p in sorted_pcts:
             fv = np.percentile(final_vals, p)
