@@ -161,6 +161,88 @@ app/main.py                              (точка входа)
 - **Чистые функции в core**: все модули ядра не содержат состояния. Состояние хранится исключительно в `st.session_state` и управляется через `app/state.py`.
 - **Plotly для всех графиков**: единообразная интерактивная визуализация на всех страницах с экспортом в PNG/SVG через kaleido.
 - **Офлайн-режим**: нет внешних API-вызовов, нет телеметрии. Приложение работает полностью на локальной машине.
-- **Дизайн-система**: токены дизайна (цвета, шрифты, градиенты) централизованы в `app/theme.py`; CSS и компоненты — в `app/styles.py` и `app/components/ux.py`.
+- **Дизайн-система**: токены дизайна централизованы в `app/assets/theme.css`; компоненты — в `app/components/`.
 - **Локализация**: все строки интерфейса управляются через `core/i18n.py`. Основной язык — русский, резервный — английский.
 - **Аудит**: все значимые операции логируются в `core/audit.py` с отметкой времени.
+
+---
+
+## Dash Migration (v5.0)
+
+### Обоснование перехода Streamlit → Dash
+
+Фреймворк заменён со Streamlit на **Dash 2.17.x** + **dash-bootstrap-components 1.6.x** по следующим причинам:
+
+1. **Pure Python** — отсутствует build-шаг, не требуется JS-тулчейн (npm, webpack).
+2. **Нативный рендеринг Plotly** — фигуры из `core/` (объекты `go.Figure` / `px.*`) передаются напрямую в `dcc.Graph` без промежуточного слоя.
+3. **Локальный Bootstrap CSS** — DBC включает Bootstrap 5 CSS в pip-пакете (без CDN).
+4. **Session state** — `dcc.Store` с `storage_type='session'` заменяет `st.session_state`.
+5. **Multi-page plugin** — `dash.page_registry` заменяет директорную конвенцию Streamlit `pages/`.
+
+### Структура после миграции
+
+```
+app/
+├── main.py              # Dash app factory + WSGI server entry point
+├── state.py             # dcc.Store schema definitions (constants + helpers)
+├── figure_theme.py      # apply_kibad_theme() — KIBAD dark theme for Plotly
+├── assets/
+│   ├── theme.css        # CSS token system + global dark theme styles
+│   ├── layout.css       # Grid/flex layout helpers
+│   └── fonts/           # IBM Plex Sans/Mono WOFF2 files (local, no CDN)
+├── components/
+│   ├── cards.py         # stat_card(label, value, delta)
+│   ├── layout.py        # page_header, section_header, empty_state
+│   ├── table.py         # data_table(df, id) — styled DataTable
+│   ├── nav.py           # sidebar_nav, tab_bar
+│   ├── form.py          # select_input, number_input, text_input, slider_input
+│   ├── alerts.py        # alert_banner(msg, level)
+│   └── upload.py        # upload_zone(id)
+└── pages/               # Dash pages registered via dash.register_page()
+    ├── p00_start.py     # path='/'
+    ├── p01_data.py      # path='/data'
+    ├── p02_prepare.py   # path='/prepare'
+    ├── p03_group.py     # path='/group'
+    ├── p04_merge.py     # path='/merge'
+    ├── p05_explore.py   # path='/explore'
+    ├── p06_tests.py     # path='/tests'
+    ├── p07_timeseries.py# path='/timeseries'
+    ├── p08_attribution.py# path='/attribution'
+    ├── p09_simulation.py# path='/simulation'
+    ├── p10_report.py    # path='/report'
+    ├── p11_help.py      # path='/help'
+    ├── p12_cluster.py   # path='/cluster'
+    ├── p14_rollrate.py  # path='/rollrate'
+    ├── p19_compare.py   # path='/compare'
+    ├── p20_charts.py    # path='/charts'
+    ├── p21_pipeline.py  # path='/pipeline'
+    ├── p22_text.py      # path='/text'
+    ├── p24_templates.py # path='/templates'
+    └── p25_autoanalyst.py# path='/auto'
+```
+
+### Ключевые изменения
+
+| Streamlit | Dash |
+|-----------|------|
+| `st.session_state` | `dcc.Store(storage_type='session')` |
+| `st.dataframe(df)` | `dash_table.DataTable` via `data_table(df, id)` |
+| `st.plotly_chart(fig)` | `dcc.Graph(figure=apply_kibad_theme(fig))` |
+| `st.selectbox` | `dcc.Dropdown` via `select_input()` |
+| `st.button` + `st.spinner` | `dbc.Button` + `dcc.Loading` |
+| `st.file_uploader` | `dcc.Upload` via `upload_zone()` |
+| `st.tabs` | `dbc.Tabs` / `dbc.Tab` |
+| `st.expander` | `dbc.Accordion` / `dbc.AccordionItem` |
+| `st.download_button` | `dcc.Download` |
+| `st.success/error/warning` | `alert_banner(msg, level)` |
+| `weasyprint` (PDF) | `reportlab` via `core/report_pdf.py` |
+
+### Sberbank enterprise constraints
+
+- NO external CDN URLs — all JS/CSS served from pip-installed packages.
+- NO Node.js / npm / webpack — deployment is `pip install && python app/main.py`.
+- NO cloud API calls at runtime.
+- `psycopg2` (not `-binary`) — requires `libpq-dev` on host.
+- `reportlab` replaces `weasyprint` (no system lib deps).
+- `kaleido` is OPTIONAL — image export wrapped in try/except with SVG fallback.
+- IBM Plex fonts served from local `app/assets/fonts/` directory.
