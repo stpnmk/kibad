@@ -112,7 +112,7 @@ layout = dbc.Container([
 
     dbc.Button("Сравнить", id="cmp-run-btn", color="primary", className="mt-3 mb-3"),
 
-    dcc.Loading(type="circle", color="#00c896", children=[
+    dcc.Loading(type="circle", color="#10b981", children=[
         html.Div(id="cmp-alert"),
         html.Div(id="cmp-output"),
     ]),
@@ -321,8 +321,8 @@ def run_comparison(n_clicks, ds_data, prep_data, active_ds, mode, metrics, agg_f
         columns=[{"name": c, "id": c} for c in cmp_df.columns],
         style_table={"overflowX": "auto"},
         style_cell={"textAlign": "center", "padding": "8px"},
-        style_header={"fontWeight": "bold", "backgroundColor": "#1c2030", "color": "#e8eaf0"},
-        style_data={"backgroundColor": "#141720", "color": "#e8eaf0"},
+        style_header={"fontWeight": "bold", "backgroundColor": "#191c24", "color": "#e4e7ee"},
+        style_data={"backgroundColor": "#111318", "color": "#e4e7ee"},
         style_data_conditional=[
             {"if": {"filter_query": "{Изменение} > 0", "column_id": "Изменение"},
              "color": "#2ecc71", "fontWeight": "bold"},
@@ -341,7 +341,7 @@ def run_comparison(n_clicks, ds_data, prep_data, active_ds, mode, metrics, agg_f
     fig_bar = px.bar(
         plot_df, x="Показатель", y="Значение", color="Группа",
         barmode="group", title="Сравнение А vs Б",
-        color_discrete_map={"А": "#4b9eff", "Б": "#e05252"},
+        color_discrete_map={"А": "#3b82f6", "Б": "#ef4444"},
     )
     fig_bar.update_layout(height=450, legend=dict(orientation="h", y=-0.2))
     apply_kibad_theme(fig_bar)

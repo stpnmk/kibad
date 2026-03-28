@@ -77,7 +77,7 @@ layout = html.Div([
     # Result area
     dcc.Loading(
         html.Div(id="prep-result"),
-        type="circle", color="#00c896",
+        type="circle", color="#10b981",
     ),
 ], style={"maxWidth": "1100px", "margin": "0 auto", "padding": "24px 16px"})
 

@@ -286,7 +286,7 @@ def show_pre_balance(covariates, treatment_col, ds_name, ds_store, prep_store):
     # Build horizontal bar chart
     fig = go.Figure()
     colors = [
-        "#e05252" if v > 0.25 else "#e8a020" if v > 0.1 else "#00c896"
+        "#ef4444" if v > 0.25 else "#f59e0b" if v > 0.1 else "#10b981"
         for v in bal["abs_smd"]
     ]
     fig.add_trace(go.Bar(
@@ -295,9 +295,9 @@ def show_pre_balance(covariates, treatment_col, ds_name, ds_store, prep_store):
         text=[f"{v:.3f}" for v in bal["abs_smd"]],
         textposition="outside",
     ))
-    fig.add_vline(x=0.1, line_dash="dash", line_color="#00c896",
+    fig.add_vline(x=0.1, line_dash="dash", line_color="#10b981",
                   annotation_text="0.1")
-    fig.add_vline(x=0.25, line_dash="dash", line_color="#e05252",
+    fig.add_vline(x=0.25, line_dash="dash", line_color="#ef4444",
                   annotation_text="0.25")
     fig.update_layout(
         title="|SMD| до сопоставления",
@@ -426,7 +426,7 @@ def _build_results(result, num_cov, work, treatment_col):
         marker=dict(size=9, color="#4a5068", symbol="circle-open", line=dict(width=2)),
         name="До",
     ))
-    colors = ["#00c896" if v < 0.1 else "#e8a020" if v < 0.25 else "#e05252"
+    colors = ["#10b981" if v < 0.1 else "#f59e0b" if v < 0.25 else "#ef4444"
               for v in bal_a["abs_smd"]]
     fig_love.add_trace(go.Scatter(
         x=bal_a["abs_smd"], y=bal_a["covariate"], mode="markers",
@@ -441,10 +441,10 @@ def _build_results(result, num_cov, work, treatment_col):
             fig_love.add_trace(go.Scatter(
                 x=[row_b["abs_smd"], row_a_match.iloc[0]["abs_smd"]],
                 y=[cov, cov], mode="lines",
-                line=dict(color="#2a2f42", width=1), showlegend=False,
+                line=dict(color="#252a3a", width=1), showlegend=False,
             ))
-    fig_love.add_vline(x=0.1, line_dash="dash", line_color="#00c896", annotation_text="0.1")
-    fig_love.add_vline(x=0.25, line_dash="dash", line_color="#e05252", annotation_text="0.25")
+    fig_love.add_vline(x=0.1, line_dash="dash", line_color="#10b981", annotation_text="0.1")
+    fig_love.add_vline(x=0.25, line_dash="dash", line_color="#ef4444", annotation_text="0.25")
     fig_love.update_layout(
         height=max(350, len(bal_b) * 30 + 100),
         margin=dict(l=10, r=10, t=30, b=30),

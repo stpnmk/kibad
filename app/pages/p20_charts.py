@@ -198,7 +198,7 @@ layout = dbc.Container([
         # --- Chart area ---
         dbc.Col([
             html.Div(id="ch-suggestion", className="mb-2"),
-            dcc.Loading(type="circle", color="#00c896", children=[
+            dcc.Loading(type="circle", color="#10b981", children=[
                 html.Div(id="ch-alert"),
                 dcc.Graph(id="ch-graph", style={"display": "none"}),
                 html.Div(id="ch-insights", className="mt-2"),

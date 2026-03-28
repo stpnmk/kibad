@@ -44,7 +44,7 @@ def select_input(
             options=opts,
             value=value,
             multi=multi,
-            placeholder=placeholder or f"Select {label.lower()}...",
+            placeholder=placeholder or f"Выберите...",
             clearable=clearable,
             className="kb-select",
         ),
@@ -112,6 +112,6 @@ def checklist_input(label: str, id: str, options: list, value: list | None = Non
             options=opts,
             value=value or [],
             labelStyle={"display": "block", "marginBottom": "4px",
-                         "color": "#8b92a8", "fontSize": "0.85rem"},
+                         "color": "#8891a5", "fontSize": "0.85rem"},
         ),
     ], style={"marginBottom": "12px"})

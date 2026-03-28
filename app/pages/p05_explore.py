@@ -42,7 +42,7 @@ layout = html.Div([
         dbc.Tab(label="KPI-трекер", tab_id="tab-kpi"),
         dbc.Tab(label="Профиль данных", tab_id="tab-profile"),
     ]),
-    dcc.Loading(html.Div(id="exp-tab-content"), type="circle", color="#00c896"),
+    dcc.Loading(html.Div(id="exp-tab-content"), type="circle", color="#10b981"),
 ])
 
 
@@ -107,7 +107,7 @@ def render_tab(tab, ds, datasets, prepared):
                 html.Div([
                     stat_card("Качество данных", f"{score:.0f}/100"),
                 ], className="kb-stats-grid"),
-                dcc.Markdown(md, style={"color": "#8b92a8", "fontSize": "0.9rem"}),
+                dcc.Markdown(md, style={"color": "#8891a5", "fontSize": "0.9rem"}),
             ])
         except Exception as e:
             return alert_banner(f"Ошибка авто-анализа: {e}", "warning")

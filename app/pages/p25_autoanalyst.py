@@ -25,7 +25,7 @@ layout = html.Div([
         dbc.Col(dcc.Dropdown(id="auto-ds", placeholder="Выберите датасет..."), width=4),
         dbc.Col(dbc.Button("Запустить полный анализ", id="auto-run-btn", color="primary"), width="auto"),
     ], className="mb-3"),
-    dcc.Loading(html.Div(id="auto-results"), type="circle", color="#00c896"),
+    dcc.Loading(html.Div(id="auto-results"), type="circle", color="#10b981"),
 ])
 
 
@@ -94,7 +94,7 @@ def run_auto_analysis(n, ds, datasets, prepared):
         md = format_insights_markdown(insights)
         sections.append(html.Div([
             section_header("Авто-инсайты"),
-            dcc.Markdown(md, style={"color": "#8b92a8"}),
+            dcc.Markdown(md, style={"color": "#8891a5"}),
         ]))
     except Exception as e:
         sections.append(alert_banner(f"Авто-инсайты недоступны: {e}", "info"))

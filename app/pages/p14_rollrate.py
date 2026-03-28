@@ -92,7 +92,7 @@ layout = dbc.Container([
 
         # --- Results ---
         dbc.Col([
-            dcc.Loading(type="circle", color="#00c896", children=[
+            dcc.Loading(type="circle", color="#10b981", children=[
                 html.Div(id="rr-alert"),
                 dbc.Tabs(id="rr-tabs", active_tab="tab-matrix", children=[
                     dbc.Tab(label="Матрица переходов", tab_id="tab-matrix"),
@@ -336,8 +336,8 @@ def render_tab(active_tab, result_data):
                     columns=[{"name": c, "id": c} for c in table_data.columns],
                     style_table={"overflowX": "auto"},
                     style_cell={"textAlign": "center", "padding": "6px"},
-                    style_header={"fontWeight": "bold", "backgroundColor": "#1c2030", "color": "#e8eaf0"},
-                    style_data={"backgroundColor": "#141720", "color": "#e8eaf0"},
+                    style_header={"fontWeight": "bold", "backgroundColor": "#191c24", "color": "#e4e7ee"},
+                    style_data={"backgroundColor": "#111318", "color": "#e4e7ee"},
                 ),
             ])
         except Exception as exc:
@@ -391,8 +391,8 @@ def render_tab(active_tab, result_data):
                 columns=[{"name": str(c), "id": str(c)} for c in count_display.reset_index().columns],
                 style_table={"overflowX": "auto"},
                 style_cell={"textAlign": "center", "padding": "6px"},
-                style_header={"fontWeight": "bold", "backgroundColor": "#1c2030", "color": "#e8eaf0"},
-                style_data={"backgroundColor": "#141720", "color": "#e8eaf0"},
+                style_header={"fontWeight": "bold", "backgroundColor": "#191c24", "color": "#e4e7ee"},
+                style_data={"backgroundColor": "#111318", "color": "#e4e7ee"},
             ),
             html.H6("Матрица переходов: ставки (%)", className="mt-4"),
             dash_table.DataTable(
@@ -400,8 +400,8 @@ def render_tab(active_tab, result_data):
                 columns=[{"name": str(c), "id": str(c)} for c in rate_display.reset_index().columns],
                 style_table={"overflowX": "auto"},
                 style_cell={"textAlign": "center", "padding": "6px"},
-                style_header={"fontWeight": "bold", "backgroundColor": "#1c2030", "color": "#e8eaf0"},
-                style_data={"backgroundColor": "#141720", "color": "#e8eaf0"},
+                style_header={"fontWeight": "bold", "backgroundColor": "#191c24", "color": "#e4e7ee"},
+                style_data={"backgroundColor": "#111318", "color": "#e4e7ee"},
             ),
             html.A(
                 dbc.Button("Скачать матрицу ставок (CSV)", color="secondary", className="mt-3"),
@@ -483,8 +483,8 @@ def render_tab(active_tab, result_data):
                     columns=[{"name": str(c), "id": str(c)} for c in N_df.reset_index().columns],
                     style_table={"overflowX": "auto"},
                     style_cell={"textAlign": "center", "padding": "6px"},
-                    style_header={"fontWeight": "bold", "backgroundColor": "#1c2030", "color": "#e8eaf0"},
-                    style_data={"backgroundColor": "#141720", "color": "#e8eaf0"},
+                    style_header={"fontWeight": "bold", "backgroundColor": "#191c24", "color": "#e4e7ee"},
+                    style_data={"backgroundColor": "#111318", "color": "#e4e7ee"},
                 ),
             ])
         except np.linalg.LinAlgError:

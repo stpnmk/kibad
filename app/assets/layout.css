@@ -10,8 +10,8 @@
 
 .kb-main {
   flex: 1;
-  margin-left: 56px;
-  padding: 24px 32px;
+  margin-left: var(--sidebar-width, 60px);
+  padding: 28px 36px;
   max-width: 1400px;
 }
 
@@ -61,7 +61,7 @@
 .kb-text-warning { color: var(--warning); }
 .kb-text-sm { font-size: 0.85rem; }
 .kb-text-xs { font-size: 0.72rem; }
-.kb-text-mono { font-family: var(--font-mono); }
+.kb-text-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .kb-text-center { text-align: center; }
 .kb-text-right { text-align: right; }
 .kb-text-uppercase {
@@ -83,7 +83,7 @@
 /* Grid layout for stats row */
 .kb-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -91,12 +91,12 @@
 /* Controls panel */
 .kb-controls {
   background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-card);
   padding: 20px;
 }
 .kb-controls-title {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -107,13 +107,13 @@
 /* Divider */
 .kb-divider {
   height: 1px;
-  background: var(--border);
+  background: var(--border-subtle);
   margin: 16px 0;
 }
 
 /* Footer */
 .kb-footer {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border-subtle);
   padding-top: 16px;
   margin-top: 32px;
   font-size: 0.75rem;
@@ -130,5 +130,8 @@
   }
   .kb-stats-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .kb-main {
+    padding: 16px 20px;
   }
 }

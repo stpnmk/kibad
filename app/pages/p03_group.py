@@ -76,7 +76,7 @@ layout = html.Div([
     ], className="mb-3"),
     dcc.Loading(
         html.Div(id="ga-results"),
-        type="circle", color="#00c896",
+        type="circle", color="#10b981",
     ),
     dcc.Download(id="ga-download"),
 ])

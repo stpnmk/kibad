@@ -29,7 +29,7 @@ layout = html.Div([
         dbc.Tab(label="Сценарный анализ", tab_id="tab-scenario"),
         dbc.Tab(label="Монте-Карло", tab_id="tab-mc"),
     ]),
-    dcc.Loading(html.Div(id="sim-content"), type="circle", color="#00c896"),
+    dcc.Loading(html.Div(id="sim-content"), type="circle", color="#10b981"),
 ])
 
 
@@ -209,7 +209,7 @@ def run_mc(n, ds, col, n_sims, horizon, datasets, prepared):
         fig = go.Figure()
         for i in range(min(100, n_s)):
             fig.add_trace(go.Scatter(y=paths[i], mode="lines", opacity=0.1,
-                                     line=dict(width=0.5, color="#00c896"), showlegend=False))
+                                     line=dict(width=0.5, color="#10b981"), showlegend=False))
         fig.update_layout(title="Монте-Карло траектории", xaxis_title="Период", yaxis_title=col)
         apply_kibad_theme(fig)
 

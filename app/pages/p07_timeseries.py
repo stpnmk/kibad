@@ -61,7 +61,7 @@ def _plot_forecast(result: ForecastResult, target_col: str, title: str) -> go.Fi
     fig.add_trace(go.Scatter(
         x=hist["date"], y=hist["actual"],
         mode="lines", name="Факт (история)",
-        line=dict(color="#e8eaf0", width=2.5),
+        line=dict(color="#e4e7ee", width=2.5),
     ))
     if not hist["forecast"].dropna().empty:
         fig.add_trace(go.Scatter(
@@ -72,7 +72,7 @@ def _plot_forecast(result: ForecastResult, target_col: str, title: str) -> go.Fi
     if not hist.empty and not fut.empty:
         fig.add_vline(
             x=hist["date"].iloc[-1],
-            line_dash="dash", line_color="#8b92a8", opacity=0.6,
+            line_dash="dash", line_color="#8891a5", opacity=0.6,
             annotation_text="Граница прогноза", annotation_position="top right",
         )
     if not fut.empty and "lower" in fut.columns and fut["lower"].notna().any():
@@ -87,7 +87,7 @@ def _plot_forecast(result: ForecastResult, target_col: str, title: str) -> go.Fi
         fig.add_trace(go.Scatter(
             x=fut["date"], y=fut["forecast"],
             mode="lines+markers", name="Прогноз",
-            line=dict(color="#e05252", width=2.5), marker=dict(size=5),
+            line=dict(color="#ef4444", width=2.5), marker=dict(size=5),
         ))
     m = result.metrics
     metric_text = " | ".join([f"{k}: {v}" for k, v in m.items()])
@@ -99,7 +99,7 @@ def _plot_forecast(result: ForecastResult, target_col: str, title: str) -> go.Fi
         annotations=[dict(
             xref="paper", yref="paper", x=0.01, y=1.03,
             text=metric_text, showarrow=False,
-            font=dict(size=11, color="#8b92a8"),
+            font=dict(size=11, color="#8891a5"),
         )],
         height=450,
     )
@@ -122,21 +122,21 @@ _method_cards = dbc.Row([
         dbc.CardHeader("Наивный / Сезонный наивный"),
         dbc.CardBody([
             html.P("Последнее значение или значение прошлого сезона.", className="card-text"),
-            html.P("Когда: базовая линия, горизонт 1-3 периода.", style={"fontSize": "0.85rem", "color": "#8b92a8"}),
+            html.P("Когда: базовая линия, горизонт 1-3 периода.", style={"fontSize": "0.85rem", "color": "#8891a5"}),
         ]),
     ], className="kb-card"), md=4),
     dbc.Col(dbc.Card([
         dbc.CardHeader("ARX (Ridge + лаги)"),
         dbc.CardBody([
             html.P("Авторегрессия + внешние факторы, Ridge-регуляризация.", className="card-text"),
-            html.P("Когда: есть экзогенные факторы, горизонт 3-24.", style={"fontSize": "0.85rem", "color": "#8b92a8"}),
+            html.P("Когда: есть экзогенные факторы, горизонт 3-24.", style={"fontSize": "0.85rem", "color": "#8891a5"}),
         ]),
     ], className="kb-card"), md=4),
     dbc.Col(dbc.Card([
         dbc.CardHeader("SARIMAX"),
         dbc.CardBody([
             html.P("Сезонная ARIMA с доверительными интервалами.", className="card-text"),
-            html.P("Когда: чёткая сезонность, >= 50 наблюдений.", style={"fontSize": "0.85rem", "color": "#8b92a8"}),
+            html.P("Когда: чёткая сезонность, >= 50 наблюдений.", style={"fontSize": "0.85rem", "color": "#8891a5"}),
         ]),
     ], className="kb-card"), md=4),
 ], className="mb-3")
@@ -241,7 +241,7 @@ def _render_tab(tab, ds_name, raw, prep):
                 ], value="seasonal", inline=True,
             ),
             dbc.Button("Запустить наивный прогноз", id="btn-naive", color="primary", className="mb-3"),
-            dcc.Loading(html.Div(id="naive-result"), type="circle", color="#00c896"),
+            dcc.Loading(html.Div(id="naive-result"), type="circle", color="#10b981"),
         ])
 
     if tab == "tab-arx":
@@ -249,7 +249,7 @@ def _render_tab(tab, ds_name, raw, prep):
             section_header("ARX -- авторегрессия с внешними факторами (Ridge)"),
             slider_input("Регуляризация Ridge (alpha)", "arx-alpha-slider", 1, 100, 1, 1),
             dbc.Button("Запустить ARX", id="btn-arx", color="primary", className="mb-3"),
-            dcc.Loading(html.Div(id="arx-result"), type="circle", color="#00c896"),
+            dcc.Loading(html.Div(id="arx-result"), type="circle", color="#10b981"),
         ])
 
     if tab == "tab-sarimax":
@@ -257,20 +257,20 @@ def _render_tab(tab, ds_name, raw, prep):
             section_header("SARIMAX -- сезонная ARIMA"),
             dbc.Row([
                 dbc.Col([
-                    html.P("Несезонная часть (p, d, q)", style={"fontWeight": "bold", "color": "#e8eaf0"}),
+                    html.P("Несезонная часть (p, d, q)", style={"fontWeight": "bold", "color": "#e4e7ee"}),
                     slider_input("p (AR)", "sarimax-p", 0, 5, 1, 1),
                     slider_input("d (дифф.)", "sarimax-d", 0, 2, 1, 1),
                     slider_input("q (MA)", "sarimax-q", 0, 5, 1, 1),
                 ], md=6),
                 dbc.Col([
-                    html.P("Сезонная часть (P, D, Q)", style={"fontWeight": "bold", "color": "#e8eaf0"}),
+                    html.P("Сезонная часть (P, D, Q)", style={"fontWeight": "bold", "color": "#e4e7ee"}),
                     slider_input("P", "sarimax-P", 0, 3, 1, 1),
                     slider_input("D", "sarimax-D", 0, 2, 0, 1),
                     slider_input("Q", "sarimax-Q", 0, 3, 1, 1),
                 ], md=6),
             ]),
             dbc.Button("Запустить SARIMAX", id="btn-sarimax", color="primary", className="mb-3"),
-            dcc.Loading(html.Div(id="sarimax-result"), type="circle", color="#00c896"),
+            dcc.Loading(html.Div(id="sarimax-result"), type="circle", color="#10b981"),
         ])
 
     if tab == "tab-backtest":
@@ -286,7 +286,7 @@ def _render_tab(tab, ds_name, raw, prep):
                 dbc.Col(slider_input("Горизонт фолда", "bt-horizon-fold", 1, 24, 6, 1), md=3),
             ]),
             dbc.Button("Запустить бэктест", id="btn-backtest", color="primary", className="mb-3"),
-            dcc.Loading(html.Div(id="backtest-result"), type="circle", color="#00c896"),
+            dcc.Loading(html.Div(id="backtest-result"), type="circle", color="#10b981"),
         ])
 
     if tab == "tab-acf":
@@ -298,7 +298,7 @@ def _render_tab(tab, ds_name, raw, prep):
                 dbc.Col(slider_input("Число лагов", "acf-nlags", 5, 60, 30, 1), md=4),
             ]),
             dbc.Button("Построить ACF/PACF", id="btn-acf", color="primary", className="mb-3"),
-            dcc.Loading(html.Div(id="acf-result"), type="circle", color="#00c896"),
+            dcc.Loading(html.Div(id="acf-result"), type="circle", color="#10b981"),
         ])
 
     if tab == "tab-anomaly":
@@ -312,7 +312,7 @@ def _render_tab(tab, ds_name, raw, prep):
                                      marks={15: "1.5", 25: "2.5", 30: "3.0", 50: "5.0"}), md=3),
             ]),
             dbc.Button("Найти аномалии", id="btn-anomaly", color="primary", className="mb-3"),
-            dcc.Loading(html.Div(id="anomaly-result"), type="circle", color="#00c896"),
+            dcc.Loading(html.Div(id="anomaly-result"), type="circle", color="#10b981"),
         ])
 
     return html.Div()
@@ -532,8 +532,8 @@ def _run_acf(n, col, nlags, ds_name, raw, prep):
             lags = list(range(len(vals)))
             fig.add_trace(go.Bar(x=lags, y=vals, marker_color="#4b9eff", name="ACF" if i == 0 else "PACF",
                                  showlegend=False), row=1, col=col_idx)
-            fig.add_hline(y=ci_bound, line_dash="dash", line_color="#e05252", row=1, col=col_idx)
-            fig.add_hline(y=-ci_bound, line_dash="dash", line_color="#e05252", row=1, col=col_idx)
+            fig.add_hline(y=ci_bound, line_dash="dash", line_color="#ef4444", row=1, col=col_idx)
+            fig.add_hline(y=-ci_bound, line_dash="dash", line_color="#ef4444", row=1, col=col_idx)
 
         fig.update_layout(title=f"ACF / PACF: {col}", height=400)
         apply_kibad_theme(fig)
@@ -544,7 +544,7 @@ def _run_acf(n, col, nlags, ds_name, raw, prep):
                 "Пунктирные линии -- 95% доверительные границы. "
                 "Значимые лаги ACF указывают на порядок q (MA), "
                 "значимые лаги PACF -- на порядок p (AR).",
-                style={"color": "#8b92a8", "fontSize": "0.85rem"},
+                style={"color": "#8891a5", "fontSize": "0.85rem"},
             ),
         ])
     except ImportError:
@@ -581,13 +581,13 @@ def _run_anomaly(n, col, window, thresh_tick, ds_name, date_col, raw, prep):
         fig = go.Figure()
         x_vals = list(range(len(anom_df)))
         fig.add_trace(go.Scatter(x=x_vals, y=anom_df["value"] if "value" in anom_df.columns else anom_df.iloc[:, 0],
-                                 mode="lines", name=col, line=dict(color="#e8eaf0")))
+                                 mode="lines", name=col, line=dict(color="#e4e7ee")))
         if not anomalies.empty:
             anom_idx = anomalies.index.tolist()
             anom_vals = anomalies["value"].values if "value" in anomalies.columns else anomalies.iloc[:, 0].values
             fig.add_trace(go.Scatter(x=anom_idx, y=anom_vals,
                                      mode="markers", name="Аномалии",
-                                     marker=dict(color="#e05252", size=10, symbol="x")))
+                                     marker=dict(color="#ef4444", size=10, symbol="x")))
         fig.update_layout(title=f"Аномалии: {col} (порог z={threshold:.1f})", height=400)
         apply_kibad_theme(fig)
 

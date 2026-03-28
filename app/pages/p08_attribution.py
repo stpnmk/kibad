@@ -41,7 +41,7 @@ layout = html.Div([
 | Север | 12 500 000 | 11 200 000 | 7 800 000 | 6 900 000 |
 
 Используйте суффиксы `_тек`/`_пред` или `_current`/`_last`.
-            """, style={"color": "#8b92a8"}),
+            """, style={"color": "#8891a5"}),
         ], title="Ожидаемый формат данных"),
     ], start_collapsed=True, className="mb-3"),
 
@@ -85,7 +85,7 @@ layout = html.Div([
             ], className="mt-3"),
         ]),
     ], className="mb-3"),
-    dcc.Loading(html.Div(id="attr-results"), type="circle", color="#00c896"),
+    dcc.Loading(html.Div(id="attr-results"), type="circle", color="#10b981"),
 ])
 
 

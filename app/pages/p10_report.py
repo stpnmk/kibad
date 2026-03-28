@@ -57,7 +57,7 @@ layout = html.Div([
             ]),
         ]),
     ], className="mb-3"),
-    dcc.Loading(html.Div(id="rep-result"), type="circle", color="#00c896"),
+    dcc.Loading(html.Div(id="rep-result"), type="circle", color="#10b981"),
     dcc.Download(id="rep-download-html"),
     dcc.Download(id="rep-download-pdf"),
 ])
@@ -149,7 +149,7 @@ def generate_report(n, ds, title, date_col, target_col, sections, datasets, prep
             ], className="mb-3"),
             html.Iframe(
                 srcDoc=report_html,
-                style={"width": "100%", "height": "600px", "border": "1px solid #2a2f42",
+                style={"width": "100%", "height": "600px", "border": "1px solid #252a3a",
                        "borderRadius": "10px", "background": "#fff"},
             ),
         ]), report_html

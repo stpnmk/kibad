@@ -62,7 +62,7 @@ layout = html.Div([
                 ], width=3),
             ]),
             html.Div(id="merge-diagnostics", className="mt-3"),
-            dcc.Loading(html.Div(id="merge-result"), type="circle", color="#00c896"),
+            dcc.Loading(html.Div(id="merge-result"), type="circle", color="#10b981"),
         ]),
         dbc.Tab(label="CONCAT (добавление строк)", tab_id="tab-concat", children=[
             dbc.Row([
@@ -85,7 +85,7 @@ layout = html.Div([
                     dbc.Button("Конкатенировать", id="concat-run-btn", color="primary", className="mt-4"),
                 ], width=3),
             ], className="mt-3"),
-            dcc.Loading(html.Div(id="concat-result"), type="circle", color="#00c896"),
+            dcc.Loading(html.Div(id="concat-result"), type="circle", color="#10b981"),
         ]),
     ], id="merge-tabs", active_tab="tab-join"),
 ])

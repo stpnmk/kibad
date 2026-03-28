@@ -26,59 +26,55 @@ dash.register_page(
 
 # Each module: (letter_icon, accent_color, title, description, href)
 _MODULES_PRIMARY = [
-    ("Д", "#4b9eff", "Загрузить данные",
+    ("Д", "#3b82f6", "Загрузить данные",
      "CSV, Excel, Parquet или PostgreSQL", "/data"),
-    ("П", "#9b59b6", "Подготовить данные",
+    ("П", "#8b5cf6", "Подготовить данные",
      "Очистка, формулы, нормализация", "/prepare"),
-    ("Г", "#00c896", "Группировка",
+    ("Г", "#10b981", "Группировка",
      "Сводные таблицы и агрегация", "/group"),
-    ("О", "#4b9eff", "Объединение",
+    ("О", "#06b6d4", "Объединение",
      "JOIN / UNION с диагностикой", "/merge"),
-    ("И", "#e8a020", "Исследование",
+    ("И", "#f59e0b", "Исследование",
      "Корреляции, распределения, профиль", "/explore"),
-    ("Т", "#e05252", "Стат. тесты",
+    ("Т", "#ef4444", "Стат. тесты",
      "t-тест, хи-квадрат, AB-тесты", "/tests"),
 ]
 
 _MODULES_ANALYTICS = [
-    ("ВР", "#1abc9c", "Временные ряды",
+    ("ВР", "#06b6d4", "Временные ряды",
      "Прогнозирование, ACF/PACF, аномалии", "/timeseries"),
-    ("Ф", "#f39c12", "Факторная атрибуция",
+    ("Ф", "#f97316", "Факторная атрибуция",
      "Декомпозиция и вклад факторов", "/attribution"),
-    ("М", "#3498db", "Моделирование",
+    ("М", "#3b82f6", "Моделирование",
      "Сценарный анализ и симуляция", "/simulation"),
-    ("К", "#e05252", "Кластеризация",
+    ("К", "#ef4444", "Кластеризация",
      "K-Means, DBSCAN, иерархическая", "/cluster"),
-    ("Ср", "#9b59b6", "Сравнение групп",
+    ("Ср", "#8b5cf6", "Сравнение групп",
      "Сопоставимость и мэтчинг", "/matching"),
-    ("Ст", "#4b9eff", "Сравнение периодов",
+    ("Ст", "#06b6d4", "Сравнение периодов",
      "Динамика показателей по периодам", "/compare"),
 ]
 
 _MODULES_TOOLS = [
-    ("Гр", "#00c896", "Графики",
+    ("Гр", "#10b981", "Графики",
      "Интерактивные визуализации", "/charts"),
-    ("Тк", "#e8a020", "Текст",
+    ("Тк", "#f59e0b", "Текст",
      "Анализ текстовых данных", "/text"),
-    ("АА", "#9b59b6", "Автоанализ",
+    ("АА", "#8b5cf6", "Автоанализ",
      "Автоматический разведочный анализ", "/autoanalyst"),
-    ("Шб", "#3498db", "Шаблоны",
+    ("Шб", "#3b82f6", "Шаблоны",
      "Готовые аналитические пайплайны", "/templates"),
-    ("Кв", "#1abc9c", "Конвейер",
+    ("Кв", "#06b6d4", "Конвейер",
      "Цепочки трансформаций данных", "/pipeline"),
-    ("О", "#f39c12", "Отчёты",
+    ("О", "#f97316", "Отчёты",
      "Экспорт PDF, HTML, CSV, Excel", "/report"),
 ]
 
 _STEPS = [
-    ("1", "Загрузите CSV / Excel на странице Данные",
-     "#4b9eff"),
-    ("2", "Очистите данные на странице Подготовка",
-     "#9b59b6"),
-    ("3", "Запустите анализ на любой аналитической странице",
-     "#00c896"),
-    ("4", "Сформируйте отчёт и экспортируйте результат",
-     "#e8a020"),
+    ("1", "Загрузите CSV / Excel на странице Данные", "#3b82f6"),
+    ("2", "Очистите данные на странице Подготовка", "#8b5cf6"),
+    ("3", "Запустите анализ на любой аналитической странице", "#10b981"),
+    ("4", "Сформируйте отчёт и экспортируйте результат", "#f59e0b"),
 ]
 
 
@@ -92,13 +88,13 @@ def _hero_section() -> html.Div:
         html.Span(
             label,
             style={
-                "background": "rgba(0,200,150,0.12)",
-                "border": "1px solid rgba(0,200,150,0.25)",
+                "background": "rgba(16,185,129,0.10)",
+                "border": "1px solid rgba(16,185,129,0.20)",
                 "borderRadius": "50px",
                 "padding": "5px 15px",
-                "fontSize": "0.78rem",
+                "fontSize": "0.76rem",
                 "fontWeight": "600",
-                "color": "#00c896",
+                "color": "#10b981",
             },
         )
         for label in ["Без Python", "Без SQL", "Без Excel"]
@@ -109,16 +105,16 @@ def _hero_section() -> html.Div:
             html.Div(
                 "АНАЛИТИКА БЕЗ КОДА",
                 style={
-                    "fontSize": "0.68rem", "fontWeight": "700",
+                    "fontSize": "0.65rem", "fontWeight": "700",
                     "textTransform": "uppercase", "letterSpacing": "0.14em",
-                    "color": "#00c896", "marginBottom": "14px",
+                    "color": "#10b981", "marginBottom": "14px",
                 },
             ),
             html.Div(
                 "KIBAD — Аналитическая студия",
                 style={
-                    "fontSize": "2rem", "fontWeight": "800",
-                    "color": "#e8eaf0",
+                    "fontSize": "1.9rem", "fontWeight": "800",
+                    "color": "#e4e7ee",
                     "lineHeight": "1.15", "letterSpacing": "-0.03em",
                     "marginBottom": "10px",
                 },
@@ -127,9 +123,9 @@ def _hero_section() -> html.Div:
                 "Загрузите данные и получите готовый анализ за 5 минут. "
                 "21 инструмент для работы с данными в одном приложении.",
                 style={
-                    "fontSize": "0.95rem", "color": "#8b92a8",
+                    "fontSize": "0.92rem", "color": "#8891a5",
                     "marginBottom": "24px", "lineHeight": "1.6",
-                    "maxWidth": "600px",
+                    "maxWidth": "580px",
                 },
             ),
             html.Div(pills, style={
@@ -137,9 +133,9 @@ def _hero_section() -> html.Div:
             }),
         ],
         style={
-            "background": "linear-gradient(135deg, #141720 0%, #1c2030 50%, #141720 100%)",
-            "border": "1px solid #2a2f42",
-            "borderRadius": "16px",
+            "background": "linear-gradient(135deg, #111318 0%, #191c24 50%, #111318 100%)",
+            "border": "1px solid #1e2232",
+            "borderRadius": "14px",
             "padding": "44px 48px",
             "marginBottom": "32px",
             "position": "relative",
@@ -150,7 +146,7 @@ def _hero_section() -> html.Div:
 
 def _stat_cards() -> html.Div:
     """Row of 3 stat cards -- values filled by callback."""
-    def _card(label: str, value_id: str, accent: str) -> html.Div:
+    def _card(label: str, value_id: str) -> html.Div:
         return html.Div(
             html.Div(
                 [
@@ -159,14 +155,13 @@ def _stat_cards() -> html.Div:
                 ],
                 className="kb-stat-card",
             ),
-            className="kb-start-stat",
         )
 
     return html.Div(
         [
-            _card("Датасетов", "start-stat-datasets", "#4b9eff"),
-            _card("Прогнозов", "start-stat-forecasts", "#00c896"),
-            _card("Тестов", "start-stat-tests", "#e8a020"),
+            _card("Датасетов", "start-stat-datasets"),
+            _card("Прогнозов", "start-stat-forecasts"),
+            _card("Тестов", "start-stat-tests"),
         ],
         className="kb-stats-grid",
         style={"marginBottom": "32px"},
@@ -183,9 +178,9 @@ def _module_card(icon: str, accent: str, title: str, desc: str, href: str) -> db
                         icon,
                         className="kb-module-icon",
                         style={
-                            "background": f"{accent}18",
+                            "background": f"{accent}14",
                             "color": accent,
-                            "border": f"1px solid {accent}30",
+                            "border": f"1px solid {accent}25",
                         },
                     ),
                     html.Div(title, className="kb-module-title"),
@@ -227,7 +222,7 @@ def _how_it_works() -> html.Div:
                     style={"background": color},
                 ),
                 html.Span(text, style={
-                    "fontSize": "0.86rem", "color": "#8b92a8",
+                    "fontSize": "0.84rem", "color": "#8891a5",
                 }),
             ],
             className="kb-start-step",
@@ -243,9 +238,9 @@ def _how_it_works() -> html.Div:
             html.Div(
                 steps,
                 style={
-                    "background": "#141720",
-                    "border": "1px solid #2a2f42",
-                    "borderRadius": "12px",
+                    "background": "#111318",
+                    "border": "1px solid #1e2232",
+                    "borderRadius": "10px",
                     "padding": "20px 24px",
                 },
             ),

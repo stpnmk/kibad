@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dash import html, dcc
 
-# Sidebar icon map: short text labels instead of emoji
+# Sidebar icon map: short text labels
 _ICON_MAP = {
     "house": "~",
     "database": "Д",
@@ -31,9 +31,39 @@ _ICON_MAP = {
     "percent": "%",
 }
 
+# Section groupings by order range: (min_order, max_order, label)
+_SECTIONS = [
+    (0, 0, None),          # Home — no section header
+    (1, 4, "Данные"),      # Data wrangling pages
+    (5, 19, "Анализ"),     # Analytics & modeling
+    (20, 99, "Инструменты"),  # Tools & export
+]
+
+
+def _make_nav_item(page: dict) -> dcc.Link:
+    """Build a single sidebar navigation link."""
+    icon_name = page.get("icon", "")
+    icon_char = _ICON_MAP.get(icon_name, icon_name if len(str(icon_name)) <= 2 else "-")
+    # Strip the number prefix from names like "5. Исследование" → "Исследование"
+    name = page.get("name", "")
+    if name and len(name) > 2 and name[0].isdigit() and ". " in name[:5]:
+        name = name.split(". ", 1)[1]
+
+    return dcc.Link(
+        html.Div([
+            html.Span(
+                icon_char,
+                className="kb-sidebar-icon",
+            ),
+            html.Span(name, className="kb-sidebar-item-label"),
+        ], className="kb-sidebar-item-inner"),
+        href=page["path"],
+        className="kb-sidebar-item",
+    )
+
 
 def sidebar_nav(pages) -> html.Div:
-    """Left sidebar with icons for page groups.
+    """Left sidebar with grouped sections and scroll.
 
     Parameters
     ----------
@@ -43,32 +73,34 @@ def sidebar_nav(pages) -> html.Div:
     """
     sorted_pages = sorted(pages, key=lambda p: p.get("order", 99))
 
-    nav_items = []
-    for page in sorted_pages:
-        icon_name = page.get("icon", "")
-        icon_char = _ICON_MAP.get(icon_name, icon_name if len(str(icon_name)) <= 2 else "-")
-        name = page.get("name", "")
-
-        nav_items.append(
-            dcc.Link(
-                html.Div([
-                    html.Span(icon_char, style={"fontSize": "1.1rem", "width": "24px", "textAlign": "center"}),
-                    html.Span(name, className="kb-sidebar-item-label"),
-                ], style={"display": "flex", "alignItems": "center", "gap": "10px"}),
-                href=page["path"],
-                className="kb-sidebar-item",
+    nav_children = []
+    for min_o, max_o, section_label in _SECTIONS:
+        group = [p for p in sorted_pages if min_o <= p.get("order", 99) <= max_o]
+        if not group:
+            continue
+        if section_label:
+            nav_children.append(
+                html.Div(section_label, className="kb-sidebar-section")
             )
-        )
+        for page in group:
+            nav_children.append(_make_nav_item(page))
 
     return html.Div([
-        # Brand
+        # Brand area
         html.Div([
-            html.Span("K", style={"fontWeight": "800", "fontSize": "1rem"}),
-        ], className="kb-sidebar-brand"),
+            html.Div([
+                html.Span("K", className="kb-sidebar-brand-letter"),
+            ], className="kb-sidebar-brand"),
+            html.Span("KIBAD", className="kb-sidebar-brand-text"),
+        ], className="kb-sidebar-header"),
 
-        # Navigation
-        html.Div(nav_items, className="kb-sidebar-nav"),
+        # Scrollable navigation area
+        html.Div(nav_children, className="kb-sidebar-nav"),
 
+        # Footer: version badge
+        html.Div([
+            html.Div("v5.0", className="kb-sidebar-version"),
+        ], className="kb-sidebar-footer"),
     ], className="kb-sidebar", id="sidebar")
 
 

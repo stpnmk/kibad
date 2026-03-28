@@ -54,7 +54,7 @@ layout = html.Div([
                 dbc.CardHeader("Шаги пайплайна"),
                 dbc.CardBody(id="pipe-steps-display"),
             ]),
-            dcc.Loading(html.Div(id="pipe-result"), type="circle", color="#00c896"),
+            dcc.Loading(html.Div(id="pipe-result"), type="circle", color="#10b981"),
         ], width=8),
     ]),
 

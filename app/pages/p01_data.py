@@ -80,7 +80,7 @@ layout = html.Div([
 
                 dcc.Loading(
                     html.Div(id="data-upload-result"),
-                    type="circle", color="#00c896",
+                    type="circle", color="#10b981",
                 ),
             ], style={"padding": "16px 0"}),
         ]),
@@ -135,7 +135,7 @@ layout = html.Div([
                 ], className="mt-2"),
                 dcc.Loading(
                     html.Div(id="pg-exec-result"),
-                    type="circle", color="#00c896",
+                    type="circle", color="#10b981",
                 ),
             ], style={"padding": "16px 0"}),
         ]),
@@ -151,7 +151,7 @@ layout = html.Div([
                 ], style={"maxWidth": "400px", "marginBottom": "16px"}),
                 dcc.Loading(
                     html.Div(id="catalog-preview"),
-                    type="circle", color="#00c896",
+                    type="circle", color="#10b981",
                 ),
             ], style={"padding": "16px 0"}),
         ]),

@@ -29,7 +29,7 @@ layout = html.Div([
         dbc.Tab(label="Биграммы", tab_id="tab-bigram"),
         dbc.Tab(label="Поиск по ключевым словам", tab_id="tab-search"),
     ]),
-    dcc.Loading(html.Div(id="txt-content"), type="circle", color="#00c896"),
+    dcc.Loading(html.Div(id="txt-content"), type="circle", color="#10b981"),
 ])
 
 

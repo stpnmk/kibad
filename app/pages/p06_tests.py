@@ -59,7 +59,7 @@ def _result_to_dict(r: TestResult) -> dict:
 def _result_card_div(r: dict, alpha: float) -> html.Div:
     is_sig = r["significant"]
     color = "#1b3a26" if is_sig else "#3a1b1b"
-    border = "#00c896" if is_sig else "#e05252"
+    border = "#10b981" if is_sig else "#ef4444"
     verdict = "ЗНАЧИМО" if is_sig else "НЕ ЗНАЧИМО"
     icon = "bi-check-circle-fill" if is_sig else "bi-x-circle-fill"
 
@@ -77,12 +77,12 @@ def _result_card_div(r: dict, alpha: float) -> html.Div:
                 style={"marginRight": "16px"},
             ),
             html.Span(r["effect_label"] or ""),
-        ], style={"fontSize": "0.85rem", "color": "#8b92a8"}),
+        ], style={"fontSize": "0.85rem", "color": "#8891a5"}),
     ]
     if r.get("ci"):
         children.append(
             html.Div(f"95% ДИ: [{r['ci'][0]:.4f}, {r['ci'][1]:.4f}]",
-                      style={"fontSize": "0.85rem", "color": "#8b92a8", "marginTop": "4px"})
+                      style={"fontSize": "0.85rem", "color": "#8891a5", "marginTop": "4px"})
         )
     children.append(
         html.Div(r["interpretation"],
@@ -96,7 +96,7 @@ def _result_card_div(r: dict, alpha: float) -> html.Div:
 
 def _overlay_hist(a_vals, b_vals, label_a, label_b, val_name) -> go.Figure:
     fig = go.Figure()
-    for vals, name, color in [(a_vals, label_a, "#4b9eff"), (b_vals, label_b, "#e05252")]:
+    for vals, name, color in [(a_vals, label_a, "#4b9eff"), (b_vals, label_b, "#ef4444")]:
         fig.add_trace(go.Histogram(
             x=vals, name=name, opacity=0.55,
             marker_color=color, nbinsx=30, histnorm="probability density",
@@ -114,7 +114,7 @@ def _overlay_hist(a_vals, b_vals, label_a, label_b, val_name) -> go.Figure:
 
 def _ci_bars(a_vals, b_vals, label_a, label_b, val_name) -> go.Figure:
     fig = go.Figure()
-    for vals, name, color in [(a_vals, label_a, "#4b9eff"), (b_vals, label_b, "#e05252")]:
+    for vals, name, color in [(a_vals, label_a, "#4b9eff"), (b_vals, label_b, "#ef4444")]:
         m = np.mean(vals)
         se = np.std(vals, ddof=1) / np.sqrt(len(vals)) if len(vals) > 1 else 0
         fig.add_trace(go.Bar(
@@ -253,10 +253,10 @@ def _render_tab(tab, ds_name, raw, prep):
                 id="tt-eqvar",
                 options=[{"label": " Предполагать равные дисперсии (Стьюдент)", "value": "eq"}],
                 value=[], inline=True,
-                className="mb-3", style={"color": "#8b92a8"},
+                className="mb-3", style={"color": "#8891a5"},
             ),
             dbc.Button("Запустить t-тест", id="btn-ttest", color="primary", className="mb-3"),
-            dcc.Loading(html.Div(id="ttest-result"), type="circle", color="#00c896"),
+            dcc.Loading(html.Div(id="ttest-result"), type="circle", color="#10b981"),
         ])
 
     if tab == "tab-mw":
@@ -265,7 +265,7 @@ def _render_tab(tab, ds_name, raw, prep):
                            "Непараметрический тест для двух независимых групп."),
             *_two_group_controls("mw", num_cols, cat_cols),
             dbc.Button("Запустить Манна-Уитни", id="btn-mw", color="primary", className="mb-3"),
-            dcc.Loading(html.Div(id="mw-result"), type="circle", color="#00c896"),
+            dcc.Loading(html.Div(id="mw-result"), type="circle", color="#10b981"),
         ])
 
     if tab == "tab-chi2":
@@ -277,7 +277,7 @@ def _render_tab(tab, ds_name, raw, prep):
                 dbc.Col(select_input("Колонка B", "chi2-col-b", cat_cols), md=6),
             ]),
             dbc.Button("Запустить хи-квадрат", id="btn-chi2", color="primary", className="mb-3"),
-            dcc.Loading(html.Div(id="chi2-result"), type="circle", color="#00c896"),
+            dcc.Loading(html.Div(id="chi2-result"), type="circle", color="#10b981"),
         ])
 
     if tab == "tab-corr":
@@ -293,7 +293,7 @@ def _render_tab(tab, ds_name, raw, prep):
                                      value="pearson"), md=4),
             ]),
             dbc.Button("Запустить тест корреляции", id="btn-corr", color="primary", className="mb-3"),
-            dcc.Loading(html.Div(id="corr-result"), type="circle", color="#00c896"),
+            dcc.Loading(html.Div(id="corr-result"), type="circle", color="#10b981"),
         ])
 
     if tab == "tab-boot":
@@ -309,7 +309,7 @@ def _render_tab(tab, ds_name, raw, prep):
                                      value="mean"), md=4),
             ]),
             dbc.Button("Запустить бутстрап", id="btn-boot", color="primary", className="mb-3"),
-            dcc.Loading(html.Div(id="boot-result"), type="circle", color="#00c896"),
+            dcc.Loading(html.Div(id="boot-result"), type="circle", color="#10b981"),
         ])
 
     if tab == "tab-perm":
@@ -321,7 +321,7 @@ def _render_tab(tab, ds_name, raw, prep):
                 dbc.Col(number_input("Число перестановок", "pm-n", value=10000, min_val=1000, max_val=100000, step=1000), md=4),
             ]),
             dbc.Button("Запустить перестановочный тест", id="btn-perm", color="primary", className="mb-3"),
-            dcc.Loading(html.Div(id="perm-result"), type="circle", color="#00c896"),
+            dcc.Loading(html.Div(id="perm-result"), type="circle", color="#10b981"),
         ])
 
     if tab == "tab-ab":
@@ -330,7 +330,7 @@ def _render_tab(tab, ds_name, raw, prep):
                            "Комплексный анализ двух групп с несколькими метриками."),
             *_two_group_controls("ab", num_cols, cat_cols),
             dbc.Button("Запустить A/B тест", id="btn-ab", color="primary", className="mb-3"),
-            dcc.Loading(html.Div(id="ab-result"), type="circle", color="#00c896"),
+            dcc.Loading(html.Div(id="ab-result"), type="circle", color="#10b981"),
         ])
 
     if tab == "tab-bh":
@@ -338,9 +338,9 @@ def _render_tab(tab, ds_name, raw, prep):
             section_header("Поправка Бенджамини-Хохберга (BH/FDR)",
                            "Коррекция p-значений при множественных сравнениях."),
             html.P("Запустите несколько тестов на других вкладках, затем нажмите кнопку ниже "
-                   "для пакетной коррекции.", style={"color": "#8b92a8"}),
+                   "для пакетной коррекции.", style={"color": "#8891a5"}),
             dbc.Button("Применить поправку BH", id="btn-bh", color="primary", className="mb-3"),
-            dcc.Loading(html.Div(id="bh-result"), type="circle", color="#00c896"),
+            dcc.Loading(html.Div(id="bh-result"), type="circle", color="#10b981"),
         ])
 
     return html.Div("Выберите вкладку.")

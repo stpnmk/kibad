@@ -93,7 +93,7 @@ def _template_card(t):
             html.Div([
                 html.Span(t["icon"], style={"fontSize": "2rem", "marginRight": "12px"}),
                 html.Div([
-                    html.H4(t["title"], style={"margin": "0", "color": "#e8eaf0"}),
+                    html.H4(t["title"], style={"margin": "0", "color": "#e4e7ee"}),
                     html.P(t["desc"], className="kb-text-secondary kb-text-sm", style={"margin": "4px 0 0 0"}),
                 ]),
             ], style={"display": "flex", "alignItems": "flex-start"}),
