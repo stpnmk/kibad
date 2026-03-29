@@ -510,6 +510,13 @@ code, pre {
   color: #fca5a5;
 }
 
+/* Sticky alert variant — stays in view while user scrolls */
+.kb-alert-sticky {
+  position: sticky;
+  top: 12px;
+  z-index: 500;
+}
+
 /* ══════════════════════════════════════════════════════════════
    BUTTONS
    ══════════════════════════════════════════════════════════════ */
@@ -667,6 +674,8 @@ code, pre {
   border-color: var(--border) !important;
   border-radius: 0 0 var(--radius-sm) var(--radius-sm) !important;
   box-shadow: var(--shadow-elevated) !important;
+  z-index: 9000 !important;
+  position: absolute !important;
 }
 .Select-option {
   background: var(--bg-elevated) !important;
@@ -777,9 +786,47 @@ input:focus, textarea:focus {
 
 .kb-page-content {
   margin-left: var(--sidebar-width);
+  margin-right: auto;
   max-width: 1400px;
-  padding: 24px;
+  padding: 28px 36px;
   min-height: 100vh;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CONTEXT MENU — right-click / kebab actions
+   z-index 9999 sits above dropdowns (9000) and modals (1050)
+   ══════════════════════════════════════════════════════════════ */
+
+.kb-context-menu {
+  position: fixed;
+  z-index: 9999;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 4px 0;
+  min-width: 180px;
+  box-shadow: var(--shadow-elevated);
+  display: none;
+}
+.kb-context-menu.active { display: block; }
+.kb-context-menu-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.1s, color 0.1s;
+}
+.kb-context-menu-item:hover {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+.kb-context-menu-separator {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 0;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1136,6 +1183,7 @@ input:focus, textarea:focus {
   }
   .kb-page-content {
     margin-left: var(--sidebar-width);
+    margin-right: auto;
     padding: 16px;
   }
 }

@@ -62,8 +62,13 @@ app.layout = dbc.Container([
         ),
     ], className="app-shell"),
 
+    # Context menu container (shown/hidden via JS callbacks)
+    html.Div(id="context-menu", className="kb-context-menu", children=[]),
+
 ], fluid=True, className="app-shell", style={"padding": "0", "maxWidth": "100%"})
 
 
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=8501)
+    import os
+    port = int(os.environ.get("PORT", 8501))
+    app.run(debug=False, host="0.0.0.0", port=port)
