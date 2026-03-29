@@ -6,8 +6,20 @@ from __future__ import annotations
 import base64
 import io
 import json
+import logging
+import os
+import re
 
 import dash
+
+logger = logging.getLogger(__name__)
+
+
+def _sanitize_filename(name: str) -> str:
+    """Strip directory components and replace unsafe characters."""
+    name = os.path.basename(name)
+    name = re.sub(r"[^\w.\-]", "_", name)
+    return name[:128]
 from dash import html, dcc, callback, Input, Output, State, dash_table, no_update, ctx
 import dash_bootstrap_components as dbc
 import pandas as pd
@@ -185,6 +197,7 @@ def load_uploaded_files(n_clicks, contents_list, filenames_list, sep, ds_store):
 
     for content_str, fname in zip(contents_list, filenames_list):
         try:
+            fname = _sanitize_filename(fname)
             # Decode base64 content from dcc.Upload
             content_type, content_data = content_str.split(",", 1)
             decoded = base64.b64decode(content_data)
@@ -215,6 +228,7 @@ def load_uploaded_files(n_clicks, contents_list, filenames_list, sep, ds_store):
             results.append(preview)
 
         except Exception as e:
+            logger.exception("Failed to load uploaded file '%s'", fname)
             results.append(dbc.Alert(f"{fname}: {e}", color="danger"))
 
     return html.Div(results), ds_store
