@@ -202,8 +202,10 @@ def multiplicative_attribution(
     total_delta = T_now - T_prev
 
     if T_prev <= 0 or T_now <= 0:
-        # Fallback to additive
-        return additive_attribution(df, target_col, target_prev_col, driver_cols, driver_prev_cols)
+        # Fallback to additive (multiplicative requires positive values)
+        result = additive_attribution(df, target_col, target_prev_col, driver_cols, driver_prev_cols)
+        result.method = "additive (fallback from multiplicative: non-positive target sums)"
+        return result
 
     log_total_ratio = np.log(T_now / T_prev)
 
@@ -305,7 +307,10 @@ def regression_attribution(
             driver_deltas.append(dd)
     else:
         total_delta = float(y.sum() - model.intercept_ * len(y_clean))
-        driver_deltas = [float(X[dc].std() * 2) for dc in driver_cols]
+        # Use actual interquartile range as meaningful delta proxy
+        driver_deltas = [float(pd.to_numeric(work[dc], errors="coerce").quantile(0.75)
+                               - pd.to_numeric(work[dc], errors="coerce").quantile(0.25))
+                         for dc in driver_cols]
 
     contribs = []
     for i, dc in enumerate(driver_cols):

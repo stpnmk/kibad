@@ -112,6 +112,6 @@ def checklist_input(label: str, id: str, options: list, value: list | None = Non
             options=opts,
             value=value or [],
             labelStyle={"display": "block", "marginBottom": "4px",
-                         "color": "#8891a5", "fontSize": "0.85rem"},
+                         "color": "#9ba3b8", "fontSize": "0.85rem"},
         ),
     ], style={"marginBottom": "12px"})

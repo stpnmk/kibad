@@ -105,7 +105,7 @@ def _hero_section() -> html.Div:
             html.Div(
                 "АНАЛИТИКА БЕЗ КОДА",
                 style={
-                    "fontSize": "0.65rem", "fontWeight": "700",
+                    "fontSize": "0.72rem", "fontWeight": "700",
                     "textTransform": "uppercase", "letterSpacing": "0.14em",
                     "color": "#10b981", "marginBottom": "14px",
                 },
@@ -123,7 +123,7 @@ def _hero_section() -> html.Div:
                 "Загрузите данные и получите готовый анализ за 5 минут. "
                 "21 инструмент для работы с данными в одном приложении.",
                 style={
-                    "fontSize": "0.92rem", "color": "#8891a5",
+                    "fontSize": "0.92rem", "color": "#9ba3b8",
                     "marginBottom": "24px", "lineHeight": "1.6",
                     "maxWidth": "580px",
                 },
@@ -222,7 +222,7 @@ def _how_it_works() -> html.Div:
                     style={"background": color},
                 ),
                 html.Span(text, style={
-                    "fontSize": "0.84rem", "color": "#8891a5",
+                    "fontSize": "0.84rem", "color": "#9ba3b8",
                 }),
             ],
             className="kb-start-step",

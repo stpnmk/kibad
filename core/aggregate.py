@@ -302,7 +302,7 @@ def pivot_view(
 
 def to_csv_bytes(df: pd.DataFrame) -> bytes:
     """Serialize DataFrame to CSV bytes (UTF-8 with BOM for Excel compat)."""
-    return ("\ufeff" + df.to_csv(index=False)).encode("utf-8-sig")
+    return df.to_csv(index=False).encode("utf-8-sig")
 
 
 def to_xlsx_bytes(df: pd.DataFrame) -> bytes:

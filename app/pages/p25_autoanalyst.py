@@ -94,7 +94,7 @@ def run_auto_analysis(n, ds, datasets, prepared):
         md = format_insights_markdown(insights)
         sections.append(html.Div([
             section_header("Авто-инсайты"),
-            dcc.Markdown(md, style={"color": "#8891a5"}),
+            dcc.Markdown(md, style={"color": "#9ba3b8"}),
         ]))
     except Exception as e:
         sections.append(alert_banner(f"Авто-инсайты недоступны: {e}", "info"))

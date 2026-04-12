@@ -424,8 +424,8 @@ def bootstrap_test(
     combined = np.concatenate([a, b])
     n_a = len(a)
     boot_diffs = np.array([
-        stat_fn(rng.choice(combined, size=n_a, replace=False)) -
-        stat_fn(rng.choice(combined, size=len(b), replace=False))
+        stat_fn(rng.choice(combined, size=n_a, replace=True)) -
+        stat_fn(rng.choice(combined, size=len(b), replace=True))
         for _ in range(n_bootstrap)
     ])
     p_value = float(np.mean(np.abs(boot_diffs) >= abs(observed_diff)))
@@ -672,9 +672,11 @@ def bh_correction(p_values: list[float], alpha: float = 0.05) -> list[dict[str, 
         adj_p = min(p * n / rank, 1.0)
         adjusted[rank_idx] = adj_p
 
-    # Enforce monotonicity (adjusted p-values must be non-decreasing from bottom)
+    # Enforce monotonicity: adjusted p-values must be non-decreasing by rank
     for i in range(n - 2, -1, -1):
-        adjusted[i] = min(adjusted[i], adjusted[i + 1]) if i + 1 < n else adjusted[i]
+        adjusted[i] = min(adjusted[i], adjusted[i + 1])
+    for i in range(1, n):
+        adjusted[i] = max(adjusted[i], adjusted[i - 1])
 
     for rank_idx, (orig_idx, p) in enumerate(indexed):
         rank = rank_idx + 1
@@ -937,8 +939,8 @@ def lag_correlation(
     """
     results = []
     for lag in range(0, max_lag + 1):
-        x_arr = x.iloc[lag:].reset_index(drop=True)
-        y_arr = y.iloc[:len(y) - lag].reset_index(drop=True) if lag > 0 else y.reset_index(drop=True)
+        x_arr = x.iloc[:len(x) - lag].reset_index(drop=True) if lag > 0 else x.reset_index(drop=True)
+        y_arr = y.iloc[lag:].reset_index(drop=True)
         n = min(len(x_arr), len(y_arr))
         x_s = pd.to_numeric(x_arr[:n], errors="coerce").dropna()
         y_s = pd.to_numeric(y_arr[:n], errors="coerce").dropna()

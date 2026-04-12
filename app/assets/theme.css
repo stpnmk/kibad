@@ -66,11 +66,11 @@
   --warning:       #f59e0b;
   --warning-dim:   rgba(245,158,11,0.12);
 
-  /* Text — 4-level hierarchy */
+  /* Text — 4-level hierarchy (WCAG AA compliant on --bg-card) */
   --text-primary:  #e4e7ee;
-  --text-secondary:#8891a5;
-  --text-muted:    #505872;
-  --text-disabled: #363d50;
+  --text-secondary:#9ba3b8;
+  --text-muted:    #6b7394;
+  --text-disabled: #454d66;
 
   /* Typography */
   --font-ui:       'IBM Plex Sans', -apple-system, 'Segoe UI', sans-serif;
@@ -130,6 +130,17 @@ a:hover { color: var(--accent-hover); text-decoration: none; }
 code, pre {
   font-family: var(--font-mono);
   font-size: 0.85em;
+}
+
+/* ── Focus & Accessibility ── */
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+button:focus-visible, a:focus-visible, [role="button"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
 }
 
 /* ── Scrollbar ── */
@@ -228,10 +239,10 @@ code, pre {
 
 /* Section dividers */
 .kb-sidebar-section {
-  font-size: 0.58rem;
+  font-size: 0.64rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   color: var(--text-muted);
   padding: 16px 0 6px 0;
   text-align: center;
@@ -254,8 +265,8 @@ code, pre {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-sm);
   color: var(--text-muted);
   cursor: pointer;
@@ -264,6 +275,10 @@ code, pre {
   margin: 0 auto;
   position: relative;
   flex-shrink: 0;
+}
+.kb-sidebar-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .kb-sidebar-item-inner {
   display: flex;
@@ -403,7 +418,7 @@ code, pre {
   opacity: 1;
 }
 .kb-stat-label {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -446,11 +461,11 @@ code, pre {
 }
 .kb-section-header h2 {
   margin: 0 0 2px 0;
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 .kb-section-header p {
   margin: 0;
@@ -520,7 +535,8 @@ code, pre {
   font-size: 0.84rem;
   border: none;
   border-radius: var(--radius-sm);
-  padding: 8px 20px;
+  padding: 10px 20px;
+  min-height: 40px;
   cursor: pointer;
   transition: all 0.15s ease;
   letter-spacing: 0.01em;
@@ -1072,11 +1088,11 @@ input:focus, textarea:focus {
 
 /* Start Page: Section Title */
 .kb-start-section-title {
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
   margin-bottom: 14px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border-subtle);

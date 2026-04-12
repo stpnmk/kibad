@@ -184,8 +184,10 @@ def run_naive_forecast(
         resid = np.zeros(len(y))  # no valid in-sample: use zero residuals → wide CI
     resid_std = float(np.nanstd(resid))
     z = float(_norm.ppf(1 - (1 - confidence) / 2))
-    lower = preds - z * resid_std
-    upper = preds + z * resid_std
+    # Widen CI by sqrt(h) for each forecast step to account for error accumulation
+    h_factors = np.sqrt(np.arange(1, horizon + 1))
+    lower = preds - z * resid_std * h_factors
+    upper = preds + z * resid_std * h_factors
 
     freq = pd.infer_freq(dates) or "MS"
     future_dates = pd.date_range(dates.iloc[-1], periods=horizon + 1, freq=freq)[1:]

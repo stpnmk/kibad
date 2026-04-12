@@ -261,17 +261,11 @@ def render_settings(mode, ds_data, prep_data, active_ds):
      State("cmp-mode", "value"),
      State("cmp-metrics", "value"),
      State("cmp-agg", "value"),
-     # Period states – may not exist
      State("cmp-settings-area", "children")],
     prevent_initial_call=True,
 )
 def run_comparison(n_clicks, ds_data, prep_data, active_ds, mode, metrics, agg_func, _settings):
-    """Main comparison callback.
-
-    Because the settings area is dynamic, we read component values via
-    pattern matching or by re-reading the store directly.  For simplicity
-    this implementation re-reads the DataFrame and applies the mode logic.
-    """
+    """Main comparison callback."""
     if not active_ds or not metrics:
         return dbc.Alert("Выберите датасет и показатели.", color="warning"), no_update
 
@@ -279,20 +273,46 @@ def run_comparison(n_clicks, ds_data, prep_data, active_ds, mode, metrics, agg_f
     if df is None or df.empty:
         return dbc.Alert("Нет данных.", color="danger"), no_update
 
-    # For the dynamic settings we need to fetch states from callback context
-    # Since Dash cannot easily read dynamically-generated component states
-    # in a single callback, we'll build the comparison UI as a two-step
-    # process where the run button triggers with all needed info.
-    # As a workaround for dynamic children, we re-use a simple approach:
-    # build subsets based on the first available method for the mode.
+    # Split data using appropriate method based on mode
+    if mode == "period":
+        date_cols = [c for c in df.columns if pd.api.types.is_datetime64_any_dtype(df[c])]
+        if date_cols:
+            date_col = date_cols[0]
+            sorted_df = df.sort_values(date_col)
+            mid = sorted_df[date_col].median()
+            df_a = sorted_df[sorted_df[date_col] <= mid]
+            df_b = sorted_df[sorted_df[date_col] > mid]
+            label_a = f"Период А (до {mid:%Y-%m-%d})"
+            label_b = f"Период Б (после {mid:%Y-%m-%d})"
+        else:
+            mid = len(df) // 2
+            df_a, df_b = df.iloc[:mid], df.iloc[mid:]
+            label_a, label_b = "Группа А (первая половина)", "Группа Б (вторая половина)"
+    elif mode == "segment":
+        cat_cols = df.select_dtypes(include=["object", "category"]).columns.tolist()
+        if cat_cols:
+            seg_col = cat_cols[0]
+            unique_vals = df[seg_col].dropna().unique()
+            mid = len(unique_vals) // 2
+            vals_a_set = set(unique_vals[:max(1, mid)])
+            vals_b_set = set(unique_vals[max(1, mid):])
+            df_a = df[df[seg_col].isin(vals_a_set)]
+            df_b = df[df[seg_col].isin(vals_b_set)]
+            label_a = f"Сегмент А ({', '.join(str(v) for v in list(vals_a_set)[:3])})"
+            label_b = f"Сегмент Б ({', '.join(str(v) for v in list(vals_b_set)[:3])})"
+        else:
+            mid = len(df) // 2
+            df_a, df_b = df.iloc[:mid], df.iloc[mid:]
+            label_a, label_b = "Группа А", "Группа Б"
+    else:
+        mid = len(df) // 2
+        df_a, df_b = df.iloc[:mid], df.iloc[mid:]
+        label_a, label_b = "Группа А (условие)", "Группа Б (условие)"
 
-    # This is a simplified approach - in production you'd use pattern-matching callbacks
-    vals_a = _aggregate_subset(df.head(len(df) // 2), metrics, agg_func)
-    vals_b = _aggregate_subset(df.tail(len(df) // 2), metrics, agg_func)
-    label_a = "Группа А (первая половина)"
-    label_b = "Группа Б (вторая половина)"
-    n_a = len(df) // 2
-    n_b = len(df) - n_a
+    vals_a = _aggregate_subset(df_a, metrics, agg_func)
+    vals_b = _aggregate_subset(df_b, metrics, agg_func)
+    n_a = len(df_a)
+    n_b = len(df_b)
 
     rows = []
     for m in metrics:
@@ -325,9 +345,9 @@ def run_comparison(n_clicks, ds_data, prep_data, active_ds, mode, metrics, agg_f
         style_data={"backgroundColor": "#111318", "color": "#e4e7ee"},
         style_data_conditional=[
             {"if": {"filter_query": "{Изменение} > 0", "column_id": "Изменение"},
-             "color": "#2ecc71", "fontWeight": "bold"},
+             "color": "#10b981", "fontWeight": "bold"},
             {"if": {"filter_query": "{Изменение} < 0", "column_id": "Изменение"},
-             "color": "#e74c3c", "fontWeight": "bold"},
+             "color": "#ef4444", "fontWeight": "bold"},
         ],
     )
 
@@ -348,7 +368,7 @@ def run_comparison(n_clicks, ds_data, prep_data, active_ds, mode, metrics, agg_f
 
     # --- Delta % chart ---
     delta_vals = cmp_df["Изменение %"].fillna(0)
-    colors = ["#2ecc71" if v >= 0 else "#e74c3c" for v in delta_vals]
+    colors = ["#10b981" if v >= 0 else "#ef4444" for v in delta_vals]
     fig_delta = go.Figure(go.Bar(
         x=cmp_df["Показатель"], y=delta_vals,
         marker_color=colors,
@@ -369,8 +389,8 @@ def run_comparison(n_clicks, ds_data, prep_data, active_ds, mode, metrics, agg_f
         measure=["relative"] * len(names),
         x=names, y=deltas,
         connector={"line": {"color": "rgb(63, 63, 63)"}},
-        increasing={"marker": {"color": "#2ecc71"}},
-        decreasing={"marker": {"color": "#e74c3c"}},
+        increasing={"marker": {"color": "#10b981"}},
+        decreasing={"marker": {"color": "#ef4444"}},
         text=[f"{d:+,.0f}" for d in deltas],
         textposition="outside",
     ))

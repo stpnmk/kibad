@@ -251,7 +251,7 @@ def analyze_dataset(df: pd.DataFrame) -> dict[str, Any]:
             if first_val == 0:
                 pct_change = None
             else:
-                pct_change = round((last_val - first_val) / abs(first_val) * 100, 1)
+                pct_change = round((last_val - first_val) / first_val * 100, 1)
 
             if pct_change is None:
                 direction = "нет данных"

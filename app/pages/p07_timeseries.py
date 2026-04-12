@@ -72,7 +72,7 @@ def _plot_forecast(result: ForecastResult, target_col: str, title: str) -> go.Fi
     if not hist.empty and not fut.empty:
         fig.add_vline(
             x=hist["date"].iloc[-1],
-            line_dash="dash", line_color="#8891a5", opacity=0.6,
+            line_dash="dash", line_color="#9ba3b8", opacity=0.6,
             annotation_text="Граница прогноза", annotation_position="top right",
         )
     if not fut.empty and "lower" in fut.columns and fut["lower"].notna().any():
@@ -99,7 +99,7 @@ def _plot_forecast(result: ForecastResult, target_col: str, title: str) -> go.Fi
         annotations=[dict(
             xref="paper", yref="paper", x=0.01, y=1.03,
             text=metric_text, showarrow=False,
-            font=dict(size=11, color="#8891a5"),
+            font=dict(size=11, color="#9ba3b8"),
         )],
         height=450,
     )
@@ -122,21 +122,21 @@ _method_cards = dbc.Row([
         dbc.CardHeader("Наивный / Сезонный наивный"),
         dbc.CardBody([
             html.P("Последнее значение или значение прошлого сезона.", className="card-text"),
-            html.P("Когда: базовая линия, горизонт 1-3 периода.", style={"fontSize": "0.85rem", "color": "#8891a5"}),
+            html.P("Когда: базовая линия, горизонт 1-3 периода.", style={"fontSize": "0.85rem", "color": "#9ba3b8"}),
         ]),
     ], className="kb-card"), md=4),
     dbc.Col(dbc.Card([
         dbc.CardHeader("ARX (Ridge + лаги)"),
         dbc.CardBody([
             html.P("Авторегрессия + внешние факторы, Ridge-регуляризация.", className="card-text"),
-            html.P("Когда: есть экзогенные факторы, горизонт 3-24.", style={"fontSize": "0.85rem", "color": "#8891a5"}),
+            html.P("Когда: есть экзогенные факторы, горизонт 3-24.", style={"fontSize": "0.85rem", "color": "#9ba3b8"}),
         ]),
     ], className="kb-card"), md=4),
     dbc.Col(dbc.Card([
         dbc.CardHeader("SARIMAX"),
         dbc.CardBody([
             html.P("Сезонная ARIMA с доверительными интервалами.", className="card-text"),
-            html.P("Когда: чёткая сезонность, >= 50 наблюдений.", style={"fontSize": "0.85rem", "color": "#8891a5"}),
+            html.P("Когда: чёткая сезонность, >= 50 наблюдений.", style={"fontSize": "0.85rem", "color": "#9ba3b8"}),
         ]),
     ], className="kb-card"), md=4),
 ], className="mb-3")
@@ -544,7 +544,7 @@ def _run_acf(n, col, nlags, ds_name, raw, prep):
                 "Пунктирные линии -- 95% доверительные границы. "
                 "Значимые лаги ACF указывают на порядок q (MA), "
                 "значимые лаги PACF -- на порядок p (AR).",
-                style={"color": "#8891a5", "fontSize": "0.85rem"},
+                style={"color": "#9ba3b8", "fontSize": "0.85rem"},
             ),
         ])
     except ImportError:
