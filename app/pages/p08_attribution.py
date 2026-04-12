@@ -41,7 +41,7 @@ layout = html.Div([
 | Север | 12 500 000 | 11 200 000 | 7 800 000 | 6 900 000 |
 
 Используйте суффиксы `_тек`/`_пред` или `_current`/`_last`.
-            """, style={"color": "#8891a5"}),
+            """, style={"color": "#9ba3b8"}),
         ], title="Ожидаемый формат данных"),
     ], start_collapsed=True, className="mb-3"),
 

@@ -14,7 +14,7 @@ import plotly.graph_objects as go
 PLOTLY_THEME = dict(
     paper_bgcolor='#111318',
     plot_bgcolor='#111318',
-    font=dict(family='IBM Plex Sans, -apple-system, sans-serif', color='#e4e7ee', size=12),
+    font=dict(family='IBM Plex Sans, -apple-system, sans-serif', color='#e4e7ee', size=13),
     colorway=[
         '#10b981',  # emerald (accent)
         '#3b82f6',  # blue
@@ -31,8 +31,8 @@ PLOTLY_THEME = dict(
         linecolor='#252a3a',
         zerolinecolor='#252a3a',
         zerolinewidth=1,
-        tickfont=dict(size=11, color='#8891a5'),
-        title_font=dict(size=12, color='#8891a5'),
+        tickfont=dict(size=12, color='#9ba3b8'),
+        title_font=dict(size=13, color='#9ba3b8'),
     ),
     yaxis=dict(
         gridcolor='#1e2232',
@@ -40,21 +40,21 @@ PLOTLY_THEME = dict(
         linecolor='#252a3a',
         zerolinecolor='#252a3a',
         zerolinewidth=1,
-        tickfont=dict(size=11, color='#8891a5'),
-        title_font=dict(size=12, color='#8891a5'),
+        tickfont=dict(size=12, color='#9ba3b8'),
+        title_font=dict(size=13, color='#9ba3b8'),
     ),
     legend=dict(
         bgcolor='rgba(0,0,0,0)',
-        font=dict(color='#8891a5', size=11),
+        font=dict(color='#9ba3b8', size=12),
         itemsizing='constant',
     ),
     hoverlabel=dict(
-        bgcolor='#191c24',
+        bgcolor='#1f2330',
         font_color='#e4e7ee',
-        font_size=12,
+        font_size=13,
         bordercolor='#252a3a',
     ),
-    margin=dict(l=48, r=24, t=40, b=40),
+    margin=dict(l=48, r=24, t=44, b=44),
 )
 
 

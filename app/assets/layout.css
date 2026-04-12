@@ -96,11 +96,11 @@
   padding: 20px;
 }
 .kb-controls-title {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin-bottom: 16px;
 }
 

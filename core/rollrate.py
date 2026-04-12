@@ -202,8 +202,11 @@ def steady_state(T: pd.DataFrame) -> pd.Series:
     T_np = T.values.astype(float)
     eigenvalues, eigenvectors = np.linalg.eig(T_np.T)
 
-    # Find eigenvector for eigenvalue closest to 1
+    # Find eigenvector for eigenvalue closest to 1 (must be within tolerance)
     idx = np.argmin(np.abs(eigenvalues - 1.0))
+    if np.abs(eigenvalues[idx] - 1.0) > 1e-6:
+        import warnings
+        warnings.warn("No eigenvalue near 1.0 found; matrix may not be stochastic")
     pi = np.real(eigenvectors[:, idx])
     pi = np.abs(pi)
     total = pi.sum()

@@ -233,7 +233,7 @@ def portfolio_summary(
     if provisions_col and provisions_col in df.columns:
         provisions = pd.to_numeric(df[provisions_col], errors="coerce").fillna(0).sum()
         coverage_ratio = (float(provisions) / total_el * 100) if total_el > 0 else None
-        provisions_adequacy = float(provisions) - total_el
+        provisions_adequacy = (float(provisions) - total_el) if total_el > 0 else None
 
     # Stage breakdown
     stage_breakdown_rows = []

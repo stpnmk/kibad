@@ -40,9 +40,9 @@ def data_table(
             style_table={"overflowX": "auto"},
             style_header={
                 "backgroundColor": "#191c24",
-                "color": "#505872",
+                "color": "#6b7394",
                 "fontWeight": "700",
-                "fontSize": "0.7rem",
+                "fontSize": "0.72rem",
                 "textTransform": "uppercase",
                 "letterSpacing": "0.06em",
                 "border": "none",

@@ -77,12 +77,12 @@ def _result_card_div(r: dict, alpha: float) -> html.Div:
                 style={"marginRight": "16px"},
             ),
             html.Span(r["effect_label"] or ""),
-        ], style={"fontSize": "0.85rem", "color": "#8891a5"}),
+        ], style={"fontSize": "0.85rem", "color": "#9ba3b8"}),
     ]
     if r.get("ci"):
         children.append(
             html.Div(f"95% ДИ: [{r['ci'][0]:.4f}, {r['ci'][1]:.4f}]",
-                      style={"fontSize": "0.85rem", "color": "#8891a5", "marginTop": "4px"})
+                      style={"fontSize": "0.85rem", "color": "#9ba3b8", "marginTop": "4px"})
         )
     children.append(
         html.Div(r["interpretation"],
@@ -253,7 +253,7 @@ def _render_tab(tab, ds_name, raw, prep):
                 id="tt-eqvar",
                 options=[{"label": " Предполагать равные дисперсии (Стьюдент)", "value": "eq"}],
                 value=[], inline=True,
-                className="mb-3", style={"color": "#8891a5"},
+                className="mb-3", style={"color": "#9ba3b8"},
             ),
             dbc.Button("Запустить t-тест", id="btn-ttest", color="primary", className="mb-3"),
             dcc.Loading(html.Div(id="ttest-result"), type="circle", color="#10b981"),
@@ -338,7 +338,7 @@ def _render_tab(tab, ds_name, raw, prep):
             section_header("Поправка Бенджамини-Хохберга (BH/FDR)",
                            "Коррекция p-значений при множественных сравнениях."),
             html.P("Запустите несколько тестов на других вкладках, затем нажмите кнопку ниже "
-                   "для пакетной коррекции.", style={"color": "#8891a5"}),
+                   "для пакетной коррекции.", style={"color": "#9ba3b8"}),
             dbc.Button("Применить поправку BH", id="btn-bh", color="primary", className="mb-3"),
             dcc.Loading(html.Div(id="bh-result"), type="circle", color="#10b981"),
         ])

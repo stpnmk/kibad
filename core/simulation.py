@@ -188,9 +188,11 @@ def run_scenario(
         )
         scen_preds = model.predict(horizon, future_exog=exog_shocked)
     elif preset is not None:
-        # No exog; apply scalar shock on the baseline predictions
+        # No exog; apply compounding shock on the baseline predictions
         total_shock = sum(preset.shocks.values())
-        scen_preds = base_preds * (1 + total_shock)
+        # Compound shock across steps to model propagation through AR lags
+        scen_preds = base_preds * np.array([(1 + total_shock) ** (i + 1)
+                                            for i in range(len(base_preds))])
 
     # Assemble forecast DataFrames
     def _make_forecast_df(preds: np.ndarray, label: str) -> pd.DataFrame:
