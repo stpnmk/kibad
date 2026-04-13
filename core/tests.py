@@ -69,12 +69,12 @@ def _cohens_d(a: np.ndarray, b: np.ndarray) -> float:
 def _d_label(d: float) -> str:
     ad = abs(d)
     if ad < 0.2:
-        return "negligible"
+        return "незначительный"
     if ad < 0.5:
-        return "small"
+        return "малый"
     if ad < 0.8:
-        return "medium"
-    return "large"
+        return "средний"
+    return "большой"
 
 
 def _cramers_v(chi2: float, n: int, k: int, r: int) -> float:
@@ -84,40 +84,40 @@ def _cramers_v(chi2: float, n: int, k: int, r: int) -> float:
 
 def _cramer_label(v: float) -> str:
     if v < 0.1:
-        return "negligible"
+        return "незначительный"
     if v < 0.3:
-        return "small"
+        return "малый"
     if v < 0.5:
-        return "medium"
-    return "large"
+        return "средний"
+    return "большой"
 
 
 def _r_label(r: float) -> str:
     ar = abs(r)
     if ar < 0.1:
-        return "negligible"
+        return "незначительный"
     if ar < 0.3:
-        return "small"
+        return "малый"
     if ar < 0.5:
-        return "medium"
-    return "large"
+        return "средний"
+    return "большой"
 
 
 def _sig_text(significant: bool, p: float, alpha: float) -> str:
     if significant:
-        return f"statistically significant (p={p:.4f} < α={alpha})"
-    return f"NOT statistically significant (p={p:.4f} ≥ α={alpha})"
+        return f"статистически значимо (p={p:.4f} < α={alpha})"
+    return f"НЕ статистически значимо (p={p:.4f} ≥ α={alpha})"
 
 
 def _cliff_label(d: float) -> str:
     ad = abs(d)
     if ad < 0.147:
-        return "negligible"
+        return "незначительный"
     if ad < 0.33:
-        return "small"
+        return "малый"
     if ad < 0.474:
-        return "medium"
-    return "large"
+        return "средний"
+    return "большой"
 
 
 # ---------------------------------------------------------------------------
@@ -166,12 +166,12 @@ def ttest_independent(
     t_crit = stats.t.ppf(1 - alpha / 2, df=df_val)
     ci = (round(diff - t_crit * se_diff, 4), round(diff + t_crit * se_diff, 4))
 
-    direction = "higher" if np.mean(a) > np.mean(b) else "lower"
+    direction = "выше" if np.mean(a) > np.mean(b) else "ниже"
     interp = (
-        f"The mean of {label_a} ({np.mean(a):.4f}) is {direction} than {label_b} ({np.mean(b):.4f}). "
-        f"The difference is {_sig_text(sig, p, alpha)}. "
-        f"Effect size (Cohen's d = {d:.3f}) is {_d_label(d)}. "
-        f"95% CI for the difference: [{ci[0]}, {ci[1]}]."
+        f"Среднее {label_a} ({np.mean(a):.4f}) {direction}, чем {label_b} ({np.mean(b):.4f}). "
+        f"Различие {_sig_text(sig, p, alpha)}. "
+        f"Размер эффекта (Cohen's d = {d:.3f}) — {_d_label(d)}. "
+        f"95% ДИ разницы: [{ci[0]}, {ci[1]}]."
     )
 
     return TestResult(
@@ -234,11 +234,11 @@ def mann_whitney(
     n1, n2 = len(a), len(b)
     r = 1 - (2 * stat) / (n1 * n2)
 
-    direction = "higher" if np.median(a) > np.median(b) else "lower"
+    direction = "выше" if np.median(a) > np.median(b) else "ниже"
     interp = (
-        f"The median of {label_a} ({np.median(a):.4f}) is {direction} than {label_b} ({np.median(b):.4f}). "
-        f"The difference is {_sig_text(sig, p, alpha)}. "
-        f"Effect size (rank-biserial r = {r:.3f}) is {_r_label(r)}."
+        f"Медиана {label_a} ({np.median(a):.4f}) {direction}, чем {label_b} ({np.median(b):.4f}). "
+        f"Различие {_sig_text(sig, p, alpha)}. "
+        f"Размер эффекта (ранговый r = {r:.3f}) — {_r_label(r)}."
     )
 
     return TestResult(
@@ -294,9 +294,9 @@ def chi_square_independence(
     v = _cramers_v(chi2, n, ct.shape[1], ct.shape[0])
 
     interp = (
-        f"The association between '{col_a}' and '{col_b}' is {_sig_text(sig, p, alpha)}. "
-        f"Chi²({dof}) = {chi2:.4f}. "
-        f"Effect size: Cramér's V = {v:.3f} ({_cramer_label(v)})."
+        f"Связь между «{col_a}» и «{col_b}» {_sig_text(sig, p, alpha)}. "
+        f"χ²({dof}) = {chi2:.4f}. "
+        f"Размер эффекта: V Крамера = {v:.3f} ({_cramer_label(v)})."
     )
 
     return TestResult(
@@ -351,16 +351,19 @@ def correlation_test(
 
     if method == "spearman":
         r, p = stats.spearmanr(x_arr, y_arr)
-        test_name = "Spearman rank correlation"
+        test_name = "Ранговая корреляция Спирмена"
+    elif method == "kendall":
+        r, p = stats.kendalltau(x_arr, y_arr)
+        test_name = "Корреляция Кендалла (τ)"
     else:
         r, p = stats.pearsonr(x_arr, y_arr)
-        test_name = "Pearson correlation"
+        test_name = "Корреляция Пирсона"
 
     sig = bool(p < alpha)
-    direction = "positive" if r > 0 else "negative"
+    direction = "положительная" if r > 0 else "отрицательная"
     interp = (
-        f"There is a {_r_label(abs(r))} {direction} {method} correlation between "
-        f"'{label_x}' and '{label_y}' (r = {r:.4f}, {_sig_text(sig, p, alpha)})."
+        f"Обнаружена {_r_label(abs(r))} {direction} {method}-корреляция между "
+        f"«{label_x}» и «{label_y}» (r = {r:.4f}, {_sig_text(sig, p, alpha)})."
     )
 
     return TestResult(
@@ -434,12 +437,13 @@ def bootstrap_test(
     ci_low = float(np.percentile(boot_diffs, (alpha / 2) * 100))
     ci_high = float(np.percentile(boot_diffs, (1 - alpha / 2) * 100))
 
+    stat_ru = "среднее" if statistic == "mean" else "медиана"
     interp = (
-        f"Bootstrap test ({n_bootstrap} resamples) for {statistic} difference: "
-        f"{label_a} {statistic} = {stat_fn(a):.4f}, {label_b} {statistic} = {stat_fn(b):.4f}. "
-        f"Observed difference = {observed_diff:.4f}. "
-        f"The difference is {_sig_text(sig, p_value, alpha)}. "
-        f"{int((1-alpha)*100)}% CI of null distribution: [{ci_low:.4f}, {ci_high:.4f}]."
+        f"Бутстрап-тест ({n_bootstrap} итераций), статистика: {stat_ru}. "
+        f"{label_a} = {stat_fn(a):.4f}, {label_b} = {stat_fn(b):.4f}. "
+        f"Наблюдаемая разница = {observed_diff:.4f}. "
+        f"Различие {_sig_text(sig, p_value, alpha)}. "
+        f"{int((1-alpha)*100)}% ДИ нулевого распределения: [{ci_low:.4f}, {ci_high:.4f}]."
     )
 
     return TestResult(
@@ -500,14 +504,232 @@ def ab_test(
     lift = (np.mean(trt_arr) - np.mean(ctrl_arr)) / abs(np.mean(ctrl_arr)) * 100 if np.mean(ctrl_arr) != 0 else float("nan")
     any_sig = ttest.significant or mw.significant
 
+    verdict_ru = "ЗНАЧИМО" if any_sig else "НЕ ЗНАЧИМО"
     summary = (
-        f"A/B Test Summary — {label_ctrl} vs {label_trt}:\n"
-        f"  Lift: {lift:+.2f}%  |  Cohen's d: {ttest.effect_size} ({ttest.effect_label})\n"
-        f"  t-test p={ttest.p_value}  |  Mann-Whitney p={mw.p_value}  |  Bootstrap p={boot.p_value}\n"
-        f"  Overall verdict: {'SIGNIFICANT' if any_sig else 'NOT SIGNIFICANT'} at α={alpha}."
+        f"A/B тест — {label_ctrl} vs {label_trt}:\n"
+        f"  Лифт: {lift:+.2f}%  |  Cohen's d: {ttest.effect_size} ({ttest.effect_label})\n"
+        f"  t-тест p={ttest.p_value}  |  Манна-Уитни p={mw.p_value}  |  Бутстрап p={boot.p_value}\n"
+        f"  Итог: {verdict_ru} при α={alpha}."
     )
 
     return {"ttest": ttest, "mann_whitney": mw, "bootstrap": boot, "summary": summary, "lift_pct": round(lift, 4)}
+
+
+# ---------------------------------------------------------------------------
+# ANOVA (one-way)
+# ---------------------------------------------------------------------------
+
+def anova_oneway(
+    *groups: "pd.Series | np.ndarray",
+    alpha: float = 0.05,
+    labels: "list[str] | None" = None,
+) -> TestResult:
+    """One-way ANOVA — сравнение средних в ≥3 группах.
+
+    Reports η² (eta-squared) as effect size and performs Tukey HSD
+    post-hoc when the omnibus test is significant.
+
+    Parameters
+    ----------
+    *groups : array-like
+        Numeric samples (one per group, ≥2 groups required).
+    alpha : float
+        Significance level.
+    labels : list[str] | None
+        Group names.
+
+    Returns
+    -------
+    TestResult
+        With ``details["posthoc"]`` containing pairwise comparisons when significant.
+    """
+    arrays = [
+        np.array(pd.to_numeric(pd.Series(g), errors="coerce").dropna(), dtype=float)
+        for g in groups
+    ]
+    if len(arrays) < 2:
+        raise ValueError("Нужно минимум 2 группы для ANOVA.")
+    for i, a in enumerate(arrays):
+        if len(a) < 2:
+            raise ValueError(f"Группа {i+1} содержит менее 2 наблюдений.")
+
+    if labels is None:
+        labels = [f"Группа {i+1}" for i in range(len(arrays))]
+
+    stat, p = stats.f_oneway(*arrays)
+    sig = bool(p < alpha)
+
+    # η² (eta-squared) = SS_between / SS_total
+    grand = np.concatenate(arrays)
+    grand_mean = grand.mean()
+    ss_between = sum(len(a) * (a.mean() - grand_mean) ** 2 for a in arrays)
+    ss_total = ((grand - grand_mean) ** 2).sum()
+    eta_sq = float(ss_between / ss_total) if ss_total > 0 else 0.0
+
+    # Label for eta²
+    if eta_sq < 0.01:
+        eta_label = "незначительный"
+    elif eta_sq < 0.06:
+        eta_label = "малый"
+    elif eta_sq < 0.14:
+        eta_label = "средний"
+    else:
+        eta_label = "большой"
+
+    details: dict[str, Any] = {
+        "k": len(arrays),
+        "eta_squared": round(eta_sq, 4),
+        "group_stats": {
+            lb: {"n": len(a), "mean": round(float(a.mean()), 4), "std": round(float(a.std(ddof=1)), 4)}
+            for lb, a in zip(labels, arrays)
+        },
+    }
+
+    # Tukey HSD post-hoc if significant
+    posthoc: list[dict[str, Any]] = []
+    if sig and len(arrays) >= 2:
+        try:
+            from scipy.stats import tukey_hsd
+            res = tukey_hsd(*arrays)
+            for i in range(len(arrays)):
+                for j in range(i + 1, len(arrays)):
+                    ph_p = float(res.pvalue[i][j])
+                    posthoc.append({
+                        "pair": f"{labels[i]} vs {labels[j]}",
+                        "p_value": round(ph_p, 6),
+                        "significant": bool(ph_p < alpha),
+                    })
+        except (ImportError, Exception):
+            pass
+    details["posthoc"] = posthoc
+
+    interp = (
+        f"Однофакторный дисперсионный анализ (ANOVA) для {len(arrays)} групп. "
+        f"F = {stat:.4f}, различие {_sig_text(sig, p, alpha)}. "
+        f"Размер эффекта: η² = {eta_sq:.4f} ({eta_label})."
+    )
+    if posthoc:
+        sig_pairs = [ph["pair"] for ph in posthoc if ph["significant"]]
+        if sig_pairs:
+            interp += f" Значимые пары (Tukey HSD): {', '.join(sig_pairs)}."
+        else:
+            interp += " Post-hoc Tukey HSD: ни одна пара не значима."
+
+    return TestResult(
+        name="Однофакторный ANOVA",
+        statistic=round(float(stat), 4),
+        p_value=round(float(p), 6),
+        alpha=alpha,
+        significant=sig,
+        effect_size=round(eta_sq, 4),
+        effect_label=eta_label,
+        details=details,
+        interpretation=interp,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Kruskal-Wallis (non-parametric ANOVA)
+# ---------------------------------------------------------------------------
+
+def kruskal_wallis(
+    *groups: "pd.Series | np.ndarray",
+    alpha: float = 0.05,
+    labels: "list[str] | None" = None,
+) -> TestResult:
+    """Kruskal-Wallis H — непараметрический аналог ANOVA.
+
+    Uses ε² (epsilon-squared) as effect size:
+    ε² = H / ((n² - 1) / (n + 1))
+
+    Parameters
+    ----------
+    *groups : array-like
+        Numeric samples.
+    alpha : float
+        Significance level.
+    labels : list[str] | None
+        Group names.
+
+    Returns
+    -------
+    TestResult
+    """
+    arrays = [
+        np.array(pd.to_numeric(pd.Series(g), errors="coerce").dropna(), dtype=float)
+        for g in groups
+    ]
+    if len(arrays) < 2:
+        raise ValueError("Нужно минимум 2 группы для Краскела-Уоллиса.")
+    for i, a in enumerate(arrays):
+        if len(a) < 2:
+            raise ValueError(f"Группа {i+1} содержит менее 2 наблюдений.")
+
+    if labels is None:
+        labels = [f"Группа {i+1}" for i in range(len(arrays))]
+
+    stat, p = stats.kruskal(*arrays)
+    sig = bool(p < alpha)
+
+    # ε² effect size
+    n = sum(len(a) for a in arrays)
+    eps_sq = float(stat / ((n ** 2 - 1) / (n + 1))) if n > 1 else 0.0
+
+    if eps_sq < 0.01:
+        eps_label = "незначительный"
+    elif eps_sq < 0.06:
+        eps_label = "малый"
+    elif eps_sq < 0.14:
+        eps_label = "средний"
+    else:
+        eps_label = "большой"
+
+    details: dict[str, Any] = {
+        "k": len(arrays),
+        "epsilon_squared": round(eps_sq, 4),
+        "group_stats": {
+            lb: {"n": len(a), "median": round(float(np.median(a)), 4)}
+            for lb, a in zip(labels, arrays)
+        },
+    }
+
+    # Post-hoc: pairwise Mann-Whitney with Bonferroni correction
+    posthoc: list[dict[str, Any]] = []
+    if sig and len(arrays) >= 2:
+        n_pairs = len(arrays) * (len(arrays) - 1) // 2
+        for i in range(len(arrays)):
+            for j in range(i + 1, len(arrays)):
+                _, ph_p = stats.mannwhitneyu(arrays[i], arrays[j], alternative="two-sided")
+                adj_p = min(float(ph_p) * n_pairs, 1.0)  # Bonferroni
+                posthoc.append({
+                    "pair": f"{labels[i]} vs {labels[j]}",
+                    "p_raw": round(float(ph_p), 6),
+                    "p_adj": round(adj_p, 6),
+                    "significant": bool(adj_p < alpha),
+                })
+    details["posthoc"] = posthoc
+
+    interp = (
+        f"Краскел-Уоллис H для {len(arrays)} групп. "
+        f"H = {stat:.4f}, различие {_sig_text(sig, p, alpha)}. "
+        f"Размер эффекта: ε² = {eps_sq:.4f} ({eps_label})."
+    )
+    if posthoc:
+        sig_pairs = [ph["pair"] for ph in posthoc if ph["significant"]]
+        if sig_pairs:
+            interp += f" Значимые пары (Манна-Уитни + Бонферрони): {', '.join(sig_pairs)}."
+
+    return TestResult(
+        name="Краскел-Уоллис H",
+        statistic=round(float(stat), 4),
+        p_value=round(float(p), 6),
+        alpha=alpha,
+        significant=sig,
+        effect_size=round(eps_sq, 4),
+        effect_label=eps_label,
+        details=details,
+        interpretation=interp,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -614,11 +836,12 @@ def permutation_test(
     p_value = float(count_extreme / n_perm)
     sig = bool(p_value < alpha)
 
+    stat_ru = "среднее" if stat == "mean" else "медиана"
     interp = (
-        f"Permutation test ({n_perm} permutations) for {stat} difference: "
+        f"Перестановочный тест ({n_perm} перестановок), статистика: {stat_ru}. "
         f"{label_a} = {stat_fn(a):.4f}, {label_b} = {stat_fn(b):.4f}. "
-        f"Observed difference = {observed:.4f}. "
-        f"The difference is {_sig_text(sig, p_value, alpha)}."
+        f"Наблюдаемая разница = {observed:.4f}. "
+        f"Различие {_sig_text(sig, p_value, alpha)}."
     )
 
     return TestResult(
