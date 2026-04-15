@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dash import html, dcc
+import dash_bootstrap_components as dbc
 
 # Sidebar icon map: short text labels
 _ICON_MAP = {
@@ -40,8 +41,12 @@ _SECTIONS = [
 ]
 
 
-def _make_nav_item(page: dict) -> dcc.Link:
-    """Build a single sidebar navigation link."""
+def _make_nav_item(page: dict) -> list:
+    """Build a single sidebar navigation link and its collapsed-mode tooltip.
+
+    Returns a list containing the ``dcc.Link`` and a ``dbc.Tooltip`` so that
+    collapsed icons show a right-side tooltip with the page name.
+    """
     icon_name = page.get("icon", "")
     icon_char = _ICON_MAP.get(icon_name, icon_name if len(str(icon_name)) <= 2 else "-")
     # Strip the number prefix from names like "5. Исследование" → "Исследование"
@@ -49,17 +54,30 @@ def _make_nav_item(page: dict) -> dcc.Link:
     if name and len(name) > 2 and name[0].isdigit() and ". " in name[:5]:
         name = name.split(". ", 1)[1]
 
-    return dcc.Link(
+    # Unique, stable ID derived from the page path (e.g. "/data" → "sidebar-icon-data").
+    # Root path "/" becomes "sidebar-icon-home".
+    slug = page["path"].strip("/").replace("/", "-") or "home"
+    icon_id = f"sidebar-icon-{slug}"
+
+    link = dcc.Link(
         html.Div([
             html.Span(
                 icon_char,
                 className="kb-sidebar-icon",
+                id=icon_id,
             ),
             html.Span(name, className="kb-sidebar-item-label"),
         ], className="kb-sidebar-item-inner"),
         href=page["path"],
         className="kb-sidebar-item",
     )
+    tooltip = dbc.Tooltip(
+        name,
+        target=icon_id,
+        placement="right",
+        delay={"show": 400, "hide": 100},
+    )
+    return [link, tooltip]
 
 
 def sidebar_nav(pages) -> html.Div:
@@ -83,7 +101,7 @@ def sidebar_nav(pages) -> html.Div:
                 html.Div(section_label, className="kb-sidebar-section")
             )
         for page in group:
-            nav_children.append(_make_nav_item(page))
+            nav_children.extend(_make_nav_item(page))
 
     return html.Div([
         # Brand area

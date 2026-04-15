@@ -1,8 +1,12 @@
 """p08_attribution – Factor Attribution / Decomposition page (Dash)."""
+import logging
+
 import dash
 from dash import html, dcc, callback, Input, Output, State, no_update
 import dash_bootstrap_components as dbc
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 from app.state import (
     get_df_from_store, STORE_DATASET, STORE_PREPARED, STORE_ACTIVE_DS, STORE_ATTRIBUTION,
@@ -180,7 +184,7 @@ def run_attribution(n, ds, target, target_prev, drivers, drivers_prev, method,
             apply_kibad_theme(fig)
             children.append(dcc.Graph(figure=fig))
         except Exception:
-            pass
+            logger.warning("Waterfall chart generation failed", exc_info=True)
 
         return html.Div(children), attr_store
 

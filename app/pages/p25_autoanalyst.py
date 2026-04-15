@@ -1,9 +1,13 @@
 """p25_autoanalyst – One-click full analysis pipeline (Dash)."""
+import logging
+
 import dash
 from dash import html, dcc, callback, Input, Output, State, no_update
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
+
+logger = logging.getLogger(__name__)
 
 from app.state import (
     get_df_from_store, STORE_DATASET, STORE_PREPARED, STORE_ACTIVE_DS,
@@ -86,7 +90,7 @@ def run_auto_analysis(n, ds, datasets, prepared):
         level = "success" if score >= 80 else ("warning" if score >= 50 else "danger")
         sections.append(alert_banner(f"Качество данных: {score:.0f}/100", level))
     except Exception:
-        pass
+        logger.warning("score_data_quality failed", exc_info=True)
 
     # 3. Auto insights
     try:
@@ -108,7 +112,7 @@ def run_auto_analysis(n, ds, datasets, prepared):
                 apply_kibad_theme(fig)
                 figs.append(dbc.Col(dcc.Graph(figure=fig), width=6))
             except Exception:
-                pass
+                logger.warning("Histogram failed for column '%s'", col, exc_info=True)
         if figs:
             sections.append(html.Div([section_header("Распределения"), dbc.Row(figs)]))
 
@@ -119,7 +123,7 @@ def run_auto_analysis(n, ds, datasets, prepared):
             apply_kibad_theme(fig)
             sections.append(html.Div([section_header("Корреляции"), dcc.Graph(figure=fig)]))
         except Exception:
-            pass
+            logger.warning("Correlation heatmap failed", exc_info=True)
 
     # 6. Descriptive stats
     try:
@@ -130,7 +134,7 @@ def run_auto_analysis(n, ds, datasets, prepared):
             data_table(desc, id="auto-desc-tbl"),
         ]))
     except Exception:
-        pass
+        logger.warning("Descriptive stats table failed", exc_info=True)
 
     # 7. Missing values
     miss = df.isnull().sum()

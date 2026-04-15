@@ -427,21 +427,26 @@ def apply_step(
 
     try:
         if triggered == "prep-btn-impute" and imp_cols:
-            for col in imp_cols:
-                if col in df.columns:
-                    df = impute_missing(df, col, method=imp_method)
+            cols_list = imp_cols if isinstance(imp_cols, list) else [imp_cols]
+            df = impute_missing(df, columns=cols_list, method=imp_method)
             operation = f"Заполнение пропусков ({imp_method})"
 
         elif triggered == "prep-btn-outliers" and out_cols:
-            for col in out_cols:
-                if col in df.columns:
-                    df = remove_outliers(df, col, method=out_method,
-                                         threshold=float(out_thresh or 1.5))
+            cols_list = out_cols if isinstance(out_cols, list) else [out_cols]
+            # remove_outliers returns (df, n_removed)
+            iqr_mul = float(out_thresh or 1.5)
+            if out_method == "iqr":
+                df, _ = remove_outliers(df, cols_list, method=out_method,
+                                        iqr_multiplier=iqr_mul)
+            else:
+                df, _ = remove_outliers(df, cols_list, method=out_method,
+                                        zscore_threshold=iqr_mul)
             operation = f"Удаление выбросов ({out_method})"
 
         elif triggered == "prep-btn-dedup":
             subset = dedup_cols if dedup_cols else None
-            df = deduplicate(df, subset=subset)
+            # deduplicate returns (df, n_removed)
+            df, _ = deduplicate(df, subset=subset)
             operation = "Дедупликация"
 
         elif triggered == "prep-btn-dates" and date_col:
@@ -450,7 +455,8 @@ def apply_step(
 
         elif triggered == "prep-btn-resample" and resample_datecol and resample_freq:
             value_cols = resample_valuecols or df.select_dtypes(include="number").columns.tolist()
-            df = resample_timeseries(df, resample_datecol, resample_freq, value_cols)
+            # signature: resample_timeseries(df, date_col, value_cols, freq, ...)
+            df = resample_timeseries(df, resample_datecol, value_cols, freq=resample_freq)
             operation = f"Ресэмплинг ({resample_freq})"
 
         elif triggered == "prep-btn-lags" and lag_col:
@@ -460,7 +466,8 @@ def apply_step(
 
         elif triggered == "prep-btn-rolling" and roll_col:
             window = int(roll_window or 7)
-            df = add_rolling(df, roll_col, window)
+            # add_rolling expects a list of window sizes
+            df = add_rolling(df, roll_col, [window])
             operation = f"Скользящее среднее ({roll_col}, окно={window})"
 
         elif triggered == "prep-btn-normalize" and norm_cols:
@@ -469,7 +476,8 @@ def apply_step(
 
         elif triggered == "prep-btn-buckets" and bucket_col:
             n_bins = int(bucket_n or 5)
-            df = add_buckets(df, bucket_col, n_bins=n_bins)
+            # add_buckets uses n_quantiles, not n_bins
+            df = add_buckets(df, bucket_col, n_quantiles=n_bins)
             operation = f"Бинирование ({bucket_col}, {n_bins} бинов)"
 
         else:

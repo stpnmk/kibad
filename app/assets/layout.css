@@ -11,6 +11,7 @@
 .kb-main {
   flex: 1;
   margin-left: var(--sidebar-width, 60px);
+  margin-right: auto;
   padding: 28px 36px;
   max-width: 1400px;
 }

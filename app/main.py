@@ -4,6 +4,7 @@ app/main.py – KIBAD Analytics Studio (Dash).
 Run with:
     python app/main.py
 """
+import logging
 import sys
 from pathlib import Path
 
@@ -11,6 +12,12 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger("kibad")
 
 import dash
 from dash import Dash, html, dcc
@@ -62,8 +69,32 @@ app.layout = dbc.Container([
         ),
     ], className="app-shell"),
 
+    # Context menu container (shown/hidden via JS callbacks)
+    html.Div(id="context-menu", className="kb-context-menu", children=[]),
+
 ], fluid=True, className="app-shell", style={"padding": "0", "maxWidth": "100%"})
 
 
+def _cleanup_old_session_files(max_age_hours: int = 24) -> None:
+    """Remove session Parquet files older than *max_age_hours*."""
+    import glob
+    import os
+    import time
+    cutoff = time.time() - max_age_hours * 3600
+    pattern = str(ROOT / "data" / "session" / "*.parquet")
+    for path in glob.glob(pattern):
+        try:
+            if os.path.getmtime(path) < cutoff:
+                os.remove(path)
+                logger.info("Removed stale session file: %s", path)
+        except OSError as exc:
+            logger.warning("Could not remove session file %s: %s", path, exc)
+
+
+_cleanup_old_session_files()
+
+
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=8501)
+    import os
+    port = int(os.environ.get("PORT", 8501))
+    app.run(debug=False, host="0.0.0.0", port=port)

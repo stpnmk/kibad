@@ -206,7 +206,7 @@ def on_dataset_select(ds_name, ds_store, prep_store):
     if not ds_name:
         return "", [], [], []
 
-    df = get_df_from_store(ds_name, ds_store, prep_store)
+    df = get_df_from_store(prep_store, ds_name) or get_df_from_store(ds_store, ds_name)
     if df is None:
         return dbc.Alert("Датасет не найден.", color="warning"), [], [], []
 
@@ -235,7 +235,7 @@ def show_group_info(treatment_col, ds_name, ds_store, prep_store):
     if not treatment_col or not ds_name:
         return ""
 
-    df = get_df_from_store(ds_name, ds_store, prep_store)
+    df = get_df_from_store(prep_store, ds_name) or get_df_from_store(ds_store, ds_name)
     if df is None:
         return ""
 
@@ -264,7 +264,7 @@ def show_pre_balance(covariates, treatment_col, ds_name, ds_store, prep_store):
     if not covariates or not treatment_col or not ds_name:
         return ""
 
-    df = get_df_from_store(ds_name, ds_store, prep_store)
+    df = get_df_from_store(prep_store, ds_name) or get_df_from_store(ds_store, ds_name)
     if df is None:
         return ""
 
@@ -353,7 +353,7 @@ def run_matching(
     if not triggered or not ds_name or not treatment_col:
         return no_update
 
-    df = get_df_from_store(ds_name, ds_store, prep_store)
+    df = get_df_from_store(prep_store, ds_name) or get_df_from_store(ds_store, ds_name)
     if df is None:
         return dbc.Alert("Датасет не найден.", color="warning")
 

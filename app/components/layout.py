@@ -25,13 +25,34 @@ def page_header(title: str, subtitle: str | None = None, icon: str | None = None
     return html.Div(children, className="kb-page-header")
 
 
-def empty_state(icon: str = "", title: str = "", description: str = "") -> html.Div:
-    """Render a centered empty-state placeholder."""
-    return html.Div([
+def empty_state(
+    icon: str = "",
+    title: str = "",
+    description: str = "",
+    action=None,
+) -> html.Div:
+    """Render a centered empty-state placeholder.
+
+    Parameters
+    ----------
+    icon:
+        Text or Bootstrap Icons class name to display as the placeholder icon.
+    title:
+        Short heading shown below the icon.
+    description:
+        Longer helper text below the title.
+    action:
+        Optional Dash component (e.g. a ``dbc.Button`` or ``dcc.Link``) rendered
+        below the description to give users a clear next-step CTA.
+    """
+    children = [
         html.Div(icon, className="kb-empty-state-icon"),
         html.Div(title, className="kb-empty-state-title"),
         html.Div(description, className="kb-empty-state-desc"),
-    ], className="kb-empty-state")
+    ]
+    if action is not None:
+        children.append(html.Div(action, style={"marginTop": "16px"}))
+    return html.Div(children, className="kb-empty-state")
 
 
 def controls_panel(title: str, children) -> html.Div:

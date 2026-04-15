@@ -11,11 +11,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import tempfile
 from pathlib import Path
 
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Session directory for large data (DataFrames serialized to Parquet)
@@ -80,6 +83,7 @@ def load_dataframe(path: str) -> pd.DataFrame | None:
     try:
         return pd.read_parquet(path)
     except Exception:
+        logger.exception("Failed to read parquet file: %s", path)
         return None
 
 
