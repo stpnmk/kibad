@@ -17,6 +17,7 @@ from dash import Dash, html, dcc
 import dash_bootstrap_components as dbc
 
 from app.components.nav import sidebar_nav
+from app.components.topbar import topbar
 from app.state import (
     STORE_DATASET, STORE_PREPARED, STORE_ACTIVE_DS, STORE_LANG,
     STORE_AUDIT, STORE_FORECAST, STORE_TEST_RESULTS, STORE_ATTRIBUTION,
@@ -53,11 +54,14 @@ app.layout = dbc.Container([
     # Location for URL routing
     dcc.Location(id="url", refresh=False),
 
-    # App shell: sidebar + page content
+    # App shell: sidebar + (topbar + page content)
     html.Div([
         sidebar_nav(dash.page_registry.values()),
         html.Div(
-            dash.page_container,
+            [
+                topbar(dash.page_registry.values()),
+                dash.page_container,
+            ],
             className="kb-main",
         ),
     ], className="app-shell"),
