@@ -37,6 +37,10 @@ Thumbs.db
 !sample_data/*.csv
 !sample_data/*.json
 
+# Runtime session cache (hashed parquet snapshots of uploaded/prepared data)
+data/session/
+*.parquet
+
 # Logs
 *.log
 logs/
