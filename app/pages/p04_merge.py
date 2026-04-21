@@ -8,7 +8,10 @@ card on the right. The UNION tab is kept for parity with existing logic.
 from __future__ import annotations
 
 import dash
-from dash import html, dcc, callback, Input, Output, State, no_update
+from dash import (
+    ALL, Input, Output, State, callback, clientside_callback, ctx, dcc, html,
+    no_update,
+)
 import dash_bootstrap_components as dbc
 
 from app.state import (
@@ -137,45 +140,50 @@ def _join_type_picker() -> html.Div:
 
 
 def _keys_card() -> html.Div:
-    """Left body card — keys setup + diagnostics + primary action."""
+    """Left body card — keys setup + diagnostics + primary action.
+
+    The body hosts a two-column "visual-mapper" of table columns. A
+    clientside callback draws curved SVG paths between paired pills;
+    colour-codes compatible (accent-green solid) vs dtype-mismatched
+    (amber dashed) pairs.
+    """
     return card(
         title="Ключи соединения",
-        subtitle="Сопоставьте колонки попарно",
-        head_right=html.Div(
-            [icon("plus", 12), html.Span("ключ")],
-            className="kb-btn kb-btn--text kb-btn--sm",
-            style={"cursor": "default"},
+        subtitle="Кликните колонку в A, затем в B — добавится пара",
+        head_right=html.Button(
+            "Сбросить",
+            id="merge-keys-reset",
+            className="kb-keys-map__reset",
+            n_clicks=0,
         ),
         size="lg",
         children=[
+            # Hint / status strip (dynamically rendered).
+            html.Div(id="merge-keys-hint", className="kb-keys-map__hint"),
+            # Pill map canvas.
             html.Div(
                 [
                     html.Div(
                         [
-                            html.Div("A · левая", className="kb-keys-col-label"),
-                            dcc.Dropdown(
-                                id="merge-left-key", placeholder="Ключ A…",
-                                className="kb-merge-keyselect",
-                            ),
+                            html.Div(id="merge-keys-left-head", className="kb-keys-map__head"),
+                            html.Div(id="merge-keys-left-col"),
                         ],
-                        className="kb-keys-col",
+                        className="kb-keys-map__col kb-keys-map__col--left",
                     ),
-                    html.Div(
-                        icon("arrows-lr", 14),
-                        className="kb-keys-pair-glyph",
-                    ),
+                    # Centre gutter stays empty — the SVG overlay spans the whole map.
+                    html.Div(className="kb-keys-map__col kb-keys-map__col--center"),
                     html.Div(
                         [
-                            html.Div("B · правая", className="kb-keys-col-label"),
-                            dcc.Dropdown(
-                                id="merge-right-key", placeholder="Ключ B…",
-                                className="kb-merge-keyselect",
-                            ),
+                            html.Div(id="merge-keys-right-head", className="kb-keys-map__head"),
+                            html.Div(id="merge-keys-right-col"),
                         ],
-                        className="kb-keys-col",
+                        className="kb-keys-map__col kb-keys-map__col--right",
                     ),
+                    # Overlay — clientside JS populates innerHTML with <svg>.
+                    html.Div(id="merge-keys-svg-host", className="kb-keys-links"),
                 ],
-                className="kb-keys-pair",
+                className="kb-keys-map",
+                id="merge-keys-map",
             ),
             html.Div(id="merge-diagnostics", className="kb-merge-diagnostics"),
             html.Div(
@@ -193,6 +201,11 @@ def _keys_card() -> html.Div:
                 ],
                 className="kb-merge-actions",
             ),
+            # State stores for the visual mapper.
+            dcc.Store(id="merge-keys-store", data=[]),
+            dcc.Store(id="merge-keys-pending", data=None),
+            dcc.Store(id="merge-keys-dtypes", data={"left": {}, "right": {}}),
+            dcc.Store(id="merge-keys-draw-trigger", data=0),
         ],
     )
 
@@ -324,50 +337,249 @@ def _shape_caption(df) -> str:
     return f"{df.shape[0]:,} × {df.shape[1]}".replace(",", " ")
 
 
+# ---------------------------------------------------------------------------
+# Visual key-mapper — pill rendering
+# ---------------------------------------------------------------------------
+def _pill(side: str, col: str, dtype: str, *, pending: bool, matched: bool,
+          mismatch: bool) -> html.Div:
+    """One clickable column-pill in the key-mapper."""
+    cls = ["kb-key-pill"]
+    if pending:
+        cls.append("is-pending")
+    if matched:
+        cls.append("is-matched")
+    if mismatch:
+        cls.append("is-mismatch")
+    return html.Div(
+        [
+            html.Span(col, className="kb-key-pill__name"),
+            html.Span(dtype, className="kb-key-pill__type"),
+        ],
+        # Pattern-match id. Dash serialises this as a JSON-string in the DOM
+        # `id` attribute, which the SVG-drawer parses to find pills.
+        id={"type": "mkp", "side": side, "col": col},
+        className=" ".join(cls),
+        n_clicks=0,
+    )
+
+
+def _render_pills(
+    df, side: str, pairs: list, pending: dict | None, other_dtypes: dict
+) -> list:
+    """Render the full pill list for one side. `other_dtypes` is the opposite
+    side's {col: dtype} map, used to colour-code mismatches."""
+    if df is None:
+        return [html.Div("Выберите датасет…", className="kb-keys-map__empty")]
+    out = []
+    paired_cols = {p[side] for p in pairs if p.get(side)}
+    for col in df.columns:
+        dtype = str(df[col].dtype)
+        is_pending = bool(pending and pending.get("side") == side and pending.get("col") == col)
+        is_matched = col in paired_cols
+        # Mismatch iff this col is part of a pair whose opposite dtype differs.
+        mismatch = False
+        if is_matched:
+            other_side = "right" if side == "left" else "left"
+            partner = next(
+                (p[other_side] for p in pairs if p.get(side) == col), None
+            )
+            if partner is not None:
+                other_dtype = other_dtypes.get(partner)
+                if other_dtype is not None and other_dtype != dtype:
+                    mismatch = True
+        out.append(
+            _pill(
+                side, col, dtype,
+                pending=is_pending, matched=is_matched, mismatch=mismatch,
+            )
+        )
+    return out
+
+
+# Reset pairs & pending whenever either dataset is swapped.
 @callback(
-    Output("merge-left-key", "options"),
-    Output("merge-left-caption", "children"),
+    Output("merge-keys-store", "data", allow_duplicate=True),
+    Output("merge-keys-pending", "data", allow_duplicate=True),
     Input("merge-left-ds", "value"),
-    State(STORE_DATASET, "data"),
-    State(STORE_PREPARED, "data"),
-)
-def update_left(ds, datasets, prepared):
-    df = _load_df(ds, datasets, prepared)
-    if df is None:
-        return [], ""
-    cols = [{"label": c, "value": c} for c in df.columns]
-    return cols, _shape_caption(df)
-
-
-@callback(
-    Output("merge-right-key", "options"),
-    Output("merge-right-caption", "children"),
     Input("merge-right-ds", "value"),
+    prevent_initial_call=True,
+)
+def reset_on_ds_change(_lds, _rds):
+    return [], None
+
+
+# Single source of truth for the pill map: renders both columns + heads
+# + captions + dtypes whenever the dataset or the stored pairs/pending
+# change. Keeping it as one callback removes the race on `merge-keys-dtypes`.
+@callback(
+    Output("merge-keys-left-col", "children"),
+    Output("merge-keys-right-col", "children"),
+    Output("merge-keys-left-head", "children"),
+    Output("merge-keys-right-head", "children"),
+    Output("merge-left-caption", "children"),
+    Output("merge-right-caption", "children"),
+    Output("merge-keys-dtypes", "data"),
+    Input("merge-left-ds", "value"),
+    Input("merge-right-ds", "value"),
+    Input("merge-keys-store", "data"),
+    Input("merge-keys-pending", "data"),
     State(STORE_DATASET, "data"),
     State(STORE_PREPARED, "data"),
 )
-def update_right(ds, datasets, prepared):
-    df = _load_df(ds, datasets, prepared)
-    if df is None:
-        return [], ""
-    cols = [{"label": c, "value": c} for c in df.columns]
-    return cols, _shape_caption(df)
+def render_pill_map(lds, rds, pairs, pending, datasets, prepared):
+    left_df = _load_df(lds, datasets, prepared)
+    right_df = _load_df(rds, datasets, prepared)
+
+    left_dtypes = (
+        {c: str(left_df[c].dtype) for c in left_df.columns}
+        if left_df is not None else {}
+    )
+    right_dtypes = (
+        {c: str(right_df[c].dtype) for c in right_df.columns}
+        if right_df is not None else {}
+    )
+
+    left_pills = _render_pills(left_df, "left",  pairs or [], pending, right_dtypes)
+    right_pills = _render_pills(right_df, "right", pairs or [], pending, left_dtypes)
+
+    def _head(letter: str, ds_name):
+        if not ds_name:
+            return f"{letter} · —"
+        return [
+            html.Span(f"{letter} · ", className="kb-keys-map__head"),
+            html.Span(str(ds_name).upper(), className="kb-keys-map__head-name"),
+        ]
+
+    left_cap = _shape_caption(left_df) if left_df is not None else ""
+    right_cap = _shape_caption(right_df) if right_df is not None else ""
+
+    return (
+        left_pills,
+        right_pills,
+        _head("A", lds),
+        _head("B", rds),
+        left_cap,
+        right_cap,
+        {"left": left_dtypes, "right": right_dtypes},
+    )
 
 
+# ---------------------------------------------------------------------------
+# Visual key-mapper — click interaction (add / toggle / switch-selection)
+# ---------------------------------------------------------------------------
+@callback(
+    Output("merge-keys-store", "data", allow_duplicate=True),
+    Output("merge-keys-pending", "data", allow_duplicate=True),
+    Input({"type": "mkp", "side": ALL, "col": ALL}, "n_clicks"),
+    Input("merge-keys-reset", "n_clicks"),
+    State("merge-keys-store", "data"),
+    State("merge-keys-pending", "data"),
+    prevent_initial_call=True,
+)
+def handle_pill_click(pill_clicks, reset_n, pairs, pending):
+    trig = ctx.triggered_id
+    if trig == "merge-keys-reset":
+        if reset_n:
+            return [], None
+        return no_update, no_update
+    # Ignore the initial pattern-match fire with all zeros.
+    if not any(pill_clicks or []):
+        return no_update, no_update
+    if not isinstance(trig, dict):
+        return no_update, no_update
+
+    side = trig.get("side")
+    col = trig.get("col")
+    pairs = list(pairs or [])
+
+    # Click on an already-paired pill → remove that pair, clear pending.
+    idx = next((i for i, p in enumerate(pairs) if p.get(side) == col), None)
+    if idx is not None:
+        pairs.pop(idx)
+        return pairs, None
+
+    # No pending yet → this becomes the pending selection.
+    if not pending:
+        return no_update, {"side": side, "col": col}
+
+    # Pending on the same side → switch the selection.
+    if pending.get("side") == side:
+        return no_update, {"side": side, "col": col}
+
+    # Pending on the opposite side → form a pair.
+    new_pair = {
+        "left":  col if side == "left" else pending["col"],
+        "right": col if side == "right" else pending["col"],
+    }
+    # Guard: prevent duplicate pair (if user clicks same combo twice).
+    if any(p["left"] == new_pair["left"] and p["right"] == new_pair["right"] for p in pairs):
+        return no_update, None
+    pairs.append(new_pair)
+    return pairs, None
+
+
+# ---------------------------------------------------------------------------
+# Hint / status strip above the pill-map
+# ---------------------------------------------------------------------------
+@callback(
+    Output("merge-keys-hint", "children"),
+    Input("merge-keys-store", "data"),
+    Input("merge-keys-pending", "data"),
+)
+def render_hint(pairs, pending):
+    pairs = pairs or []
+    left = html.Span(
+        f"Пар настроено: {len(pairs)}" if pairs else
+        "Кликните колонку в A, затем в B — так добавляется пара"
+    )
+    right = html.Span()
+    if pending:
+        side_ru = "A" if pending["side"] == "left" else "B"
+        right = html.Span(
+            [
+                "Ожидается пара для ",
+                html.Strong(f'{side_ru} · {pending["col"]}'),
+            ]
+        )
+    return [left, right]
+
+
+# ---------------------------------------------------------------------------
+# Clientside trigger — redraws SVG links whenever pairs / dtypes change.
+# ---------------------------------------------------------------------------
+clientside_callback(
+    """
+    function(pairs, dtypes) {
+        if (window.kbDrawMergeKeys) {
+            setTimeout(function() { window.kbDrawMergeKeys(pairs, dtypes); }, 30);
+        }
+        return (Array.isArray(pairs) ? pairs.length : 0) + ':' + Date.now();
+    }
+    """,
+    Output("merge-keys-draw-trigger", "data"),
+    Input("merge-keys-store", "data"),
+    Input("merge-keys-dtypes", "data"),
+)
+
+
+# ---------------------------------------------------------------------------
+# Diagnostics — aggregates match-rate, dtype mismatches, nulls, cardinality
+# across all configured key pairs.
+# ---------------------------------------------------------------------------
 @callback(
     Output("merge-diagnostics", "children"),
     Output("merge-match-chip", "children"),
     Output("merge-kpis", "children"),
-    Input("merge-left-key", "value"),
-    Input("merge-right-key", "value"),
+    Input("merge-keys-store", "data"),
     Input("merge-how", "value"),
     State("merge-left-ds", "value"),
     State("merge-right-ds", "value"),
     State(STORE_DATASET, "data"),
     State(STORE_PREPARED, "data"),
 )
-def diagnostics(lk, rk, how, lds, rds, datasets, prepared):
-    if not all([lk, rk, lds, rds]):
+def diagnostics(pairs, how, lds, rds, datasets, prepared):
+    pairs = pairs or []
+    if not pairs or not lds or not rds:
         return "", "", ""
 
     left_df = _load_df(lds, datasets, prepared)
@@ -375,22 +587,35 @@ def diagnostics(lk, rk, how, lds, rds, datasets, prepared):
     if left_df is None or right_df is None:
         return "", "", ""
 
+    # Guard: only keep pairs whose cols still exist in both sides.
+    pairs = [
+        p for p in pairs
+        if p.get("left") in left_df.columns and p.get("right") in right_df.columns
+    ]
+    if not pairs:
+        return "", "", ""
+
+    lks = [p["left"] for p in pairs]
+    rks = [p["right"] for p in pairs]
+
     try:
-        c = analyze_key_cardinality(left_df, right_df, [lk], [rk])
+        c = analyze_key_cardinality(left_df, right_df, lks, rks)
     except Exception as ex:
         return alert_banner(f"Ошибка анализа: {ex}", "danger"), "", ""
 
     a_rows = int(left_df.shape[0])
     b_rows = int(right_df.shape[0])
-    left_null_pct = float(left_df[lk].isna().mean() * 100) if a_rows else 0.0
-    right_null_pct = float(right_df[rk].isna().mean() * 100) if b_rows else 0.0
+    left_null_pct = float(left_df[lks].isna().any(axis=1).mean() * 100) if a_rows else 0.0
+    right_null_pct = float(right_df[rks].isna().any(axis=1).mean() * 100) if b_rows else 0.0
 
-    # Match rate — fraction of A-keys present in B.
-    left_keys = left_df[lk].dropna()
-    right_key_set = set(right_df[rk].dropna().unique().tolist())
-    if len(left_keys):
-        matched = left_keys.isin(right_key_set).sum()
-        match_rate = float(matched) * 100.0 / len(left_keys)
+    # Match rate — fraction of A-key-tuples present in B (composite-key aware).
+    left_keys = left_df[lks].dropna()
+    right_keys = right_df[rks].dropna()
+    if len(left_keys) and len(right_keys):
+        right_tuples = set(map(tuple, right_keys.itertuples(index=False, name=None)))
+        left_tuples = list(map(tuple, left_keys.itertuples(index=False, name=None)))
+        matched = sum(1 for t in left_tuples if t in right_tuples)
+        match_rate = matched * 100.0 / len(left_tuples)
     else:
         match_rate = 0.0
 
@@ -398,9 +623,18 @@ def diagnostics(lk, rk, how, lds, rds, datasets, prepared):
     duplicates = int(a_rows - int(c.get("left_unique_keys") or a_rows))
 
     warns: list = []
-    left_dtype = str(left_df[lk].dtype)
-    right_dtype = str(right_df[rk].dtype)
-    if left_dtype != right_dtype:
+    mismatches = [
+        (p["left"], str(left_df[p["left"]].dtype),
+         p["right"], str(right_df[p["right"]].dtype))
+        for p in pairs
+        if str(left_df[p["left"]].dtype) != str(right_df[p["right"]].dtype)
+    ]
+    if mismatches:
+        pair_txt: list = []
+        for i, (lk, ld, rk, rd) in enumerate(mismatches):
+            if i:
+                pair_txt.append(", ")
+            pair_txt.append(f"{lk} ({ld}) ↔ {rk} ({rd})")
         warns.append(
             html.Div(
                 [
@@ -408,8 +642,9 @@ def diagnostics(lk, rk, how, lds, rds, datasets, prepared):
                     html.Div(
                         [
                             html.Strong("Несовпадение типов"),
-                            f" на ключе {lk} ({left_dtype}) ↔ {rk} ({right_dtype}). "
-                            "Потребуется приведение типов.",
+                            " на ключ" + ("ах " if len(mismatches) > 1 else "е "),
+                            *pair_txt,
+                            ". Потребуется приведение типов.",
                         ]
                     ),
                 ],
@@ -466,34 +701,48 @@ def diagnostics(lk, rk, how, lds, rds, datasets, prepared):
     Input("merge-run-btn", "n_clicks"),
     State("merge-left-ds", "value"),
     State("merge-right-ds", "value"),
-    State("merge-left-key", "value"),
-    State("merge-right-key", "value"),
+    State("merge-keys-store", "data"),
     State("merge-how", "value"),
     State(STORE_DATASET, "data"),
     State(STORE_PREPARED, "data"),
     prevent_initial_call=True,
 )
-def run_merge(n, lds, rds, lk, rk, how, datasets, prepared):
+def run_merge(n, lds, rds, pairs, how, datasets, prepared):
     if not n:
         return no_update, no_update
-    if not all([lds, rds, lk, rk]):
-        return alert_banner("Выберите оба датасета и ключи.", "warning"), no_update
+    pairs = pairs or []
+    if not lds or not rds or not pairs:
+        return alert_banner(
+            "Выберите оба датасета и хотя бы одну пару ключей.", "warning"
+        ), no_update
 
     left_df = _load_df(lds, datasets, prepared)
     right_df = _load_df(rds, datasets, prepared)
     if left_df is None or right_df is None:
         return alert_banner("Датасеты не найдены.", "danger"), no_update
 
+    lks = [p["left"] for p in pairs]
+    rks = [p["right"] for p in pairs]
+
     try:
-        result_df, warnings = merge_tables(left_df, right_df, [lk], [rk], how=how)
+        mr = merge_tables(left_df, right_df, lks, rks, how=how)
     except Exception as ex:
         return alert_banner(f"Ошибка: {ex}", "danger"), no_update
+    result_df = mr.df
+    warnings = mr.warnings
 
     name = f"{lds}_x_{rds}"
     path = save_dataframe(result_df, name)
     datasets = datasets or {}
     datasets[name] = path
-    log_event("merge", dataset=name, details=f"{lds} {how} {rds} on {lk}={rk}")
+    keys_txt = ", ".join(f"{lk}={rk}" for lk, rk in zip(lks, rks))
+    log_event(
+        "merge",
+        details={
+            "dataset": name, "left": lds, "right": rds,
+            "how": how, "keys": keys_txt,
+        },
+    )
 
     children = [alert_banner(str(w), "warning") for w in warnings]
     children.append(
