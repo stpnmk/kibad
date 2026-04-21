@@ -724,22 +724,55 @@ a:focus-visible,
    UPLOAD ZONE
    ══════════════════════════════════════════════════════════════ */
 .kb-upload-zone {
-  border: 2px dashed var(--border-strong);
+  border: 1.5px dashed var(--border-strong);
   border-radius: var(--radius-md);
-  padding: 44px 24px;
-  text-align: center;
+  padding: 28px 24px;
+  min-height: 180px;
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-  background: var(--surface-1);
+  background: linear-gradient(180deg, rgba(31,122,77,0.05), rgba(31,122,77,0.01));
+  position: relative;
 }
 .kb-upload-zone:hover {
   border-color: var(--accent-500);
-  background: rgba(33,160,102,0.06);
+  background: linear-gradient(180deg, rgba(31,122,77,0.09), rgba(31,122,77,0.03));
   box-shadow: var(--shadow-glow);
 }
+.kb-upload-zone-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 140px;
+  text-align: center;
+}
+.kb-upload-zone-chip {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+.kb-upload-zone-icon-tile {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-default);
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
 .kb-upload-zone-icon { font-size: 2rem; margin-bottom: 12px; opacity: 0.4; }
-.kb-upload-zone-text { font-size: 0.9rem; color: var(--text-secondary); }
-.kb-upload-zone-hint { font-size: 0.76rem; color: var(--text-tertiary); margin-top: 6px; }
+.kb-upload-zone-text {
+  font: 500 14px/18px var(--font-ui);
+  color: var(--text-primary);
+}
+.kb-upload-zone-hint {
+  font: 400 12px/16px var(--font-ui);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
 
 /* ══════════════════════════════════════════════════════════════
    DATA TABLE
@@ -1377,4 +1410,178 @@ input:focus, textarea:focus {
 }
 .kb-callout--warning .kb-icon { color: var(--warning); }
 .kb-callout strong { color: var(--text-primary); font-weight: 600; }
+
+/* ══════════════════════════════════════════════════════════════
+   DATA PAGE (Slide 4 — Загрузка)
+   ══════════════════════════════════════════════════════════════ */
+.kb-data-page { padding-top: 16px; }
+
+.kb-data-body {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+}
+@media (max-width: 1200px) {
+  .kb-data-body { grid-template-columns: 1fr; }
+}
+.kb-data-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.kb-data-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ─── Upload controls row ─── */
+.kb-data-ctrls-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.kb-data-ctrl--sep { width: 200px; }
+.kb-data-ctrl--enc { width: 160px; }
+.kb-data-ctrl--hdr { width: 160px; }
+.kb-data-ctrls-row .kb-btn { margin-left: auto; }
+
+/* ─── Results area ─── */
+.kb-data-results:empty { display: none; }
+.kb-data-alerts { display: flex; flex-direction: column; gap: 10px; }
+.kb-data-alerts .kb-alert { margin-bottom: 0; }
+
+.kb-data-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin: 4px 0 4px;
+}
+.kb-data-kpis .kb-stat-card { min-height: 76px; padding: 10px 12px; }
+.kb-data-kpis .kb-stat-value { font-size: 20px; line-height: 24px; }
+.kb-data-kpis .kb-stat-label { font-size: 9px; }
+@media (max-width: 1100px) {
+  .kb-data-kpis { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ─── Preview card ─── */
+.kb-data-preview-head-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kb-data-preview-tbl { overflow-x: auto; }
+
+/* ─── Right rail: recent sources card ─── */
+.kb-data-recent-empty,
+.kb-data-schema-empty {
+  font: 400 12px/17px var(--font-ui);
+  color: var(--text-tertiary);
+  margin-top: 10px;
+}
+.kb-data-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+.kb-data-recent-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+.kb-data-recent-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+}
+.kb-data-recent-text { min-width: 0; flex: 1; }
+.kb-data-recent-name {
+  font: 400 13px/17px var(--font-ui);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kb-data-recent-meta {
+  font: 400 11px/14px var(--font-mono);
+  color: var(--text-tertiary);
+}
+
+/* ─── Right rail: schema card ─── */
+.kb-data-schema-summary {
+  font: 400 12px/16px var(--font-ui);
+  color: var(--text-secondary);
+  margin-top: 10px;
+}
+.kb-data-schema-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 12px;
+}
+.kb-data-schema-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 0;
+}
+.kb-data-schema-name {
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kb-data-schema-type { color: var(--text-tertiary); flex-shrink: 0; }
+.kb-data-schema-more {
+  color: var(--text-tertiary);
+  font: 400 11px/14px var(--font-mono);
+  padding: 4px 0;
+}
+
+/* ─── PostgreSQL tab ─── */
+.kb-data-pg { padding-top: 16px; }
+.kb-data-pg-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.kb-data-pg-row > * { flex: 1; min-width: 160px; }
+.kb-data-pg-row .kb-btn { flex: 0 0 auto; }
+.kb-data-pg-sql { margin-top: 20px; }
+.kb-data-field { display: flex; flex-direction: column; gap: 6px; }
+.kb-textarea--sql {
+  width: 100%;
+  min-height: 120px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 10px 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  resize: vertical;
+}
+.kb-textarea--sql:focus {
+  outline: none;
+  border-color: var(--accent-500);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* ─── Catalog tab ─── */
+.kb-data-catalog { padding-top: 16px; }
+.kb-data-catalog-picker { max-width: 420px; margin-bottom: 16px; }
 

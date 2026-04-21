@@ -1,28 +1,30 @@
 """
-pages/p01_data.py -- Dataset ingestion: file upload, PostgreSQL connection, catalog.
+pages/p01_data.py — Dataset ingestion (Slide 4 port).
+
+Layout: step-style header with action buttons, tabs for file upload / PostgreSQL /
+catalog, a two-column body (dropzone + controls + preview on the left, recent
+sources + schema on the right rail).
 """
 from __future__ import annotations
 
 import base64
-import io
-import json
 
 import dash
-from dash import html, dcc, callback, Input, Output, State, dash_table, no_update, ctx
+from dash import html, dcc, callback, Input, Output, State, no_update
 import dash_bootstrap_components as dbc
 import pandas as pd
 
-from app.components.upload import upload_zone
-from app.components.layout import page_header, section_header, empty_state
-from app.components.cards import stat_card
+from app.components.alerts import alert_banner
+from app.components.cards import card, chip, kpi
+from app.components.form import text_input
+from app.components.icons import icon
+from app.components.layout import empty_state
 from app.components.table import data_table
-from app.components.form import text_input, select_input
-from app.figure_theme import apply_kibad_theme
+from app.components.upload import upload_zone
 from app.state import (
-    STORE_DATASET, STORE_ACTIVE_DS,
-    save_dataframe, get_df_from_store, list_datasets,
+    STORE_DATASET, save_dataframe, get_df_from_store, list_datasets,
 )
-from core.data import load_file, profile_dataframe, describe_numeric, infer_column_types
+from core.data import load_file
 
 dash.register_page(
     __name__,
@@ -32,135 +34,368 @@ dash.register_page(
     icon="database",
 )
 
+
 # ---------------------------------------------------------------------------
-# Layout
+# Presentational helpers
 # ---------------------------------------------------------------------------
-layout = html.Div([
-    page_header("1. Данные", "Загрузка и подключение источников данных"),
-
-    dbc.Tabs([
-        # -- Tab 1: File Upload --
-        dbc.Tab(label="Загрузка файлов", tab_id="tab-upload", children=[
-            html.Div([
-                section_header("Загрузка файлов"),
-                upload_zone(
-                    id="data-upload",
-                    label="Перетащите файл или нажмите для выбора",
-                    hint="CSV, Excel (.xlsx), Parquet",
-                    multiple=True,
-                ),
-                html.Div(className="mb-3"),
-                dbc.Row([
-                    dbc.Col([
-                        html.Label("Разделитель CSV", className="kb-stat-label",
-                                   style={"marginBottom": "6px"}),
-                        dcc.Dropdown(
-                            id="data-csv-sep",
-                            options=[
-                                {"label": "Запятая (,)", "value": ","},
-                                {"label": "Точка с запятой (;)", "value": ";"},
-                                {"label": "Табуляция", "value": "\t"},
-                                {"label": "Вертикальная черта (|)", "value": "|"},
-                            ],
-                            value=",",
-                            clearable=False,
-                            className="kb-select",
-                        ),
-                    ], md=3),
-                    dbc.Col([
-                        html.Div(style={"height": "24px"}),
-                        dbc.Button(
-                            "Загрузить",
-                            id="data-btn-load",
-                            color="primary",
-                            className="w-100",
-                        ),
-                    ], md=2),
-                ], className="mb-3"),
-
-                dcc.Loading(
-                    html.Div(id="data-upload-result"),
-                    type="circle", color="#10b981",
-                ),
-            ], style={"padding": "16px 0"}),
-        ]),
-
-        # -- Tab 2: PostgreSQL --
-        dbc.Tab(label="PostgreSQL", tab_id="tab-pg", children=[
-            html.Div([
-                section_header("Подключение к базе данных"),
-                dbc.Row([
-                    dbc.Col(text_input("Хост", "pg-host", value="localhost"), md=4),
-                    dbc.Col(text_input("Порт", "pg-port", value="5432"), md=2),
-                    dbc.Col(text_input("База данных", "pg-database"), md=3),
-                ]),
-                dbc.Row([
-                    dbc.Col(text_input("Пользователь", "pg-user"), md=4),
-                    dbc.Col([
-                        html.Label("Пароль", className="kb-stat-label",
-                                   style={"marginBottom": "6px"}),
-                        dcc.Input(
-                            id="pg-password",
-                            type="password",
-                            placeholder="Пароль",
-                            style={"width": "100%"},
-                        ),
-                    ], md=4, style={"marginBottom": "12px"}),
-                ]),
-                dbc.Row([
-                    dbc.Col(
-                        dbc.Button("Подключиться", id="pg-btn-connect",
-                                   color="primary"),
-                        md=3,
+def _page_head() -> html.Div:
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div("Шаг 1", className="kb-overline"),
+                    html.H1("Данные", className="kb-page-title"),
+                    html.Div(
+                        "Загрузка и подключение источников данных",
+                        className="kb-page-subtitle",
                     ),
-                ]),
-                html.Div(id="pg-connect-result", className="mt-3"),
-                html.Hr(),
-                html.Div([
-                    html.Label("SQL-запрос", className="kb-stat-label",
-                               style={"marginBottom": "6px"}),
+                ],
+                className="kb-page-head-left",
+            ),
+            html.Div(
+                [
+                    html.Button(
+                        [icon("database", 14), html.Span("Подключить БД")],
+                        id="data-connect-db-btn",
+                        className="kb-btn kb-btn--ghost",
+                        n_clicks=0,
+                    ),
+                    html.Button(
+                        [icon("history", 14), html.Span("История загрузок")],
+                        id="data-history-btn",
+                        className="kb-btn kb-btn--ghost",
+                        n_clicks=0,
+                    ),
+                ],
+                className="kb-page-head-actions",
+            ),
+        ],
+        className="kb-page-head",
+    )
+
+
+def _upload_controls_row() -> html.Div:
+    """CSV parsing controls + Load button, horizontally aligned."""
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Label("Разделитель CSV", className="kb-field-label"),
+                    dcc.Dropdown(
+                        id="data-csv-sep",
+                        options=[
+                            {"label": "Запятая ( , )",        "value": ","},
+                            {"label": "Точка с запятой ( ; )", "value": ";"},
+                            {"label": "Табуляция",             "value": "\t"},
+                            {"label": "Вертикальная черта ( | )", "value": "|"},
+                        ],
+                        value=",", clearable=False,
+                    ),
+                ],
+                className="kb-data-ctrl kb-data-ctrl--sep",
+            ),
+            html.Div(
+                [
+                    html.Label("Кодировка", className="kb-field-label"),
+                    dcc.Dropdown(
+                        id="data-encoding",
+                        options=[
+                            {"label": "UTF-8",      "value": "utf-8"},
+                            {"label": "Windows-1251", "value": "cp1251"},
+                            {"label": "Latin-1",    "value": "latin-1"},
+                        ],
+                        value="utf-8", clearable=False,
+                    ),
+                ],
+                className="kb-data-ctrl kb-data-ctrl--enc",
+            ),
+            html.Div(
+                [
+                    html.Label("Заголовок", className="kb-field-label"),
+                    dcc.Dropdown(
+                        id="data-header",
+                        options=[
+                            {"label": "1-я строка", "value": "0"},
+                            {"label": "Нет",        "value": "-1"},
+                        ],
+                        value="0", clearable=False,
+                    ),
+                ],
+                className="kb-data-ctrl kb-data-ctrl--hdr",
+            ),
+            html.Button(
+                [icon("upload", 14), html.Span("Загрузить")],
+                id="data-btn-load",
+                className="kb-btn kb-btn--primary",
+                n_clicks=0,
+            ),
+        ],
+        className="kb-data-ctrls-row",
+    )
+
+
+def _upload_tab_body() -> html.Div:
+    return html.Div(
+        [
+            html.Div(
+                [
+                    # LEFT — main column
+                    html.Div(
+                        [
+                            upload_zone(
+                                id="data-upload",
+                                label="Перетащите файл или нажмите для выбора",
+                                hint="CSV · Excel (.xlsx) · Parquet · до 2 ГБ",
+                                multiple=True,
+                            ),
+                            _upload_controls_row(),
+                            dcc.Loading(
+                                html.Div(
+                                    id="data-upload-result",
+                                    className="kb-data-results",
+                                ),
+                                type="circle", color="var(--accent-500)",
+                            ),
+                        ],
+                        className="kb-data-main",
+                    ),
+
+                    # RIGHT rail
+                    html.Div(
+                        [
+                            html.Div(id="data-recent-rail"),
+                            html.Div(id="data-schema-rail"),
+                        ],
+                        className="kb-data-rail",
+                    ),
+                ],
+                className="kb-data-body",
+            ),
+        ],
+        className="kb-data-page",
+    )
+
+
+def _pg_tab_body() -> html.Div:
+    return html.Div(
+        [
+            html.Div(
+                [
+                    text_input("Хост", "pg-host", value="localhost"),
+                    text_input("Порт", "pg-port", value="5432"),
+                    text_input("База данных", "pg-database"),
+                ],
+                className="kb-data-pg-row",
+            ),
+            html.Div(
+                [
+                    text_input("Пользователь", "pg-user"),
+                    html.Div(
+                        [
+                            html.Label("Пароль", className="kb-field-label"),
+                            dcc.Input(
+                                id="pg-password",
+                                type="password",
+                                placeholder="Пароль",
+                                className="kb-input",
+                            ),
+                        ],
+                        className="kb-data-field",
+                    ),
+                    html.Button(
+                        "Подключиться",
+                        id="pg-btn-connect",
+                        className="kb-btn kb-btn--primary",
+                        n_clicks=0,
+                    ),
+                ],
+                className="kb-data-pg-row",
+            ),
+            html.Div(id="pg-connect-result", className="kb-data-results"),
+
+            html.Div(
+                [
+                    html.Label("SQL-запрос", className="kb-field-label"),
                     dcc.Textarea(
                         id="pg-sql-query",
                         placeholder="SELECT * FROM my_table LIMIT 10000",
-                        style={"width": "100%", "height": "120px",
-                               "fontFamily": "monospace"},
+                        className="kb-textarea kb-textarea--sql",
                     ),
-                    html.Label("Имя датасета", className="kb-stat-label mt-2",
-                               style={"marginBottom": "6px"}),
-                    dcc.Input(id="pg-ds-name", value="pg_query",
-                              style={"width": "300px"}),
-                    html.Div(className="mb-2"),
-                    dbc.Button("Выполнить запрос", id="pg-btn-exec",
-                               color="primary"),
-                ], className="mt-2"),
-                dcc.Loading(
-                    html.Div(id="pg-exec-result"),
-                    type="circle", color="#10b981",
-                ),
-            ], style={"padding": "16px 0"}),
-        ]),
+                    html.Div(
+                        [
+                            html.Div(
+                                [
+                                    html.Label("Имя датасета", className="kb-field-label"),
+                                    dcc.Input(
+                                        id="pg-ds-name", value="pg_query",
+                                        className="kb-input",
+                                    ),
+                                ],
+                                className="kb-data-field",
+                            ),
+                            html.Button(
+                                [icon("play", 12), html.Span("Выполнить запрос")],
+                                id="pg-btn-exec",
+                                className="kb-btn kb-btn--primary",
+                                n_clicks=0,
+                            ),
+                        ],
+                        className="kb-data-pg-row",
+                    ),
+                ],
+                className="kb-data-pg-sql",
+            ),
+            dcc.Loading(
+                html.Div(id="pg-exec-result", className="kb-data-results"),
+                type="circle", color="var(--accent-500)",
+            ),
+        ],
+        className="kb-data-pg",
+    )
 
-        # -- Tab 3: Catalog --
-        dbc.Tab(label="Каталог датасетов", tab_id="tab-catalog", children=[
-            html.Div([
-                section_header("Каталог датасетов"),
-                html.Div([
-                    html.Label("Выберите датасет", className="kb-stat-label",
-                               style={"marginBottom": "6px"}),
-                    dcc.Dropdown(id="catalog-ds-select", className="kb-select"),
-                ], style={"maxWidth": "400px", "marginBottom": "16px"}),
-                dcc.Loading(
-                    html.Div(id="catalog-preview"),
-                    type="circle", color="#10b981",
-                ),
-            ], style={"padding": "16px 0"}),
-        ]),
-    ], id="data-tabs", active_tab="tab-upload"),
-], style={"maxWidth": "1100px", "margin": "0 auto", "padding": "24px 16px"})
+
+def _catalog_tab_body() -> html.Div:
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Label("Выберите датасет", className="kb-field-label"),
+                    dcc.Dropdown(id="catalog-ds-select"),
+                ],
+                className="kb-data-catalog-picker",
+            ),
+            dcc.Loading(
+                html.Div(id="catalog-preview", className="kb-data-results"),
+                type="circle", color="var(--accent-500)",
+            ),
+        ],
+        className="kb-data-catalog",
+    )
 
 
 # ---------------------------------------------------------------------------
-# Callback: parse uploaded files
+# Layout
+# ---------------------------------------------------------------------------
+layout = html.Div(
+    [
+        _page_head(),
+
+        dbc.Tabs(
+            [
+                dbc.Tab(label="Загрузка файлов",   tab_id="tab-upload",  children=_upload_tab_body()),
+                dbc.Tab(label="PostgreSQL",        tab_id="tab-pg",      children=_pg_tab_body()),
+                dbc.Tab(label="Каталог датасетов", tab_id="tab-catalog", children=_catalog_tab_body()),
+            ],
+            id="data-tabs", active_tab="tab-upload",
+        ),
+    ],
+    className="kb-page kb-page-data",
+)
+
+
+# ---------------------------------------------------------------------------
+# Upload result renderer
+# ---------------------------------------------------------------------------
+def _render_upload_result(df: pd.DataFrame, ds_name: str, size_bytes: int) -> html.Div:
+    n_rows, n_cols = df.shape
+    n_num = len(df.select_dtypes(include="number").columns)
+    n_null = int(df.isnull().sum().sum())
+    n_dups = int(df.duplicated().sum())
+    size_mb = size_bytes / (1024 * 1024)
+
+    # Columns with suspected outliers (|z| > 3 in numeric cols)
+    suspect_cols: list[str] = []
+    for col in df.select_dtypes(include="number").columns:
+        vals = df[col].dropna()
+        if len(vals) < 8:
+            continue
+        std = vals.std()
+        if std and std > 0:
+            z = (vals - vals.mean()).abs() / std
+            if (z > 3).any():
+                suspect_cols.append(col)
+
+    alerts: list = [
+        html.Div(
+            [
+                html.Span(icon("check", 16), className="ic"),
+                html.Div(
+                    [
+                        "Датасет ",
+                        html.Strong(ds_name),
+                        " загружен: ",
+                        html.Span(
+                            f"{n_rows:,} строк × {n_cols} колонок".replace(",", " "),
+                            className="mono",
+                        ),
+                        " · ",
+                        html.Span(f"{size_mb:.1f} МБ", className="mono"),
+                    ]
+                ),
+            ],
+            className="kb-alert kb-alert--success",
+        )
+    ]
+    if suspect_cols:
+        alerts.append(
+            html.Div(
+                [
+                    html.Span(icon("alert", 16), className="ic"),
+                    html.Div(
+                        [
+                            html.Strong("Качество данных: "),
+                            f"колонок с выбросами — {len(suspect_cols)}. ",
+                            "Рекомендуется просмотреть: ",
+                            html.Span(", ".join(suspect_cols[:8]), className="mono"),
+                            ("…" if len(suspect_cols) > 8 else ""),
+                        ]
+                    ),
+                ],
+                className="kb-alert kb-alert--warning",
+            )
+        )
+
+    kpis = html.Div(
+        [
+            kpi("Строк",      f"{n_rows:,}".replace(",", " ")),
+            kpi("Столбцов",   str(n_cols)),
+            kpi("Числовых",   str(n_num)),
+            kpi("Пропусков",  f"{n_null:,}".replace(",", " ")),
+            kpi("Дублей",     f"{n_dups:,}".replace(",", " ")),
+        ],
+        className="kb-data-kpis",
+    )
+
+    preview = card(
+        title="Предпросмотр",
+        head_right=html.Div(
+            [
+                chip(ds_name, "neutral"),
+                html.Button(
+                    [icon("funnel", 12), html.Span("Фильтры")],
+                    className="kb-btn kb-btn--ghost kb-btn--sm",
+                ),
+                html.Button(
+                    [icon("grid", 12), html.Span(f"Столбцы ({n_cols})")],
+                    className="kb-btn kb-btn--ghost kb-btn--sm",
+                ),
+            ],
+            className="kb-data-preview-head-tools",
+        ),
+        size="md",
+        children=[
+            html.Div(
+                data_table(df.head(50), id=f"preview-{ds_name}", page_size=10),
+                className="kb-data-preview-tbl",
+            )
+        ],
+    )
+
+    return html.Div([html.Div(alerts, className="kb-data-alerts"), kpis, preview])
+
+
+# ---------------------------------------------------------------------------
+# Callback: upload files
 # ---------------------------------------------------------------------------
 @callback(
     Output("data-upload-result", "children"),
@@ -185,43 +420,134 @@ def load_uploaded_files(n_clicks, contents_list, filenames_list, sep, ds_store):
 
     for content_str, fname in zip(contents_list, filenames_list):
         try:
-            # Decode base64 content from dcc.Upload
-            content_type, content_data = content_str.split(",", 1)
+            _, content_data = content_str.split(",", 1)
             decoded = base64.b64decode(content_data)
 
             df = load_file(decoded, filename=fname, sep=sep)
             ds_name = fname.rsplit(".", 1)[0] if "." in fname else fname
             path = save_dataframe(df, ds_name)
             ds_store[ds_name] = path
-
-            # Build preview
-            n_rows, n_cols = df.shape
-            n_num = len(df.select_dtypes(include="number").columns)
-            n_null = int(df.isnull().sum().sum())
-
-            preview = html.Div([
-                dbc.Alert(
-                    f"Датасет \u00AB{ds_name}\u00BB загружен: {n_rows:,} строк \u00D7 {n_cols} колонок",
-                    color="success",
-                ),
-                dbc.Row([
-                    dbc.Col(stat_card("Строк", f"{n_rows:,}"), md=3),
-                    dbc.Col(stat_card("Столбцов", str(n_cols)), md=3),
-                    dbc.Col(stat_card("Числовых", str(n_num)), md=3),
-                    dbc.Col(stat_card("Пропусков", f"{n_null:,}"), md=3),
-                ], className="mb-3"),
-                data_table(df.head(10), id=f"preview-{ds_name}", page_size=10),
-            ])
-            results.append(preview)
-
-        except Exception as e:
-            results.append(dbc.Alert(f"{fname}: {e}", color="danger"))
+            results.append(_render_upload_result(df, ds_name, len(decoded)))
+        except Exception as exc:
+            results.append(alert_banner(f"{fname}: {exc}", "danger"))
 
     return html.Div(results), ds_store
 
 
 # ---------------------------------------------------------------------------
-# Callback: PostgreSQL connection (stub -- actual DB logic in services.db)
+# Right-rail: recent sources + schema of active dataset
+# ---------------------------------------------------------------------------
+def _recent_source_row(name: str, meta: str) -> html.Div:
+    return html.Div(
+        [
+            html.Div(icon("table", 14), className="kb-data-recent-icon"),
+            html.Div(
+                [
+                    html.Div(name, className="kb-data-recent-name"),
+                    html.Div(meta, className="kb-data-recent-meta"),
+                ],
+                className="kb-data-recent-text",
+            ),
+        ],
+        className="kb-data-recent-row",
+    )
+
+
+@callback(
+    Output("data-recent-rail", "children"),
+    Output("data-schema-rail", "children"),
+    Input(STORE_DATASET, "data"),
+)
+def update_rail(ds_store):
+    ds_store = ds_store or {}
+    names = list_datasets(ds_store)
+
+    # Recent sources card
+    if not names:
+        recent_body = html.Div(
+            "Пока нет загруженных датасетов.",
+            className="kb-data-recent-empty",
+        )
+    else:
+        rows = []
+        for name in names[-5:][::-1]:
+            df = get_df_from_store(ds_store, name)
+            meta = (f"{df.shape[0]:,} × {df.shape[1]}".replace(",", " ")
+                    if df is not None else "—")
+            rows.append(_recent_source_row(name, meta))
+        recent_body = html.Div(rows, className="kb-data-recent-list")
+
+    recent_card = card(
+        title=None,
+        size="sm",
+        children=[
+            html.Div("Недавние источники", className="kb-overline"),
+            recent_body,
+        ],
+    )
+
+    # Schema card — based on the last dataset loaded (most recent entry)
+    if not names:
+        schema_card = card(
+            title=None,
+            size="sm",
+            children=[
+                html.Div("Схема", className="kb-overline"),
+                html.Div("Загрузите датасет, чтобы увидеть схему.",
+                         className="kb-data-schema-empty"),
+            ],
+        )
+    else:
+        last = names[-1]
+        df = get_df_from_store(ds_store, last)
+        if df is None:
+            schema_card = card(
+                title=None, size="sm",
+                children=[
+                    html.Div("Схема", className="kb-overline"),
+                    html.Div("Не удалось прочитать датасет.",
+                             className="kb-data-schema-empty"),
+                ],
+            )
+        else:
+            total = df.shape[1]
+            shown_cols = list(df.columns[:8])
+            rows = []
+            for col in shown_cols:
+                rows.append(
+                    html.Div(
+                        [
+                            html.Span(col, className="kb-data-schema-name"),
+                            html.Span(str(df[col].dtype),
+                                      className="kb-data-schema-type"),
+                        ],
+                        className="kb-data-schema-row",
+                    )
+                )
+            if total > len(shown_cols):
+                rows.append(
+                    html.Div(
+                        f"+ {total - len(shown_cols)} more…",
+                        className="kb-data-schema-more",
+                    )
+                )
+            schema_card = card(
+                title=None, size="sm",
+                children=[
+                    html.Div("Схема", className="kb-overline"),
+                    html.Div(
+                        f"{total} колонок · auto-detected · {last}",
+                        className="kb-data-schema-summary",
+                    ),
+                    html.Div(rows, className="kb-data-schema-list"),
+                ],
+            )
+
+    return recent_card, schema_card
+
+
+# ---------------------------------------------------------------------------
+# PostgreSQL callbacks
 # ---------------------------------------------------------------------------
 @callback(
     Output("pg-connect-result", "children"),
@@ -235,28 +561,24 @@ def load_uploaded_files(n_clicks, contents_list, filenames_list, sep, ds_store):
 )
 def pg_connect(n_clicks, host, port, database, user, password):
     if not all([host, port, database, user]):
-        return dbc.Alert("Заполните хост, порт, базу данных и пользователя.", color="warning")
+        return alert_banner(
+            "Заполните хост, порт, базу данных и пользователя.", "warning"
+        )
     try:
         from services.db import test_connection
         ok, msg = test_connection(host, port, database, user, password)
         if ok:
-            return dbc.Alert(
-                f"Подключено к {database} на {host}:{port}",
-                color="success",
-            )
-        return dbc.Alert(f"Ошибка: {msg}", color="danger")
+            return alert_banner(f"Подключено к {database} на {host}:{port}", "success")
+        return alert_banner(f"Ошибка: {msg}", "danger")
     except ImportError:
-        return dbc.Alert(
+        return alert_banner(
             "Модуль services.db не найден. PostgreSQL-подключение недоступно.",
-            color="warning",
+            "warning",
         )
     except Exception as exc:
-        return dbc.Alert(f"Ошибка: {exc}", color="danger")
+        return alert_banner(f"Ошибка: {exc}", "danger")
 
 
-# ---------------------------------------------------------------------------
-# Callback: Execute SQL query
-# ---------------------------------------------------------------------------
 @callback(
     Output("pg-exec-result", "children"),
     Output(STORE_DATASET, "data", allow_duplicate=True),
@@ -280,25 +602,29 @@ def pg_execute(n_clicks, sql, ds_name, host, port, database, user, password, ds_
                   "user": user, "password": password}
         df = query_to_dataframe(**params, query=sql)
         if df.empty:
-            return dbc.Alert("Запрос вернул 0 строк.", color="warning"), no_update
+            return alert_banner("Запрос вернул 0 строк.", "warning"), no_update
+
         ds_store = ds_store or {}
         path = save_dataframe(df, ds_name or "pg_query")
         ds_store[ds_name or "pg_query"] = path
-        return html.Div([
-            dbc.Alert(
-                f"Датасет \u00AB{ds_name}\u00BB загружен: {len(df):,} строк \u00D7 {len(df.columns)} колонок",
-                color="success",
-            ),
-            data_table(df.head(10), id="pg-preview-tbl", page_size=10),
-        ]), ds_store
+
+        return html.Div(
+            [
+                alert_banner(
+                    f"Датасет «{ds_name}» загружен: {len(df):,} × {len(df.columns)}.".replace(",", " "),
+                    "success",
+                ),
+                data_table(df.head(50), id="pg-preview-tbl", page_size=10),
+            ]
+        ), ds_store
     except ImportError:
-        return dbc.Alert("Модуль services.db не найден.", color="warning"), no_update
+        return alert_banner("Модуль services.db не найден.", "warning"), no_update
     except Exception as exc:
-        return dbc.Alert(f"Ошибка: {exc}", color="danger"), no_update
+        return alert_banner(f"Ошибка: {exc}", "danger"), no_update
 
 
 # ---------------------------------------------------------------------------
-# Callback: populate catalog dropdown
+# Catalog callbacks
 # ---------------------------------------------------------------------------
 @callback(
     Output("catalog-ds-select", "options"),
@@ -312,9 +638,6 @@ def update_catalog_dropdown(ds_store):
     return options, value
 
 
-# ---------------------------------------------------------------------------
-# Callback: catalog preview
-# ---------------------------------------------------------------------------
 @callback(
     Output("catalog-preview", "children"),
     Input("catalog-ds-select", "value"),
@@ -325,40 +648,53 @@ def show_catalog_preview(ds_name, ds_store):
         return empty_state(
             icon="",
             title="Нет данных",
-            description="Загрузите датасет во вкладке \u00ABЗагрузка файлов\u00BB",
+            description="Загрузите датасет во вкладке «Загрузка файлов»",
         )
 
     df = get_df_from_store(ds_store, ds_name)
     if df is None:
-        return dbc.Alert("Не удалось загрузить датасет.", color="warning")
+        return alert_banner("Не удалось загрузить датасет.", "warning")
 
     n_rows, n_cols = df.shape
     n_num = len(df.select_dtypes(include="number").columns)
     n_null = int(df.isnull().sum().sum())
+    n_dups = int(df.duplicated().sum())
 
-    # Schema table
-    schema_df = pd.DataFrame({
-        "Колонка": df.columns,
-        "Тип": df.dtypes.astype(str).values,
-        "Заполнено %": (df.notna().mean() * 100).round(1).values,
-        "Уникальных": df.nunique().values,
-        "Пример": [
-            str(df[c].dropna().iloc[0]) if df[c].notna().any() else "\u2014"
-            for c in df.columns
+    schema_df = pd.DataFrame(
+        {
+            "Колонка": df.columns,
+            "Тип": df.dtypes.astype(str).values,
+            "Заполнено %": (df.notna().mean() * 100).round(1).values,
+            "Уникальных": df.nunique().values,
+            "Пример": [
+                str(df[c].dropna().iloc[0]) if df[c].notna().any() else "—"
+                for c in df.columns
+            ],
+        }
+    )
+
+    kpis = html.Div(
+        [
+            kpi("Строк",     f"{n_rows:,}".replace(",", " ")),
+            kpi("Столбцов",  str(n_cols)),
+            kpi("Числовых",  str(n_num)),
+            kpi("Пропусков", f"{n_null:,}".replace(",", " ")),
+            kpi("Дублей",    f"{n_dups:,}".replace(",", " ")),
         ],
-    })
+        className="kb-data-kpis",
+    )
 
-    return html.Div([
-        dbc.Row([
-            dbc.Col(stat_card("Строк", f"{n_rows:,}"), md=3),
-            dbc.Col(stat_card("Столбцов", str(n_cols)), md=3),
-            dbc.Col(stat_card("Числовых", str(n_num)), md=3),
-            dbc.Col(stat_card("Пропусков", f"{n_null:,}"), md=3),
-        ], className="mb-3"),
-
-        html.H5("Предварительный просмотр", className="mb-2"),
-        data_table(df.head(10), id="catalog-data-tbl", page_size=10),
-
-        html.H5("Схема данных", className="mt-3 mb-2"),
-        data_table(schema_df, id="catalog-schema-tbl", page_size=20),
-    ])
+    return html.Div(
+        [
+            kpis,
+            card(
+                title="Предпросмотр",
+                head_right=chip(ds_name, "neutral"),
+                children=[data_table(df.head(50), id="catalog-data-tbl", page_size=10)],
+            ),
+            card(
+                title="Схема данных",
+                children=[data_table(schema_df, id="catalog-schema-tbl", page_size=20)],
+            ),
+        ]
+    )
