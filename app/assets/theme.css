@@ -1795,6 +1795,182 @@ input:focus, textarea:focus {
 .kb-keys-map__reset:disabled { color: var(--text-tertiary); cursor: not-allowed; }
 
 /* ══════════════════════════════════════════════════════════════
+   GROUP PAGE (p03_group) — Slide 5 «Группировка и агрегация»
+   ══════════════════════════════════════════════════════════════ */
+
+.kb-group-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1280px;
+}
+
+/* ── Hero ─────────────────────────────────────────────────── */
+.kb-group-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 28px;
+}
+.kb-group-hero__left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.kb-group-hero__title { margin-top: 4px !important; }
+.kb-group-hero__sub   { color: var(--text-secondary); }
+.kb-group-hero__right {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ── 2-column split (config | result) ─────────────────────── */
+.kb-group-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: flex-start;
+}
+
+/* ── Config card ──────────────────────────────────────────── */
+.kb-group-config .kb-field + .kb-field { margin-top: 16px; }
+
+/* Row under the Dataset dropdown, showing "6 000 × 23". */
+.kb-group-ds-meta {
+  margin-top: 6px;
+  font: 400 11px/1 var(--font-mono);
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+}
+.kb-group-ds-meta__text { color: var(--text-tertiary); }
+
+/* Two-up grid for time-bucket + date-col selects. */
+.kb-group-timegrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+.kb-group-timegrid__col { min-width: 0; }
+
+.kb-group-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+/* ── Agg pill-checkbox grid ───────────────────────────────── */
+.kb-agg-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+.kb-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  text-align: left;
+  font-family: inherit;
+}
+.kb-check:hover { border-color: var(--border-strong); color: var(--text-primary); }
+.kb-check__box {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--accent-300);
+  flex-shrink: 0;
+}
+.kb-check__label { font-size: 12px; }
+.kb-check.is-on {
+  background: rgba(33,160,102,0.08);
+  border-color: var(--accent-700);
+  color: var(--text-primary);
+}
+.kb-check.is-on .kb-check__box {
+  background: var(--accent-700);
+  border-color: var(--accent-700);
+  color: var(--text-on-accent, #fff);
+}
+
+/* ── Result card ──────────────────────────────────────────── */
+.kb-group-result { display: flex; flex-direction: column; gap: 16px; }
+.kb-group-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.kb-group-kpis .kb-stat-card { min-height: 76px; padding: 10px 14px; }
+.kb-group-result__chart {
+  padding: 4px 0;
+  border-top: 1px solid var(--border-subtle);
+}
+.kb-group-result__table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 12px;
+}
+
+/* ── Result empty state ──────────────────────────────────── */
+.kb-group-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 32px 20px 24px;
+  color: var(--text-tertiary);
+}
+.kb-group-empty__icon {
+  width: 48px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  border-radius: 50%;
+  color: var(--text-secondary);
+}
+.kb-group-empty__title {
+  font: 600 14px/20px var(--font-ui);
+  color: var(--text-secondary);
+}
+.kb-group-empty__desc {
+  font: 400 12px/18px var(--font-ui);
+  max-width: 320px;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .kb-group-layout { grid-template-columns: 1fr; }
+  .kb-agg-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 640px) {
+  .kb-group-hero { flex-direction: column; align-items: stretch; gap: 12px; }
+  .kb-group-hero__right { flex-wrap: wrap; }
+  .kb-agg-grid { grid-template-columns: repeat(2, 1fr); }
+  .kb-group-timegrid { grid-template-columns: 1fr; }
+  .kb-group-kpis { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ══════════════════════════════════════════════════════════════
    PREPARE PAGE (p02_prepare) — Slide 16 «Подготовка данных»
    ══════════════════════════════════════════════════════════════ */
 
