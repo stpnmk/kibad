@@ -1585,3 +1585,70 @@ input:focus, textarea:focus {
 .kb-data-catalog { padding-top: 16px; }
 .kb-data-catalog-picker { max-width: 420px; margin-bottom: 16px; }
 
+/* ─── Selected-files summary (under dropzone, pre-load) ─── */
+.kb-data-selected:empty { display: none; }
+.kb-data-selected {
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kb-data-selected-head {
+  font: 500 12px/16px var(--font-ui);
+  color: var(--text-secondary);
+}
+.kb-data-selected-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kb-data-selected-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font: 400 13px/17px var(--font-mono);
+  color: var(--text-primary);
+}
+.kb-data-selected-icon { color: var(--accent-500); }
+.kb-data-selected-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ─── Column picker (toggled by "Столбцы" button) ─── */
+.kb-data-cols-picker {
+  margin-bottom: 12px;
+  transition: opacity 0.15s ease, max-height 0.2s ease;
+  max-height: 300px;
+  overflow: hidden;
+}
+.kb-data-cols-picker--hidden {
+  max-height: 0;
+  opacity: 0;
+  margin-bottom: 0;
+  pointer-events: none;
+}
+.kb-data-cols-picker-dd { width: 100%; }
+
+/* ─── Button active/on state ─── */
+.kb-btn.is-active {
+  background: var(--accent-900);
+  border-color: var(--accent-700);
+  color: var(--accent-300);
+}
+
+/* ─── DataTable polish (supplements style_* from table.py) ─── */
+.kb-table { margin-top: 4px; }
+.kb-table .dash-spreadsheet-container { background: var(--surface-1) !important; }
+.kb-table th { user-select: none; }
+.kb-table-empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+

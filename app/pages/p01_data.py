@@ -148,6 +148,11 @@ def _upload_tab_body() -> html.Div:
                                 hint="CSV · Excel (.xlsx) · Parquet · до 2 ГБ",
                                 multiple=True,
                             ),
+                            # Selected-files summary — appears the moment files are chosen
+                            html.Div(
+                                id="data-selected-files",
+                                className="kb-data-selected",
+                            ),
                             _upload_controls_row(),
                             dcc.Loading(
                                 html.Div(
@@ -366,6 +371,9 @@ def _render_upload_result(df: pd.DataFrame, ds_name: str, size_bytes: int) -> ht
         className="kb-data-kpis",
     )
 
+    # Column picker — hidden until "Столбцы" button is pressed
+    col_options = [{"label": c, "value": c} for c in df.columns]
+
     preview = card(
         title="Предпросмотр",
         head_right=html.Div(
@@ -373,25 +381,126 @@ def _render_upload_result(df: pd.DataFrame, ds_name: str, size_bytes: int) -> ht
                 chip(ds_name, "neutral"),
                 html.Button(
                     [icon("funnel", 12), html.Span("Фильтры")],
-                    className="kb-btn kb-btn--ghost kb-btn--sm",
+                    id="data-btn-filters",
+                    className="kb-btn kb-btn--ghost kb-btn--sm is-active",
+                    n_clicks=0,
                 ),
                 html.Button(
                     [icon("grid", 12), html.Span(f"Столбцы ({n_cols})")],
+                    id="data-btn-cols",
                     className="kb-btn kb-btn--ghost kb-btn--sm",
+                    n_clicks=0,
                 ),
             ],
             className="kb-data-preview-head-tools",
         ),
         size="md",
         children=[
+            # Hidden column picker — revealed by "Столбцы" button
             html.Div(
-                data_table(df.head(50), id=f"preview-{ds_name}", page_size=10),
+                dcc.Dropdown(
+                    id="data-cols-picker",
+                    options=col_options,
+                    value=list(df.columns),
+                    multi=True,
+                    placeholder="Выберите колонки…",
+                    className="kb-data-cols-picker-dd",
+                ),
+                id="data-cols-picker-wrap",
+                className="kb-data-cols-picker kb-data-cols-picker--hidden",
+            ),
+            html.Div(
+                data_table(df.head(200), id="data-preview-tbl", page_size=10),
                 className="kb-data-preview-tbl",
-            )
+            ),
         ],
     )
 
     return html.Div([html.Div(alerts, className="kb-data-alerts"), kpis, preview])
+
+
+# ---------------------------------------------------------------------------
+# Callback: show selected filename(s) right after the user picks a file
+# ---------------------------------------------------------------------------
+@callback(
+    Output("data-selected-files", "children"),
+    Input("data-upload", "filename"),
+)
+def show_selected_filenames(filenames):
+    if not filenames:
+        return ""
+    if not isinstance(filenames, list):
+        filenames = [filenames]
+    rows = [
+        html.Div(
+            [
+                html.Span(icon("file-text", 14), className="kb-data-selected-icon"),
+                html.Span(fn, className="kb-data-selected-name"),
+            ],
+            className="kb-data-selected-row",
+        )
+        for fn in filenames
+    ]
+    return html.Div(
+        [
+            html.Div(
+                f"Выбрано файлов: {len(filenames)} · нажмите «Загрузить», чтобы обработать",
+                className="kb-data-selected-head",
+            ),
+            html.Div(rows, className="kb-data-selected-list"),
+        ]
+    )
+
+
+# ---------------------------------------------------------------------------
+# Callback: Filters / Columns buttons — toggle filter row, toggle column picker
+# ---------------------------------------------------------------------------
+@callback(
+    Output("data-preview-tbl", "filter_action"),
+    Output("data-btn-filters", "className"),
+    Input("data-btn-filters", "n_clicks"),
+    prevent_initial_call=True,
+)
+def toggle_filters(n):
+    if not n:
+        return no_update, no_update
+    on = (n % 2) == 0  # starts as "active" (n=0 → on), each click toggles
+    return (
+        "native" if on else "none",
+        "kb-btn kb-btn--ghost kb-btn--sm is-active" if on else "kb-btn kb-btn--ghost kb-btn--sm",
+    )
+
+
+@callback(
+    Output("data-cols-picker-wrap", "className"),
+    Output("data-btn-cols", "className"),
+    Input("data-btn-cols", "n_clicks"),
+    prevent_initial_call=True,
+)
+def toggle_columns_picker(n):
+    if not n:
+        return no_update, no_update
+    open_ = (n % 2) == 1
+    return (
+        "kb-data-cols-picker" if open_ else "kb-data-cols-picker kb-data-cols-picker--hidden",
+        "kb-btn kb-btn--ghost kb-btn--sm is-active" if open_ else "kb-btn kb-btn--ghost kb-btn--sm",
+    )
+
+
+@callback(
+    Output("data-preview-tbl", "hidden_columns"),
+    Input("data-cols-picker", "value"),
+    State("data-preview-tbl", "columns"),
+    prevent_initial_call=True,
+)
+def apply_column_visibility(selected, cols):
+    if cols is None:
+        return no_update
+    all_ids = [c["id"] for c in cols]
+    if not selected:
+        # Nothing selected — hide all (user probably wants to reset)
+        return all_ids
+    return [cid for cid in all_ids if cid not in selected]
 
 
 # ---------------------------------------------------------------------------
@@ -400,6 +509,7 @@ def _render_upload_result(df: pd.DataFrame, ds_name: str, size_bytes: int) -> ht
 @callback(
     Output("data-upload-result", "children"),
     Output(STORE_DATASET, "data", allow_duplicate=True),
+    Output("data-selected-files", "children", allow_duplicate=True),
     Input("data-btn-load", "n_clicks"),
     State("data-upload", "contents"),
     State("data-upload", "filename"),
@@ -409,7 +519,7 @@ def _render_upload_result(df: pd.DataFrame, ds_name: str, size_bytes: int) -> ht
 )
 def load_uploaded_files(n_clicks, contents_list, filenames_list, sep, ds_store):
     if not n_clicks or not contents_list:
-        return no_update, no_update
+        return no_update, no_update, no_update
 
     ds_store = ds_store or {}
     results = []
@@ -431,7 +541,7 @@ def load_uploaded_files(n_clicks, contents_list, filenames_list, sep, ds_store):
         except Exception as exc:
             results.append(alert_banner(f"{fname}: {exc}", "danger"))
 
-    return html.Div(results), ds_store
+    return html.Div(results), ds_store, ""
 
 
 # ---------------------------------------------------------------------------
