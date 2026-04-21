@@ -490,7 +490,7 @@ def run_aggregation(n, ds_name, group_cols, metric_cols, agg_funcs,
             group_cols=group_cols,
             metric_cols=metric_cols,
             agg_funcs=agg_funcs,
-            time_col=date_col if time_bucket else None,
+            date_col=date_col if time_bucket else None,
             time_bucket=time_bucket if time_bucket else None,
         )
     except Exception as exc:
