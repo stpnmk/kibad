@@ -1795,6 +1795,305 @@ input:focus, textarea:focus {
 .kb-keys-map__reset:disabled { color: var(--text-tertiary); cursor: not-allowed; }
 
 /* ══════════════════════════════════════════════════════════════
+   PREPARE PAGE (p02_prepare) — Slide 16 «Подготовка данных»
+   ══════════════════════════════════════════════════════════════ */
+
+.kb-prep-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1280px;
+}
+
+/* ── Hero header ──────────────────────────────────────────── */
+.kb-prep-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 28px;
+}
+.kb-prep-hero__left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.kb-prep-hero__title { margin-top: 4px !important; }
+.kb-prep-hero__sub   { color: var(--text-secondary); }
+.kb-prep-hero__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.kb-prep-hero__ds { min-width: 240px; }
+
+/* ── 9-step horizontal stepper ─────────────────────────────── */
+.kb-wizard {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 0;
+  padding: 20px 24px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  position: relative;
+}
+.kb-wizard__step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 0 12px 0 0;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+.kb-wizard__step:focus { outline: none; }
+.kb-wizard__step:focus-visible .kb-wizard__node {
+  box-shadow: 0 0 0 4px var(--accent-glow, rgba(33,160,102,0.25));
+}
+.kb-wizard__node {
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: 500 12px/1 var(--font-mono);
+  background: var(--surface-2);
+  color: var(--text-tertiary);
+  border: 1px solid var(--border-strong);
+  position: relative;
+  z-index: 2;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.kb-wizard__label {
+  font: 500 12px/16px var(--font-ui);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+/* Connecting line (child 1) — sits between THIS step's node and the next. */
+.kb-wizard__line {
+  position: absolute;
+  top: 14px;
+  left: 28px;
+  right: 0;
+  height: 1px;
+  background: var(--border-strong);
+  z-index: 1;
+}
+.kb-wizard__line.is-done { background: var(--accent-700); }
+
+/* State variants */
+.kb-wizard__step.is-done .kb-wizard__node {
+  background: var(--accent-700);
+  color: var(--text-on-accent, #fff);
+  border-color: var(--accent-700);
+}
+.kb-wizard__step.is-done .kb-wizard__label { color: var(--text-secondary); }
+
+.kb-wizard__step.is-active .kb-wizard__node {
+  background: var(--surface-1);
+  color: var(--accent-300);
+  border: 2px solid var(--accent-500);
+  box-shadow: 0 0 0 4px rgba(33,160,102,0.20);
+}
+.kb-wizard__step.is-active .kb-wizard__label { color: var(--text-primary); }
+
+.kb-wizard__step:hover:not(.is-active) .kb-wizard__node {
+  border-color: var(--accent-500);
+  color: var(--text-primary);
+}
+.kb-wizard__step:hover:not(.is-active) .kb-wizard__label {
+  color: var(--text-primary);
+}
+
+/* ── Stats row (4 KPI tiles) ───────────────────────────────── */
+.kb-prep-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.kb-prep-stats .kb-stat-card { min-height: 92px; }
+.kb-stat-value--warn { color: var(--warning); }
+.kb-stat-value--ok   { color: var(--accent-300); }
+.kb-stat-hint {
+  font: 400 11px/14px var(--font-ui);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+/* ── Split layout: form + history ──────────────────────────── */
+.kb-prep-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 16px;
+  align-items: flex-start;
+}
+.kb-prep-layout__main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.kb-prep-layout__side {
+  position: sticky;
+  top: 16px;
+}
+
+/* Row of action buttons below a step form. */
+.kb-prep-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Mapping-step chips strip. */
+.kb-prep-colchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* Types-step compact dtype list. */
+.kb-prep-typegrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0 24px;
+  margin: 4px 0 12px;
+}
+.kb-prep-typerow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.kb-prep-typerow__col {
+  font-size: 12px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kb-prep-typerow__type {
+  font: 500 10px/14px var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* ── Result card ──────────────────────────────────────────── */
+.kb-prep-result-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.kb-prep-result-stats .kb-stat-card { min-height: 72px; padding: 10px 12px; }
+.kb-prep-result .kb-stat-value { font-size: 20px; }
+
+/* ── History panel ────────────────────────────────────────── */
+.kb-prep-history { padding: 20px 22px; }
+.kb-prep-history .kb-card-head { margin-bottom: 8px; }
+
+.kb-prep-history__list {
+  display: flex;
+  flex-direction: column;
+}
+.kb-prep-history__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.kb-prep-history__item:last-child { border-bottom: none; }
+.kb-prep-history__num {
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  background: var(--accent-900);
+  color: var(--accent-300);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.kb-prep-history__body { flex: 1; min-width: 0; }
+.kb-prep-history__op {
+  font: 500 13px/18px var(--font-ui);
+  color: var(--text-primary);
+}
+.kb-prep-history__detail {
+  font: 400 12px/16px var(--font-mono);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kb-prep-history__time {
+  font: 400 12px/1 var(--font-mono);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.kb-prep-history__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 24px 16px;
+  color: var(--text-tertiary);
+}
+.kb-prep-history__empty-icon {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  border-radius: 50%;
+  color: var(--text-tertiary);
+}
+.kb-prep-history__empty-title {
+  font: 600 13px/18px var(--font-ui);
+  color: var(--text-secondary);
+}
+.kb-prep-history__empty-desc {
+  font: 400 12px/18px var(--font-ui);
+  max-width: 260px;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .kb-prep-layout { grid-template-columns: 1fr; }
+  .kb-prep-layout__side { position: static; }
+}
+@media (max-width: 820px) {
+  .kb-prep-hero { flex-direction: column; align-items: stretch; gap: 12px; }
+  .kb-prep-hero__right { flex-wrap: wrap; }
+  .kb-prep-stats { grid-template-columns: repeat(2, 1fr); }
+  .kb-wizard { grid-template-columns: repeat(3, 1fr); row-gap: 16px; }
+  .kb-wizard__step:nth-child(3n) .kb-wizard__line,
+  .kb-wizard__step:last-child .kb-wizard__line { display: none; }
+  .kb-prep-result-stats { grid-template-columns: repeat(2, 1fr); }
+  .kb-prep-typegrid { grid-template-columns: 1fr; }
+}
+
+/* ══════════════════════════════════════════════════════════════
    LANDING PAGE (p00_start) — Slide 2 «Обзор платформы»
    ══════════════════════════════════════════════════════════════ */
 
