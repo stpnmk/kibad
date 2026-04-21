@@ -25,7 +25,6 @@ import pandas as pd
 
 from app.components.alerts import alert_banner
 from app.components.cards import chip
-from app.components.form import number_input, select_input
 from app.components.icons import icon
 from app.components.layout import empty_state
 from app.components.table import data_table
@@ -63,19 +62,19 @@ _STEPS: list[tuple[str, str, str]] = [
 ]
 _STEP_INDEX = {tab: i for i, (tab, _s, _t) in enumerate(_STEPS)}
 
-# Map each step's apply-button id back to its tab — used to mark the step
-# as "done" in the history stepper when the button is clicked.
-_BTN_TO_TAB = {
-    "prep-btn-dates":    "tab-prep-dates",
-    "prep-btn-impute":   "tab-prep-impute",
-    "prep-btn-outliers": "tab-prep-outliers",
-    "prep-btn-dedup":    "tab-prep-dedup",
-    "prep-btn-resample": "tab-prep-resample",
-    # feature-engineering buttons all count as the last step
-    "prep-btn-lags":      "tab-prep-features",
-    "prep-btn-rolling":   "tab-prep-features",
-    "prep-btn-normalize": "tab-prep-features",
-    "prep-btn-buckets":   "tab-prep-features",
+# Map each step's op code back to its tab — used to mark the step as "done"
+# in the history stepper when its apply button is clicked.
+_OP_TO_TAB = {
+    "dates":     "tab-prep-dates",
+    "impute":    "tab-prep-impute",
+    "outliers":  "tab-prep-outliers",
+    "dedup":     "tab-prep-dedup",
+    "resample":  "tab-prep-resample",
+    # feature-engineering ops all count as the last step
+    "lags":      "tab-prep-features",
+    "rolling":   "tab-prep-features",
+    "normalize": "tab-prep-features",
+    "buckets":   "tab-prep-features",
 }
 
 
@@ -432,13 +431,54 @@ def _step_head(title: str, subtitle: str) -> html.Div:
     )
 
 
-def _btn_primary(text: str, id_: str) -> html.Button:
+def _btn_apply(text: str, op: str) -> html.Button:
+    """Apply button with pattern-matching ID ``{type: prep-apply, op}``."""
     return html.Button(
         [icon("play", 12), html.Span(text)],
-        id=id_,
+        id={"type": "prep-apply", "op": op},
         className="kb-btn kb-btn--primary",
         n_clicks=0,
     )
+
+
+def _mk_select(label: str, op: str, key: str, options: list,
+               value=None, multi: bool = False) -> html.Div:
+    """Labeled Dropdown with pattern-match id ``{type:prep-arg, op, key}``."""
+    if options and isinstance(options[0], str):
+        opts = [{"label": o, "value": o} for o in options]
+    else:
+        opts = options
+    return html.Div([
+        html.Label(label, className="kb-stat-label",
+                   style={"marginBottom": "6px"}),
+        dcc.Dropdown(
+            id={"type": "prep-arg", "op": op, "key": key},
+            options=opts,
+            value=value,
+            multi=multi,
+            placeholder="Выберите...",
+            clearable=True,
+            className="kb-select",
+        ),
+    ], style={"marginBottom": "12px"})
+
+
+def _mk_number(label: str, op: str, key: str, value=None,
+               min_val=None, max_val=None, step=None) -> html.Div:
+    """Labeled number input with pattern-match id."""
+    return html.Div([
+        html.Label(label, className="kb-stat-label",
+                   style={"marginBottom": "6px"}),
+        dcc.Input(
+            id={"type": "prep-arg", "op": op, "key": key},
+            type="number",
+            value=value,
+            min=min_val,
+            max=max_val,
+            step=step,
+            style={"width": "100%"},
+        ),
+    ], style={"marginBottom": "12px"})
 
 
 @callback(
@@ -534,10 +574,10 @@ def render_step(active_tab, ds_name, ds_store, prep_store):
             [
                 _step_head("Парсинг дат",
                           "Преобразование текстового столбца в datetime (формат auto)"),
-                select_input("Столбец с датой", "prep-date-col",
-                             options=all_cols,
-                             value=date_cols[0] if date_cols else (all_cols[0] if all_cols else None)),
-                html.Div(_btn_primary("Парсить даты", "prep-btn-dates"),
+                _mk_select("Столбец с датой", op="dates", key="col",
+                           options=all_cols,
+                           value=date_cols[0] if date_cols else (all_cols[0] if all_cols else None)),
+                html.Div(_btn_apply("Парсить даты", "dates"),
                          className="kb-prep-actions"),
             ],
             className="kb-card kb-card--lg",
@@ -552,8 +592,9 @@ def render_step(active_tab, ds_name, ds_store, prep_store):
                     "Преобразование текстовых столбцов в числовой тип "
                     "(удаление пробелов, запятых)",
                 ),
-                select_input("Столбцы для преобразования", "prep-num-cols",
-                             options=cat_cols, multi=True),
+                _mk_select("Столбцы для преобразования",
+                           op="numeric", key="cols",
+                           options=cat_cols, multi=True),
                 alert_banner(
                     "Отдельная операция недоступна — используйте «Парсинг дат» "
                     "или «Генерация фич → Нормализация» для обработки числовых.",
@@ -574,14 +615,14 @@ def render_step(active_tab, ds_name, ds_store, prep_store):
                     "Выберите столбцы и метод заполнения. "
                     "Применяется к копии датасета — исходник не изменится.",
                 ),
-                select_input(
+                _mk_select(
                     f"Столбцы с пропусками · {len(cols_with_nulls)} с NA",
-                    "prep-impute-cols",
+                    op="impute", key="cols",
                     options=cols_with_nulls, multi=True,
                     value=cols_with_nulls[:5],
                 ),
-                select_input(
-                    "Метод заполнения", "prep-impute-method",
+                _mk_select(
+                    "Метод заполнения", op="impute", key="method",
                     options=[
                         {"label": "Медиана",                  "value": "median"},
                         {"label": "Среднее",                  "value": "mean"},
@@ -607,7 +648,7 @@ def render_step(active_tab, ds_name, ds_store, prep_store):
                                  level="success")
                 ),
                 html.Div(
-                    _btn_primary("Заполнить пропуски", "prep-btn-impute"),
+                    _btn_apply("Заполнить пропуски", "impute"),
                     className="kb-prep-actions",
                 ),
             ],
@@ -620,21 +661,21 @@ def render_step(active_tab, ds_name, ds_store, prep_store):
             [
                 _step_head("Удаление выбросов",
                           "IQR или Z-score по выбранным числовым столбцам"),
-                select_input("Числовые столбцы", "prep-outlier-cols",
-                             options=num_cols, multi=True,
-                             value=num_cols[:3]),
-                select_input(
-                    "Метод", "prep-outlier-method",
+                _mk_select("Числовые столбцы", op="outliers", key="cols",
+                           options=num_cols, multi=True,
+                           value=num_cols[:3]),
+                _mk_select(
+                    "Метод", op="outliers", key="method",
                     options=[
                         {"label": "IQR (межквартильный размах)", "value": "iqr"},
                         {"label": "Z-score",                     "value": "zscore"},
                     ],
                     value="iqr",
                 ),
-                number_input("Порог (IQR multiplier / Z-score)",
-                             "prep-outlier-threshold",
-                             value=1.5, min_val=0.5, max_val=5, step=0.1),
-                html.Div(_btn_primary("Удалить выбросы", "prep-btn-outliers"),
+                _mk_number("Порог (IQR multiplier / Z-score)",
+                           op="outliers", key="threshold",
+                           value=1.5, min_val=0.5, max_val=5, step=0.1),
+                html.Div(_btn_apply("Удалить выбросы", "outliers"),
                          className="kb-prep-actions"),
             ],
             className="kb-card kb-card--lg",
@@ -649,9 +690,10 @@ def render_step(active_tab, ds_name, ds_store, prep_store):
                           "Удаление повторяющихся строк по выбранным столбцам"),
                 alert_banner(f"Обнаружено дубликатов: {n_dup:,}".replace(",", " "),
                              level="info" if n_dup else "success"),
-                select_input("Подмножество столбцов (пусто = все)",
-                             "prep-dedup-cols", options=all_cols, multi=True),
-                html.Div(_btn_primary("Удалить дубликаты", "prep-btn-dedup"),
+                _mk_select("Подмножество столбцов (пусто = все)",
+                           op="dedup", key="cols",
+                           options=all_cols, multi=True),
+                html.Div(_btn_apply("Удалить дубликаты", "dedup"),
                          className="kb-prep-actions"),
             ],
             className="kb-card kb-card--lg",
@@ -663,13 +705,13 @@ def render_step(active_tab, ds_name, ds_store, prep_store):
             [
                 _step_head("Ресэмплинг временного ряда",
                           "Агрегация по периоду (день / неделя / месяц / …)"),
-                select_input(
-                    "Столбец даты", "prep-resample-datecol",
+                _mk_select(
+                    "Столбец даты", op="resample", key="datecol",
                     options=date_cols if date_cols else all_cols,
                     value=date_cols[0] if date_cols else None,
                 ),
-                select_input(
-                    "Период", "prep-resample-freq",
+                _mk_select(
+                    "Период", op="resample", key="freq",
                     options=[
                         {"label": "День",     "value": "D"},
                         {"label": "Неделя",   "value": "W"},
@@ -679,10 +721,10 @@ def render_step(active_tab, ds_name, ds_store, prep_store):
                     ],
                     value="MS",
                 ),
-                select_input("Числовые столбцы для агрегации",
-                             "prep-resample-valuecols",
-                             options=num_cols, multi=True, value=num_cols[:3]),
-                html.Div(_btn_primary("Ресэмплить", "prep-btn-resample"),
+                _mk_select("Числовые столбцы для агрегации",
+                           op="resample", key="valuecols",
+                           options=num_cols, multi=True, value=num_cols[:3]),
+                html.Div(_btn_apply("Ресэмплить", "resample"),
                          className="kb-prep-actions"),
             ],
             className="kb-card kb-card--lg",
@@ -696,31 +738,32 @@ def render_step(active_tab, ds_name, ds_store, prep_store):
                           "Лаги, скользящие средние, нормализация, бинирование"),
                 dbc.Accordion([
                     dbc.AccordionItem([
-                        select_input("Столбец", "prep-lag-col",
-                                     options=num_cols,
-                                     value=num_cols[0] if num_cols else None),
-                        number_input(
+                        _mk_select("Столбец", op="lags", key="col",
+                                   options=num_cols,
+                                   value=num_cols[0] if num_cols else None),
+                        _mk_number(
                             "Лаги (через запятую, напр. 1,3,7)",
-                            "prep-lag-periods", value=1,
+                            op="lags", key="periods", value=1,
                         ),
-                        html.Div(_btn_primary("Добавить лаги", "prep-btn-lags"),
+                        html.Div(_btn_apply("Добавить лаги", "lags"),
                                  className="kb-prep-actions"),
                     ], title="Лаги"),
                     dbc.AccordionItem([
-                        select_input("Столбец", "prep-roll-col",
-                                     options=num_cols,
-                                     value=num_cols[0] if num_cols else None),
-                        number_input("Окно", "prep-roll-window",
-                                     value=7, min_val=2, max_val=365),
-                        html.Div(_btn_primary("Добавить скользящее среднее",
-                                              "prep-btn-rolling"),
+                        _mk_select("Столбец", op="rolling", key="col",
+                                   options=num_cols,
+                                   value=num_cols[0] if num_cols else None),
+                        _mk_number("Окно", op="rolling", key="window",
+                                   value=7, min_val=2, max_val=365),
+                        html.Div(_btn_apply("Добавить скользящее среднее",
+                                            "rolling"),
                                  className="kb-prep-actions"),
                     ], title="Скользящее среднее"),
                     dbc.AccordionItem([
-                        select_input("Столбцы для нормализации",
-                                     "prep-norm-cols", options=num_cols, multi=True),
-                        select_input(
-                            "Метод", "prep-norm-method",
+                        _mk_select("Столбцы для нормализации",
+                                   op="normalize", key="cols",
+                                   options=num_cols, multi=True),
+                        _mk_select(
+                            "Метод", op="normalize", key="method",
                             options=[
                                 {"label": "Min-Max [0, 1]",    "value": "minmax"},
                                 {"label": "Z-score",           "value": "zscore"},
@@ -728,18 +771,16 @@ def render_step(active_tab, ds_name, ds_store, prep_store):
                             ],
                             value="minmax",
                         ),
-                        html.Div(_btn_primary("Нормализовать",
-                                              "prep-btn-normalize"),
+                        html.Div(_btn_apply("Нормализовать", "normalize"),
                                  className="kb-prep-actions"),
                     ], title="Нормализация"),
                     dbc.AccordionItem([
-                        select_input("Столбец", "prep-bucket-col",
-                                     options=num_cols,
-                                     value=num_cols[0] if num_cols else None),
-                        number_input("Количество бинов", "prep-bucket-n",
-                                     value=5, min_val=2, max_val=20),
-                        html.Div(_btn_primary("Создать бины",
-                                              "prep-btn-buckets"),
+                        _mk_select("Столбец", op="buckets", key="col",
+                                   options=num_cols,
+                                   value=num_cols[0] if num_cols else None),
+                        _mk_number("Количество бинов", op="buckets", key="n",
+                                   value=5, min_val=2, max_val=20),
+                        html.Div(_btn_apply("Создать бины", "buckets"),
                                  className="kb-prep-actions"),
                     ], title="Бинирование (бакеты)"),
                 ], start_collapsed=True),
@@ -757,55 +798,22 @@ def render_step(active_tab, ds_name, ds_store, prep_store):
     Output("prep-result", "children"),
     Output(STORE_PREPARED, "data", allow_duplicate=True),
     Output("prep-history-store", "data", allow_duplicate=True),
-    # Inputs — apply buttons
-    Input("prep-btn-impute", "n_clicks"),
-    Input("prep-btn-outliers", "n_clicks"),
-    Input("prep-btn-dedup", "n_clicks"),
-    Input("prep-btn-dates", "n_clicks"),
-    Input("prep-btn-resample", "n_clicks"),
-    Input("prep-btn-lags", "n_clicks"),
-    Input("prep-btn-rolling", "n_clicks"),
-    Input("prep-btn-normalize", "n_clicks"),
-    Input("prep-btn-buckets", "n_clicks"),
+    # Apply buttons (pattern-matched) + reset
+    Input({"type": "prep-apply", "op": ALL}, "n_clicks"),
     Input("prep-btn-reset", "n_clicks"),
-    # States
+    # Form field values (pattern-matched, parallel to `arg_ids`)
+    State({"type": "prep-arg", "op": ALL, "key": ALL}, "value"),
+    State({"type": "prep-arg", "op": ALL, "key": ALL}, "id"),
+    # Shared state
     State("prep-ds-select", "value"),
     State(STORE_DATASET, "data"),
     State(STORE_PREPARED, "data"),
     State("prep-history-store", "data"),
-    State("prep-impute-cols", "value"),
-    State("prep-impute-method", "value"),
-    State("prep-outlier-cols", "value"),
-    State("prep-outlier-method", "value"),
-    State("prep-outlier-threshold", "value"),
-    State("prep-dedup-cols", "value"),
-    State("prep-date-col", "value"),
-    State("prep-resample-datecol", "value"),
-    State("prep-resample-freq", "value"),
-    State("prep-resample-valuecols", "value"),
-    State("prep-lag-col", "value"),
-    State("prep-lag-periods", "value"),
-    State("prep-roll-col", "value"),
-    State("prep-roll-window", "value"),
-    State("prep-norm-cols", "value"),
-    State("prep-norm-method", "value"),
-    State("prep-bucket-col", "value"),
-    State("prep-bucket-n", "value"),
     prevent_initial_call=True,
 )
-def apply_step(
-    n_imp, n_out, n_ded, n_dat, n_res, n_lag, n_roll, n_norm, n_bkt, n_reset,
-    ds_name, ds_store, prep_store, history,
-    imp_cols, imp_method,
-    out_cols, out_method, out_thresh,
-    dedup_cols,
-    date_col,
-    resample_datecol, resample_freq, resample_valuecols,
-    lag_col, lag_periods,
-    roll_col, roll_window,
-    norm_cols, norm_method,
-    bucket_col, bucket_n,
-):
+def apply_step(apply_clicks, n_reset,
+               arg_values, arg_ids,
+               ds_name, ds_store, prep_store, history):
     if not ds_name:
         return no_update, no_update, no_update
 
@@ -828,6 +836,20 @@ def apply_step(
             [],
         )
 
+    # Only continue for apply-button clicks
+    if not (isinstance(triggered, dict) and triggered.get("type") == "prep-apply"):
+        return no_update, no_update, no_update
+    if not any(apply_clicks or []):
+        return no_update, no_update, no_update
+
+    op = triggered.get("op")
+
+    # Build {key: value} dict for args belonging to this op
+    args: dict = {}
+    for aid, val in zip(arg_ids or [], arg_values or []):
+        if isinstance(aid, dict) and aid.get("op") == op:
+            args[aid.get("key")] = val
+
     df = get_df_from_store(prep_store, ds_name)
     if df is None:
         df = get_df_from_store(ds_store, ds_name)
@@ -839,15 +861,30 @@ def apply_step(
     operation = ""
     detail = ""
 
+    def _warn():
+        return (
+            alert_banner("Выберите параметры операции.", level="warning"),
+            no_update, no_update,
+        )
+
     try:
-        if triggered == "prep-btn-impute" and imp_cols:
+        if op == "impute":
+            imp_cols = args.get("cols") or []
+            imp_method = args.get("method") or "median"
+            if not imp_cols:
+                return _warn()
             for col in imp_cols:
                 if col in df.columns:
                     df = impute_missing(df, col, method=imp_method)
             operation = "Заполнение пропусков"
             detail = f"{len(imp_cols)} столбцов · метод = {imp_method}"
 
-        elif triggered == "prep-btn-outliers" and out_cols:
+        elif op == "outliers":
+            out_cols = args.get("cols") or []
+            out_method = args.get("method") or "iqr"
+            out_thresh = args.get("threshold")
+            if not out_cols:
+                return _warn()
             for col in out_cols:
                 if col in df.columns:
                     df = remove_outliers(df, col, method=out_method,
@@ -855,52 +892,74 @@ def apply_step(
             operation = "Удаление выбросов"
             detail = f"{len(out_cols)} столбцов · {out_method} > {out_thresh}"
 
-        elif triggered == "prep-btn-dedup":
+        elif op == "dedup":
+            dedup_cols = args.get("cols")
             subset = dedup_cols if dedup_cols else None
             df = deduplicate(df, subset=subset)
             operation = "Дедупликация"
             detail = (f"по {len(subset)} столбцам" if subset else "по всем столбцам")
 
-        elif triggered == "prep-btn-dates" and date_col:
+        elif op == "dates":
+            date_col = args.get("col")
+            if not date_col:
+                return _warn()
             df = parse_dates(df, date_col)
             operation = "Парсинг дат"
             detail = f"{date_col} · формат auto"
 
-        elif triggered == "prep-btn-resample" and resample_datecol and resample_freq:
+        elif op == "resample":
+            resample_datecol = args.get("datecol")
+            resample_freq = args.get("freq")
+            resample_valuecols = args.get("valuecols")
+            if not resample_datecol or not resample_freq:
+                return _warn()
             value_cols = resample_valuecols or df.select_dtypes(
                 include="number").columns.tolist()
             df = resample_timeseries(df, resample_datecol, resample_freq, value_cols)
             operation = "Ресэмплинг"
             detail = f"{resample_datecol} · {resample_freq} · {len(value_cols)} метрик"
 
-        elif triggered == "prep-btn-lags" and lag_col:
+        elif op == "lags":
+            lag_col = args.get("col")
+            lag_periods = args.get("periods")
+            if not lag_col:
+                return _warn()
             periods = [int(lag_periods)] if lag_periods else [1]
             df = add_lags(df, lag_col, periods)
             operation = "Лаги"
             detail = f"{lag_col} · лаги {periods}"
 
-        elif triggered == "prep-btn-rolling" and roll_col:
+        elif op == "rolling":
+            roll_col = args.get("col")
+            roll_window = args.get("window")
+            if not roll_col:
+                return _warn()
             window = int(roll_window or 7)
             df = add_rolling(df, roll_col, window)
             operation = "Скользящее среднее"
             detail = f"{roll_col} · окно {window}"
 
-        elif triggered == "prep-btn-normalize" and norm_cols:
+        elif op == "normalize":
+            norm_cols = args.get("cols") or []
+            norm_method = args.get("method") or "minmax"
+            if not norm_cols:
+                return _warn()
             df = normalize(df, norm_cols, method=norm_method)
             operation = "Нормализация"
             detail = f"{len(norm_cols)} столбцов · {norm_method}"
 
-        elif triggered == "prep-btn-buckets" and bucket_col:
+        elif op == "buckets":
+            bucket_col = args.get("col")
+            bucket_n = args.get("n")
+            if not bucket_col:
+                return _warn()
             n_bins = int(bucket_n or 5)
             df = add_buckets(df, bucket_col, n_bins=n_bins)
             operation = "Бинирование"
             detail = f"{bucket_col} · {n_bins} бинов"
 
         else:
-            return (
-                alert_banner("Выберите параметры операции.", level="warning"),
-                no_update, no_update,
-            )
+            return _warn()
 
     except Exception as exc:
         return (
@@ -916,9 +975,9 @@ def apply_step(
     after_nulls = int(df.isnull().sum().sum())
 
     # Append to history
-    tab_for_btn = _BTN_TO_TAB.get(triggered, "tab-prep-features")
+    tab_for_op = _OP_TO_TAB.get(op, "tab-prep-features")
     history.append({
-        "tab":    tab_for_btn,
+        "tab":    tab_for_op,
         "op":     operation,
         "detail": detail,
         "time":   pd.Timestamp.now().strftime("%H:%M"),
