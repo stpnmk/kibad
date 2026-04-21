@@ -6,6 +6,7 @@ dash-bootstrap-components==1.6.0
 pandas>=2.1.0,<3.0
 numpy>=1.26.0,<2.0
 pyarrow>=14.0.0,<16.0
+charset-normalizer>=3.3.0,<4.0   # Auto-detect CSV encoding on upload
 
 # === Analytics (core/ deps — do not change) ===
 plotly>=5.18.0,<6.0

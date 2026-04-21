@@ -84,12 +84,13 @@ def _upload_controls_row() -> html.Div:
                     dcc.Dropdown(
                         id="data-csv-sep",
                         options=[
-                            {"label": "Запятая ( , )",        "value": ","},
+                            {"label": "Авто",                  "value": "auto"},
+                            {"label": "Запятая ( , )",         "value": ","},
                             {"label": "Точка с запятой ( ; )", "value": ";"},
                             {"label": "Табуляция",             "value": "\t"},
                             {"label": "Вертикальная черта ( | )", "value": "|"},
                         ],
-                        value=",", clearable=False,
+                        value="auto", clearable=False,
                     ),
                 ],
                 className="kb-data-ctrl kb-data-ctrl--sep",
@@ -100,11 +101,16 @@ def _upload_controls_row() -> html.Div:
                     dcc.Dropdown(
                         id="data-encoding",
                         options=[
-                            {"label": "UTF-8",      "value": "utf-8"},
+                            {"label": "Авто",         "value": "auto"},
+                            {"label": "UTF-8",        "value": "utf-8"},
+                            {"label": "UTF-8 (BOM)",  "value": "utf-8-sig"},
                             {"label": "Windows-1251", "value": "cp1251"},
-                            {"label": "Latin-1",    "value": "latin-1"},
+                            {"label": "Windows-1252", "value": "cp1252"},
+                            {"label": "Latin-1",      "value": "latin-1"},
+                            {"label": "CP866 (DOS)",  "value": "cp866"},
+                            {"label": "KOI8-R",       "value": "koi8-r"},
                         ],
-                        value="utf-8", clearable=False,
+                        value="auto", clearable=False,
                     ),
                 ],
                 className="kb-data-ctrl kb-data-ctrl--enc",
@@ -301,7 +307,13 @@ layout = html.Div(
 # ---------------------------------------------------------------------------
 # Upload result renderer
 # ---------------------------------------------------------------------------
-def _render_upload_result(df: pd.DataFrame, ds_name: str, size_bytes: int) -> html.Div:
+def _sep_label(sep: str) -> str:
+    """Human-readable name for a CSV separator character."""
+    return {",": ",", ";": ";", "\t": "TAB", "|": "|"}.get(sep, sep)
+
+
+def _render_upload_result(df: pd.DataFrame, ds_name: str, size_bytes: int,
+                           meta: dict | None = None) -> html.Div:
     n_rows, n_cols = df.shape
     n_num = len(df.select_dtypes(include="number").columns)
     n_null = int(df.isnull().sum().sum())
@@ -320,23 +332,33 @@ def _render_upload_result(df: pd.DataFrame, ds_name: str, size_bytes: int) -> ht
             if (z > 3).any():
                 suspect_cols.append(col)
 
+    success_children: list = [
+        "Датасет ",
+        html.Strong(ds_name),
+        " загружен: ",
+        html.Span(
+            f"{n_rows:,} строк × {n_cols} колонок".replace(",", " "),
+            className="mono",
+        ),
+        " · ",
+        html.Span(f"{size_mb:.1f} МБ", className="mono"),
+    ]
+    if meta and meta.get("kind") == "csv":
+        success_children += [
+            " · определено: ",
+            html.Span(
+                f"sep={_sep_label(meta['sep'])} · enc={meta['encoding']}"
+                + (f" · decimal={meta['decimal']}" if meta.get("decimal") else ""),
+                className="mono",
+                style={"color": "var(--text-primary)"},
+            ),
+        ]
+
     alerts: list = [
         html.Div(
             [
                 html.Span(icon("check", 16), className="ic"),
-                html.Div(
-                    [
-                        "Датасет ",
-                        html.Strong(ds_name),
-                        " загружен: ",
-                        html.Span(
-                            f"{n_rows:,} строк × {n_cols} колонок".replace(",", " "),
-                            className="mono",
-                        ),
-                        " · ",
-                        html.Span(f"{size_mb:.1f} МБ", className="mono"),
-                    ]
-                ),
+                html.Div(success_children),
             ],
             className="kb-alert kb-alert--success",
         )
@@ -514,10 +536,12 @@ def apply_column_visibility(selected, cols):
     State("data-upload", "contents"),
     State("data-upload", "filename"),
     State("data-csv-sep", "value"),
+    State("data-encoding", "value"),
     State(STORE_DATASET, "data"),
     prevent_initial_call=True,
 )
-def load_uploaded_files(n_clicks, contents_list, filenames_list, sep, ds_store):
+def load_uploaded_files(n_clicks, contents_list, filenames_list,
+                         sep, encoding, ds_store):
     if not n_clicks or not contents_list:
         return no_update, no_update, no_update
 
@@ -528,16 +552,24 @@ def load_uploaded_files(n_clicks, contents_list, filenames_list, sep, ds_store):
         contents_list = [contents_list]
         filenames_list = [filenames_list]
 
+    # "auto" → let core.data sniff the parameter
+    load_kwargs: dict = {}
+    if sep and sep != "auto":
+        load_kwargs["sep"] = sep
+    if encoding and encoding != "auto":
+        load_kwargs["encoding"] = encoding
+
     for content_str, fname in zip(contents_list, filenames_list):
         try:
             _, content_data = content_str.split(",", 1)
             decoded = base64.b64decode(content_data)
 
-            df = load_file(decoded, filename=fname, sep=sep)
+            df, meta = load_file(decoded, filename=fname,
+                                 return_meta=True, **load_kwargs)
             ds_name = fname.rsplit(".", 1)[0] if "." in fname else fname
             path = save_dataframe(df, ds_name)
             ds_store[ds_name] = path
-            results.append(_render_upload_result(df, ds_name, len(decoded)))
+            results.append(_render_upload_result(df, ds_name, len(decoded), meta))
         except Exception as exc:
             results.append(alert_banner(f"{fname}: {exc}", "danger"))
 

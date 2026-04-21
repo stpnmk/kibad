@@ -3,6 +3,7 @@ core/data.py – Dataset loading, profiling, and type inference.
 """
 from __future__ import annotations
 
+import csv
 import io
 import re
 from pathlib import Path
@@ -13,16 +14,191 @@ import pandas as pd
 
 
 # ---------------------------------------------------------------------------
+# Sniffing — encoding + dialect auto-detection
+# ---------------------------------------------------------------------------
+
+_ENCODING_FALLBACKS: list[str] = [
+    "utf-8-sig", "utf-8", "cp1251", "cp1252", "latin-1", "cp866", "koi8-r",
+]
+_CANDIDATE_SEPS: list[str] = [",", ";", "\t", "|"]
+
+
+def _read_bytes(source: Any) -> bytes:
+    """Read up to ~256 KB from *source* for sniffing purposes.
+
+    ``source`` may be a path, bytes, or a file-like object. File-like
+    objects are rewound to the start after reading.
+    """
+    if isinstance(source, (bytes, bytearray)):
+        return bytes(source[: 256 * 1024])
+    if isinstance(source, (str, Path)):
+        with open(source, "rb") as f:
+            return f.read(256 * 1024)
+    # file-like
+    pos = None
+    try:
+        pos = source.tell()
+    except Exception:
+        pass
+    data = source.read(256 * 1024)
+    if pos is not None:
+        try:
+            source.seek(pos)
+        except Exception:
+            pass
+    return data if isinstance(data, (bytes, bytearray)) else data.encode("utf-8")
+
+
+def _detect_encoding(sample: bytes) -> str:
+    """Pick a plausible encoding for *sample* bytes.
+
+    Tries ``charset_normalizer`` first; falls back to probing a short list
+    of common encodings. Always returns *something* decodable.
+    """
+    if not sample:
+        return "utf-8"
+    # BOM shortcuts
+    if sample.startswith(b"\xef\xbb\xbf"):
+        return "utf-8-sig"
+    if sample.startswith((b"\xff\xfe", b"\xfe\xff")):
+        return "utf-16"
+    try:
+        from charset_normalizer import from_bytes  # lazy import
+        best = from_bytes(sample).best()
+        if best is not None and best.encoding:
+            enc = best.encoding.lower().replace("_", "-")
+            # normalise common aliases
+            if enc in ("windows-1251", "cp1251"):
+                return "cp1251"
+            if enc in ("windows-1252", "cp1252"):
+                return "cp1252"
+            return enc
+    except Exception:
+        pass
+    for enc in _ENCODING_FALLBACKS:
+        try:
+            sample.decode(enc)
+            return enc
+        except UnicodeDecodeError:
+            continue
+    return "utf-8"  # last resort — pd.read_csv will use errors="replace"
+
+
+def _detect_delimiter(text_sample: str) -> str:
+    """Pick the most likely CSV delimiter from a decoded *text_sample*.
+
+    Uses ``csv.Sniffer`` when possible; otherwise falls back to counting
+    candidate characters across the first ~30 non-blank lines.
+    """
+    if not text_sample:
+        return ","
+    # Try stdlib sniffer first
+    try:
+        dialect = csv.Sniffer().sniff(text_sample[:8192], delimiters=",;\t|")
+        if dialect.delimiter in _CANDIDATE_SEPS:
+            return dialect.delimiter
+    except Exception:
+        pass
+    # Fallback — pick the candidate with the most consistent per-line count
+    lines = [ln for ln in text_sample.splitlines()[:30] if ln.strip()]
+    if not lines:
+        return ","
+    best, best_score = ",", -1.0
+    for sep in _CANDIDATE_SEPS:
+        counts = [ln.count(sep) for ln in lines]
+        avg = sum(counts) / len(counts)
+        if avg < 1:
+            continue
+        # reward consistency (low variance) + high count
+        var = sum((c - avg) ** 2 for c in counts) / len(counts)
+        score = avg - var
+        if score > best_score:
+            best_score, best = score, sep
+    return best
+
+
+def _detect_decimal(text_sample: str, sep: str) -> str:
+    """Return ``","`` if numbers look like ``1,23`` under *sep*, else ``"."``.
+
+    If the delimiter is already ``","`` we can't use ``","`` as decimal, so
+    we short-circuit to ``"."``.
+    """
+    if sep == ",":
+        return "."
+    # Look at a handful of non-header lines
+    lines = [ln for ln in text_sample.splitlines()[1:50] if ln.strip()]
+    if not lines:
+        return "."
+    comma_dec = dot_dec = 0
+    # Match *entire* token — "1,23" or "1.23" or "-1234,5" — but NOT
+    # "05.01.2024" (two separators) or "2024-01-05" (dash).
+    pat = re.compile(r"^-?\d+[,.]\d+$")
+    for ln in lines:
+        for raw in ln.split(sep):
+            tok = raw.strip().strip('"').strip("'")
+            if not pat.fullmatch(tok):
+                continue
+            if "," in tok:
+                comma_dec += 1
+            else:
+                dot_dec += 1
+    return "," if comma_dec > dot_dec else "."
+
+
+def sniff_csv(source: Any) -> dict[str, Any]:
+    """Detect CSV dialect parameters for *source*.
+
+    Parameters
+    ----------
+    source:
+        Path, raw bytes, or file-like — same shapes accepted by
+        :func:`load_csv`.
+
+    Returns
+    -------
+    dict
+        With keys ``encoding``, ``sep``, ``decimal`` (always present).
+    """
+    sample = _read_bytes(source)
+    encoding = _detect_encoding(sample)
+    try:
+        text = sample.decode(encoding, errors="replace")
+    except LookupError:
+        text = sample.decode("utf-8", errors="replace")
+        encoding = "utf-8"
+    sep = _detect_delimiter(text)
+    decimal = _detect_decimal(text, sep)
+    return {"encoding": encoding, "sep": sep, "decimal": decimal}
+
+
+# ---------------------------------------------------------------------------
 # Loading
 # ---------------------------------------------------------------------------
 
-def load_csv(source: Any, **kwargs) -> pd.DataFrame:
+def load_csv(
+    source: Any,
+    *,
+    sep: str | None = None,
+    encoding: str | None = None,
+    decimal: str | None = None,
+    _sniff_result: dict | None = None,
+    **kwargs,
+) -> pd.DataFrame:
     """Load CSV from a file path, file-like object, or bytes.
+
+    When *sep* / *encoding* / *decimal* are ``None`` they are auto-detected
+    via :func:`sniff_csv`. Pass explicit values (or any truthy string) to
+    disable sniffing for that parameter.
 
     Parameters
     ----------
     source:
         Path string, pathlib.Path, BytesIO / UploadedFile, or raw bytes.
+    sep, encoding, decimal:
+        Explicit CSV dialect params. ``None`` enables auto-detect.
+    _sniff_result:
+        Internal — pre-computed sniff dict, to avoid sniffing twice when
+        :func:`load_file` already did it.
     **kwargs:
         Extra kwargs forwarded to ``pd.read_csv``.
 
@@ -30,6 +206,22 @@ def load_csv(source: Any, **kwargs) -> pd.DataFrame:
     -------
     pd.DataFrame
     """
+    need_sniff = sep is None or encoding is None or decimal is None
+    if need_sniff:
+        sniffed = _sniff_result or sniff_csv(source)
+        if sep is None:
+            sep = sniffed["sep"]
+        if encoding is None:
+            encoding = sniffed["encoding"]
+        if decimal is None:
+            decimal = sniffed["decimal"]
+
+    kwargs.setdefault("sep", sep)
+    kwargs.setdefault("encoding", encoding)
+    kwargs.setdefault("decimal", decimal)
+    # Robustness — ignore bad lines rather than failing the whole upload
+    kwargs.setdefault("on_bad_lines", "skip")
+
     if isinstance(source, (str, Path)):
         return pd.read_csv(source, **kwargs)
     if isinstance(source, (bytes, bytearray)):
@@ -59,7 +251,13 @@ def load_excel(source: Any, sheet_name: int | str = 0, **kwargs) -> pd.DataFrame
     return pd.read_excel(source, sheet_name=sheet_name, **kwargs)
 
 
-def load_file(source: Any, filename: str = "", **kwargs) -> pd.DataFrame:
+def load_file(
+    source: Any,
+    filename: str = "",
+    *,
+    return_meta: bool = False,
+    **kwargs,
+) -> pd.DataFrame | tuple[pd.DataFrame, dict]:
     """Auto-detect CSV vs Excel by filename extension and load.
 
     Parameters
@@ -68,17 +266,37 @@ def load_file(source: Any, filename: str = "", **kwargs) -> pd.DataFrame:
         Raw bytes, file-like object, or path.
     filename:
         Original filename used to detect extension.
+    return_meta:
+        If True, return ``(df, meta)`` where ``meta`` describes the
+        effective loader parameters (``kind``, and for CSV also
+        ``encoding``, ``sep``, ``decimal``). Useful for surfacing
+        auto-detected values back to the UI.
     **kwargs:
-        Extra kwargs forwarded to the underlying loader.
+        Extra kwargs forwarded to the underlying loader. Pass
+        ``sep``/``encoding``/``decimal`` explicitly to override
+        auto-detection.
 
     Returns
     -------
-    pd.DataFrame
+    pd.DataFrame, or (pd.DataFrame, dict) if ``return_meta`` is True.
     """
     name = filename.lower() if filename else ""
     if name.endswith((".xls", ".xlsx")):
-        return load_excel(source, **kwargs)
-    return load_csv(source, **kwargs)
+        df = load_excel(source, **kwargs)
+        return (df, {"kind": "excel"}) if return_meta else df
+
+    # CSV path — sniff upfront so we can report what was used
+    sniffed = sniff_csv(source)
+    df = load_csv(source, _sniff_result=sniffed, **kwargs)
+    if not return_meta:
+        return df
+    meta = {
+        "kind": "csv",
+        "encoding": kwargs.get("encoding") or sniffed["encoding"],
+        "sep":      kwargs.get("sep")      or sniffed["sep"],
+        "decimal":  kwargs.get("decimal")  or sniffed["decimal"],
+    }
+    return df, meta
 
 
 # ---------------------------------------------------------------------------
