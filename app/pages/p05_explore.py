@@ -569,6 +569,91 @@ def _render_auto_analysis(df: pd.DataFrame) -> html.Div:
     )
 
 
+def _render_auto_landing(df: pd.DataFrame) -> html.Div:
+    """Pre-analysis CTA card — shows dataset size and a launch button."""
+    n_rows, n_cols = df.shape
+    rows_fmt = f"{n_rows:,}".replace(",", " ")
+    # very rough heuristic — fine for a hint
+    if n_rows * n_cols > 500_000:
+        duration = "до нескольких секунд"
+    elif n_rows * n_cols > 50_000:
+        duration = "пара секунд"
+    else:
+        duration = "почти мгновенно"
+
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.H3("Авто-анализ датасета"),
+                            html.Div(
+                                "Оценим качество, найдём корреляции, тренды, "
+                                "выбросы, концентрации и выдадим рекомендации.",
+                                className="caption",
+                            ),
+                        ],
+                        className="kb-card-title",
+                    ),
+                    html.Button(
+                        [icon("play"), html.Span("Запустить анализ")],
+                        id="exp-auto-run",
+                        n_clicks=0,
+                        className="kb-btn kb-btn--primary kb-btn--lg",
+                    ),
+                ],
+                className="kb-card-head kb-auto-launch__head",
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Span("Объём", className="kb-overline"),
+                            html.Div(
+                                f"{rows_fmt} × {n_cols}",
+                                className="kb-auto-launch__stat-val mono",
+                            ),
+                            html.Div("строк × колонок",
+                                     className="kb-auto-launch__stat-hint"),
+                        ],
+                        className="kb-auto-launch__stat",
+                    ),
+                    html.Div(
+                        [
+                            html.Span("Время", className="kb-overline"),
+                            html.Div(duration,
+                                     className="kb-auto-launch__stat-val"),
+                            html.Div("оценка",
+                                     className="kb-auto-launch__stat-hint"),
+                        ],
+                        className="kb-auto-launch__stat",
+                    ),
+                    html.Div(
+                        [
+                            html.Span("Что получите", className="kb-overline"),
+                            html.Div(
+                                "оценка · инсайты · рекомендации",
+                                className="kb-auto-launch__stat-val",
+                            ),
+                            html.Div("7 разделов",
+                                     className="kb-auto-launch__stat-hint"),
+                        ],
+                        className="kb-auto-launch__stat",
+                    ),
+                ],
+                className="kb-auto-launch__stats",
+            ),
+            dcc.Loading(
+                html.Div(id="exp-auto-result"),
+                type="circle",
+                color="#21A066",
+            ),
+        ],
+        className="kb-card kb-card--lg kb-auto-launch",
+    )
+
+
 @callback(
     Output("exp-tab-content", "children"),
     Input("exp-tabs", "active_tab"),
@@ -588,10 +673,10 @@ def render_tab(tab, ds, datasets, prepared):
     dt_cols = [c for c in df.columns if pd.api.types.is_datetime64_any_dtype(df[c])]
 
     if tab == "tab-auto":
-        try:
-            return _render_auto_analysis(df)
-        except Exception as e:
-            return alert_banner(f"Ошибка авто-анализа: {e}", "warning")
+        # Show landing CTA — analysis is run manually via the button.
+        # The ``exp-auto-result`` div inside the landing is populated by
+        # the ``run_auto_analysis`` callback below.
+        return _render_auto_landing(df)
 
     elif tab == "tab-ts":
         if not dt_cols or not num_cols:
@@ -656,6 +741,27 @@ def render_tab(tab, ds, datasets, prepared):
         ])
 
     return ""
+
+
+@callback(
+    Output("exp-auto-result", "children"),
+    Input("exp-auto-run", "n_clicks"),
+    State("exp-ds-select", "value"),
+    State(STORE_DATASET, "data"),
+    State(STORE_PREPARED, "data"),
+    prevent_initial_call=True,
+)
+def run_auto_analysis(n_clicks, ds, datasets, prepared):
+    """Populate the auto-analysis result area after the user clicks «Запустить анализ»."""
+    if not n_clicks or not ds:
+        return no_update
+    df = get_df_from_store(prepared, ds) or get_df_from_store(datasets, ds)
+    if df is None:
+        return alert_banner("Датасет не найден.", "warning")
+    try:
+        return _render_auto_analysis(df)
+    except Exception as e:
+        return alert_banner(f"Ошибка авто-анализа: {e}", "warning")
 
 
 @callback(
