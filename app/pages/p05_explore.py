@@ -25,6 +25,15 @@ from core.insights import analyze_dataset, format_insights_markdown, score_data_
 
 dash.register_page(__name__, path="/explore", name="5. Исследование", order=5, icon="search")
 
+
+def _load_df(prepared, datasets, ds):
+    """Prefer prepared over raw. Can't use ``a or b`` because ``bool(df)``
+    raises on DataFrames."""
+    df = get_df_from_store(prepared, ds)
+    if df is None:
+        df = get_df_from_store(datasets, ds)
+    return df
+
 layout = html.Div([
     page_header("5. Исследовательский анализ", "Распределения, корреляции, профилирование"),
     dbc.Row([
@@ -70,7 +79,7 @@ def update_ds(datasets, active):
 def show_info(ds, datasets, prepared):
     if not ds:
         return empty_state("", "Данные не загружены", "Загрузите датасет на странице Данные")
-    df = get_df_from_store(prepared, ds) or get_df_from_store(datasets, ds)
+    df = _load_df(prepared, datasets, ds)
     if df is None:
         return ""
     return html.Div([
@@ -664,7 +673,7 @@ def _render_auto_landing(df: pd.DataFrame) -> html.Div:
 def render_tab(tab, ds, datasets, prepared):
     if not ds:
         return empty_state("", "Выберите датасет", "")
-    df = get_df_from_store(prepared, ds) or get_df_from_store(datasets, ds)
+    df = _load_df(prepared, datasets, ds)
     if df is None:
         return alert_banner("Датасет не найден.", "warning")
 
@@ -755,7 +764,7 @@ def run_auto_analysis(n_clicks, ds, datasets, prepared):
     """Populate the auto-analysis result area after the user clicks «Запустить анализ»."""
     if not n_clicks or not ds:
         return no_update
-    df = get_df_from_store(prepared, ds) or get_df_from_store(datasets, ds)
+    df = _load_df(prepared, datasets, ds)
     if df is None:
         return alert_banner("Датасет не найден.", "warning")
     try:
@@ -776,7 +785,7 @@ def run_auto_analysis(n_clicks, ds, datasets, prepared):
 def render_ts(date_col, val_cols, ds, datasets, prepared):
     if not date_col or not val_cols or not ds:
         return ""
-    df = get_df_from_store(prepared, ds) or get_df_from_store(datasets, ds)
+    df = _load_df(prepared, datasets, ds)
     if df is None:
         return ""
     try:
