@@ -1382,7 +1382,18 @@ input:focus, textarea:focus {
 /* ══════════════════════════════════════════════════════════════
    MERGE PAGE (Slide 6)
    ══════════════════════════════════════════════════════════════ */
-.kb-page { padding: 8px 4px 32px; }
+/* Generic page container — every page wraps its content in
+   `className="kb-page kb-page-<slug>"`. With `.kb-main` now filling the
+   full width right of the sidebar, each page caps its own width and
+   centers itself horizontally so the layout doesn't drift left on big
+   monitors. */
+.kb-page {
+  padding: 8px 4px 32px;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
 
 .kb-page-head {
   display: flex;
