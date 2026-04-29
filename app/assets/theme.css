@@ -6456,10 +6456,16 @@ input:focus, textarea:focus {
   background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
+  /* Default: clip children (used for cards that wrap sub-tabs or tables
+     so their borders match the card's rounded corners). Padded variant
+     overrides this so dcc.Dropdown menus don't get truncated. */
   overflow: hidden;
   margin-top: 12px;
 }
-.kb-match-card--pad { padding: 16px 20px; }
+.kb-match-card--pad {
+  padding: 16px 20px;
+  overflow: visible;
+}
 .kb-match-card__head {
   display: flex;
   align-items: center;

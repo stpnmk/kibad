@@ -931,6 +931,18 @@ def _render_pre_balance(covariates, treatment_col, ds_name, raw, prep):
     State(STORE_PREPARED, "data"),
 )
 def _render_tab(tab, results, ds_name, treatment_col, covs, raw, prep):
+    # If this fired because the results-store updated, only re-render when
+    # the user is on the Compare tab (otherwise we'd wipe the just-set
+    # result of the method-specific tab — `psm-result`, `exact-result`,
+    # etc. live inside this container and are populated by the run
+    # callbacks, which write to the store at the same time).
+    try:
+        triggered = ctx.triggered_id
+    except Exception:
+        triggered = None
+    if triggered == "match-results-store" and tab != "compare":
+        return no_update
+
     df = _get_df(ds_name, raw, prep)
     if tab == "compare":
         return _render_compare(results, df, treatment_col)
