@@ -482,8 +482,21 @@ def handle_pill_click(pill_clicks, reset_n, pairs, pending):
         if reset_n:
             return [], None
         return no_update, no_update
-    # Ignore the initial pattern-match fire with all zeros.
-    if not any(pill_clicks or []):
+
+    # Pattern-match input: Dash returns a list when ≥2 pills exist, but a
+    # bare int when exactly one matches and an empty list / None when none
+    # are in the DOM yet (page load before datasets are picked). Coerce to
+    # an iterable of ints in all cases so `any()` works.
+    if pill_clicks is None:
+        clicks_iter = []
+    elif isinstance(pill_clicks, int):
+        clicks_iter = [pill_clicks]
+    else:
+        clicks_iter = list(pill_clicks)
+
+    # Ignore the initial pattern-match fire with all zeros (page just rendered;
+    # no real click yet).
+    if not any(clicks_iter):
         return no_update, no_update
     if not isinstance(trig, dict):
         return no_update, no_update
