@@ -5,7 +5,7 @@ from dash import html, dcc, callback, Input, Output, State, no_update
 import dash_bootstrap_components as dbc
 
 from app.state import (
-    get_df_from_store, save_dataframe,
+    get_df_from_store, get_df_from_stores, save_dataframe,
     STORE_DATASET, STORE_PREPARED, STORE_ACTIVE_DS,
 )
 from app.components.layout import page_header, section_header, empty_state
@@ -123,7 +123,7 @@ def run_pipeline(n, ds, steps, datasets, prepared):
     if not ds or not steps:
         return alert_banner("Выберите датасет и добавьте шаги.", "warning")
 
-    df = get_df_from_store(prepared, ds) or get_df_from_store(datasets, ds)
+    df = get_df_from_stores(ds, prepared, datasets)
     if df is None:
         return alert_banner("Датасет не найден.", "danger")
 

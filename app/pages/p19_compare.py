@@ -16,7 +16,7 @@ from dash import Input, Output, State, callback, dcc, html, dash_table, no_updat
 import dash_bootstrap_components as dbc
 
 from app.state import (
-    get_df_from_store, list_datasets, save_dataframe,
+    get_df_from_store, get_df_from_stores, list_datasets, save_dataframe,
     STORE_DATASET, STORE_ACTIVE_DS, STORE_PREPARED,
 )
 from app.figure_theme import apply_kibad_theme
@@ -131,9 +131,10 @@ layout = dbc.Container([
      Input(STORE_ACTIVE_DS, "data")],
 )
 def populate_metrics(ds_data, prep_data, active_ds):
-    if not active_ds:
+    ds = active_ds or next(iter(prep_data or {}), None) or next(iter(ds_data or {}), None)
+    if not ds:
         return [], []
-    df = get_df_from_store(prep_data, active_ds) or get_df_from_store(ds_data, active_ds)
+    df = get_df_from_stores(ds, prep_data, ds_data)
     if df is None:
         return [], []
     num_cols = df.select_dtypes(include="number").columns.tolist()
@@ -150,9 +151,10 @@ def populate_metrics(ds_data, prep_data, active_ds):
      Input(STORE_ACTIVE_DS, "data")],
 )
 def render_settings(mode, ds_data, prep_data, active_ds):
-    if not active_ds:
+    ds = active_ds or next(iter(prep_data or {}), None) or next(iter(ds_data or {}), None)
+    if not ds:
         return dbc.Alert("Загрузите данные.", color="info")
-    df = get_df_from_store(prep_data, active_ds) or get_df_from_store(ds_data, active_ds)
+    df = get_df_from_stores(ds, prep_data, ds_data)
     if df is None:
         return dbc.Alert("Нет данных.", color="info")
 
@@ -269,7 +271,7 @@ def run_comparison(n_clicks, ds_data, prep_data, active_ds, mode, metrics, agg_f
     if not active_ds or not metrics:
         return dbc.Alert("Выберите датасет и показатели.", color="warning"), no_update
 
-    df = get_df_from_store(prep_data, active_ds) or get_df_from_store(ds_data, active_ds)
+    df = get_df_from_stores(active_ds, prep_data, ds_data)
     if df is None or df.empty:
         return dbc.Alert("Нет данных.", color="danger"), no_update
 
@@ -363,7 +365,7 @@ def run_comparison(n_clicks, ds_data, prep_data, active_ds, mode, metrics, agg_f
         barmode="group", title="Сравнение А vs Б",
         color_discrete_map={"А": "#3b82f6", "Б": "#ef4444"},
     )
-    fig_bar.update_layout(height=450, legend=dict(orientation="h", y=-0.2))
+    fig_bar.update_layout(height=420, legend=dict(orientation="h", y=-0.18, x=0))
     apply_kibad_theme(fig_bar)
 
     # --- Delta % chart ---

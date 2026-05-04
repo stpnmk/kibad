@@ -1,12 +1,16 @@
 """p10_report – Report generation page (Dash)."""
+import logging
+
 import dash
 from dash import html, dcc, callback, Input, Output, State, no_update
 import dash_bootstrap_components as dbc
 import pandas as pd
 import io
 
+logger = logging.getLogger(__name__)
+
 from app.state import (
-    get_df_from_store, STORE_DATASET, STORE_PREPARED, STORE_ACTIVE_DS, STORE_REPORT,
+    get_df_from_store, get_df_from_stores, STORE_DATASET, STORE_PREPARED, STORE_ACTIVE_DS, STORE_REPORT,
 )
 from app.components.layout import page_header, section_header, empty_state
 from app.components.alerts import alert_banner
@@ -87,7 +91,7 @@ def update_ds(datasets, active):
 def update_cols(ds, datasets, prepared):
     if not ds:
         return [], []
-    df = get_df_from_store(prepared, ds) or get_df_from_store(datasets, ds)
+    df = get_df_from_stores(ds, prepared, datasets)
     if df is None:
         return [], []
     all_opts = [{"label": c, "value": c} for c in df.columns]
@@ -112,7 +116,7 @@ def generate_report(n, ds, title, date_col, target_col, sections, datasets, prep
     if not ds:
         return alert_banner("Выберите датасет.", "warning"), no_update
 
-    df = get_df_from_store(prepared, ds) or get_df_from_store(datasets, ds)
+    df = get_df_from_stores(ds, prepared, datasets)
     if df is None:
         return alert_banner("Датасет не найден.", "danger"), no_update
 
@@ -136,7 +140,7 @@ def generate_report(n, ds, title, date_col, target_col, sections, datasets, prep
                 summary = generate_business_summary(df, date_col, target_col)
                 rb.add_interpretation("Бизнес-саммари", summary)
             except Exception:
-                pass
+                logger.warning("generate_business_summary failed for dataset %s", ds, exc_info=True)
 
         report_html = rb.render()
         log_event("report", dataset=ds, details=f"sections={sections}")
@@ -184,5 +188,5 @@ def download_pdf(n, report_html):
         pdf_bytes = generate_pdf_bytes(report_html)
         return dcc.send_bytes(pdf_bytes, "kibad_report.pdf")
     except Exception:
-        # Fallback: download as HTML
+        logger.warning("PDF generation failed, falling back to HTML download", exc_info=True)
         return dcc.send_string(report_html, "kibad_report.html")

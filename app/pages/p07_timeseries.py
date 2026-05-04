@@ -6,6 +6,7 @@ p07_timeseries.py -- Временные ряды: прогнозирование
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 import dash
@@ -13,6 +14,8 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+
+logger = logging.getLogger(__name__)
 from plotly.subplots import make_subplots
 from dash import Input, Output, State, callback, dcc, html, no_update
 import dash_bootstrap_components as dbc
@@ -70,10 +73,22 @@ def _plot_forecast(result: ForecastResult, target_col: str, title: str) -> go.Fi
             line=dict(color="#4b9eff", width=1.5, dash="dot"), opacity=0.8,
         ))
     if not hist.empty and not fut.empty:
-        fig.add_vline(
-            x=hist["date"].iloc[-1],
-            line_dash="dash", line_color="#9ba3b8", opacity=0.6,
-            annotation_text="Граница прогноза", annotation_position="top right",
+        boundary_x = hist["date"].iloc[-1]
+        # Use add_shape + add_annotation instead of add_vline to avoid
+        # Plotly's internal shapeannotation._mean(sum([Timestamp])) which
+        # fails with pandas 2.x
+        fig.add_shape(
+            type="line",
+            x0=boundary_x, x1=boundary_x,
+            y0=0, y1=1, yref="paper",
+            line=dict(dash="dash", color="#8891a5", width=1.5),
+            opacity=0.6,
+        )
+        fig.add_annotation(
+            x=boundary_x, y=1, yref="paper",
+            text="Граница прогноза", showarrow=False,
+            font=dict(size=11, color="#8891a5"),
+            xanchor="left", yanchor="top",
         )
     if not fut.empty and "lower" in fut.columns and fut["lower"].notna().any():
         fig.add_trace(go.Scatter(
@@ -94,12 +109,12 @@ def _plot_forecast(result: ForecastResult, target_col: str, title: str) -> go.Fi
     fig.update_layout(
         title=dict(text=f"<b>{title}</b>", font=dict(size=16)),
         hovermode="x unified",
-        legend=dict(orientation="h", y=-0.25, x=0),
+        legend=dict(orientation="h", y=-0.18, x=0),
         xaxis_title="Дата", yaxis_title=target_col,
         annotations=[dict(
             xref="paper", yref="paper", x=0.01, y=1.03,
             text=metric_text, showarrow=False,
-            font=dict(size=11, color="#9ba3b8"),
+            font=dict(size=11, color="#8891a5"),
         )],
         height=450,
     )
@@ -117,29 +132,31 @@ def _metric_cards(metrics: dict) -> list:
 # Layout
 # ---------------------------------------------------------------------------
 
-_method_cards = dbc.Row([
-    dbc.Col(dbc.Card([
-        dbc.CardHeader("Наивный / Сезонный наивный"),
-        dbc.CardBody([
-            html.P("Последнее значение или значение прошлого сезона.", className="card-text"),
-            html.P("Когда: базовая линия, горизонт 1-3 периода.", style={"fontSize": "0.85rem", "color": "#9ba3b8"}),
+_method_info = dbc.Accordion([
+    dbc.AccordionItem([
+        dbc.Row([
+            dbc.Col([
+                html.Strong("Наивный / Сезонный наивный", style={"color": "#e4e7ee"}),
+                html.P("Последнее значение или значение прошлого сезона. "
+                       "Базовая линия, горизонт 1–3 периода.",
+                       style={"fontSize": "0.83rem", "color": "#8891a5", "marginBottom": 0}),
+            ], md=4),
+            dbc.Col([
+                html.Strong("ARX (Ridge + лаги)", style={"color": "#e4e7ee"}),
+                html.P("Авторегрессия + внешние факторы, Ridge-регуляризация. "
+                       "Лучше при экзогенных факторах, горизонт 3–24.",
+                       style={"fontSize": "0.83rem", "color": "#8891a5", "marginBottom": 0}),
+            ], md=4),
+            dbc.Col([
+                html.Strong("SARIMAX", style={"color": "#e4e7ee"}),
+                html.P("Сезонная ARIMA с доверительными интервалами. "
+                       "Нужна чёткая сезонность, ≥ 50 наблюдений.",
+                       style={"fontSize": "0.83rem", "color": "#8891a5", "marginBottom": 0}),
+            ], md=4),
         ]),
-    ], className="kb-card"), md=4),
-    dbc.Col(dbc.Card([
-        dbc.CardHeader("ARX (Ridge + лаги)"),
-        dbc.CardBody([
-            html.P("Авторегрессия + внешние факторы, Ridge-регуляризация.", className="card-text"),
-            html.P("Когда: есть экзогенные факторы, горизонт 3-24.", style={"fontSize": "0.85rem", "color": "#9ba3b8"}),
-        ]),
-    ], className="kb-card"), md=4),
-    dbc.Col(dbc.Card([
-        dbc.CardHeader("SARIMAX"),
-        dbc.CardBody([
-            html.P("Сезонная ARIMA с доверительными интервалами.", className="card-text"),
-            html.P("Когда: чёткая сезонность, >= 50 наблюдений.", style={"fontSize": "0.85rem", "color": "#9ba3b8"}),
-        ]),
-    ], className="kb-card"), md=4),
-], className="mb-3")
+    ], title="Справка по методам", item_id="methods-info"),
+], start_collapsed=True, className="mb-3",
+   style={"fontSize": "0.9rem"})
 
 
 layout = dbc.Container([
@@ -147,23 +164,29 @@ layout = dbc.Container([
                 "Прогнозирование и анализ динамики",
                 "bi-graph-up"),
 
-    _method_cards,
+    _method_info,
 
-    # Controls
+    # Row 1: dataset + series config
     dbc.Row([
-        dbc.Col(select_input("Датасет", "ts-ds-select", [], placeholder="Выберите датасет..."), md=3),
-        dbc.Col(select_input("Колонка даты", "ts-date-col", []), md=2),
-        dbc.Col(select_input("Целевая переменная", "ts-target-col", []), md=2),
-        dbc.Col(slider_input("Горизонт", "ts-horizon", 1, 60, 12, 1), md=2),
-        dbc.Col(slider_input("Сезонный период", "ts-period", 1, 52, 12, 1), md=2),
-    ], className="mb-2"),
+        dbc.Col(select_input("Датасет", "ts-ds-select", [],
+                             placeholder="Выберите датасет..."), md=3),
+        dbc.Col(select_input("Колонка даты", "ts-date-col", []), md=3),
+        dbc.Col(select_input("Целевая переменная", "ts-target-col", []), md=3),
+        dbc.Col(select_input("Внешние факторы (exog)", "ts-exog-cols", [],
+                             multi=True), md=3),
+    ], className="mb-2 align-items-end"),
 
+    # Row 2: model hyperparams
     dbc.Row([
-        dbc.Col(select_input("Внешние факторы (exog)", "ts-exog-cols", [], multi=True), md=4),
-        dbc.Col(text_input("Лаги AR (через запятую)", "ts-lags", value="1,2,3,12"), md=3),
+        dbc.Col(slider_input("Горизонт прогноза", "ts-horizon", 1, 60, 12, 1), md=3),
+        dbc.Col(slider_input("Сезонный период", "ts-period", 1, 52, 12, 1), md=3),
+        dbc.Col(text_input("Лаги AR (через запятую)", "ts-lags",
+                           value="1,2,3,12"), md=3),
+        dbc.Col(slider_input("Регуляризация Ridge (alpha)", "ts-arx-alpha",
+                             1, 100, 1, 1), md=3),
     ], className="mb-3"),
 
-    html.Hr(),
+    html.Hr(className="mb-3"),
 
     # Tabs
     dbc.Tabs(id="ts-tabs", active_tab="tab-naive", children=[
@@ -185,12 +208,16 @@ layout = dbc.Container([
 # ---------------------------------------------------------------------------
 @callback(
     Output("ts-ds-select", "options"),
+    Output("ts-ds-select", "value"),
     Input(STORE_DATASET, "data"),
     Input(STORE_PREPARED, "data"),
+    State(STORE_ACTIVE_DS, "data"),
 )
-def _ds_opts(raw, prep):
+def _ds_opts(raw, prep, active_ds):
     names = sorted(set(list_datasets(raw) + list_datasets(prep)))
-    return [{"label": n, "value": n} for n in names]
+    opts = [{"label": n, "value": n} for n in names]
+    val = active_ds if active_ds in names else (names[0] if names else None)
+    return opts, val
 
 
 @callback(
@@ -205,7 +232,8 @@ def _col_opts(ds_name, raw, prep):
     df = _get_df(ds_name, raw, prep)
     if df is None:
         return [], [], []
-    dt_cols = [c for c in df.columns if pd.api.types.is_datetime64_any_dtype(df[c])]
+    dt_cols = [c for c in df.columns if pd.api.types.is_datetime64_any_dtype(df[c])
+               or (df[c].dtype == object and pd.to_datetime(df[c], errors="coerce").notna().mean() > 0.8)]
     num_cols = df.select_dtypes(include="number").columns.tolist()
     return (
         [{"label": c, "value": c} for c in dt_cols],
@@ -246,8 +274,9 @@ def _render_tab(tab, ds_name, raw, prep):
 
     if tab == "tab-arx":
         return html.Div([
-            section_header("ARX -- авторегрессия с внешними факторами (Ridge)"),
-            slider_input("Регуляризация Ridge (alpha)", "arx-alpha-slider", 1, 100, 1, 1),
+            section_header("ARX — авторегрессия с внешними факторами (Ridge)"),
+            html.P("Параметры модели задаются в панели выше (Лаги AR, Регуляризация Ridge).",
+                   style={"color": "#8891a5", "fontSize": "0.85rem", "marginBottom": "12px"}),
             dbc.Button("Запустить ARX", id="btn-arx", color="primary", className="mb-3"),
             dcc.Loading(html.Div(id="arx-result"), type="circle", color="#10b981"),
         ])
@@ -360,7 +389,7 @@ def _run_naive(n, naive_type, ds_name, date_col, target_col, horizon, period, ra
 @callback(
     Output("arx-result", "children"),
     Input("btn-arx", "n_clicks"),
-    State("arx-alpha-slider", "value"),
+    State("ts-arx-alpha", "value"),
     State("ts-ds-select", "value"),
     State("ts-date-col", "value"), State("ts-target-col", "value"),
     State("ts-horizon", "value"), State("ts-lags", "value"),
@@ -406,6 +435,11 @@ def _run_arx(n, alpha_r, ds_name, date_col, target_col, horizon, lags_str, exog_
         children.append(data_table(result.forecast_df.tail(30), "arx-fc-table", page_size=10))
         return html.Div(children)
     except Exception as e:
+        import traceback as _tb
+        tb_str = _tb.format_exc()
+        # Log full traceback as an INFO message visible in server output
+        import logging as _log
+        _log.getLogger("werkzeug").info("ARX_FULL_TRACEBACK: %s", tb_str)
         return alert_banner(f"Ошибка ARX: {e}", "danger")
 
 
@@ -544,7 +578,7 @@ def _run_acf(n, col, nlags, ds_name, raw, prep):
                 "Пунктирные линии -- 95% доверительные границы. "
                 "Значимые лаги ACF указывают на порядок q (MA), "
                 "значимые лаги PACF -- на порядок p (AR).",
-                style={"color": "#9ba3b8", "fontSize": "0.85rem"},
+                style={"color": "#8891a5", "fontSize": "0.85rem"},
             ),
         ])
     except ImportError:

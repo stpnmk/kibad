@@ -12,6 +12,8 @@ def select_input(
     multi: bool = False,
     placeholder: str = "",
     clearable: bool = True,
+    error: str | None = None,
+    help_text: str | None = None,
 ) -> html.Div:
     """Styled ``dcc.Dropdown`` with label.
 
@@ -37,24 +39,30 @@ def select_input(
     else:
         opts = options
 
-    return html.Div([
-        html.Label(label, className="kb-stat-label", style={"marginBottom": "6px"}),
+    select_class = "kb-select" + (" kb-select-error" if error else "")
+    children = [
+        html.Label(label, className="kb-label"),
         dcc.Dropdown(
             id=id,
             options=opts,
             value=value,
             multi=multi,
-            placeholder=placeholder or f"Выберите...",
+            placeholder=placeholder or "Выберите...",
             clearable=clearable,
-            className="kb-select",
+            className=select_class,
         ),
-    ], style={"marginBottom": "12px"})
+    ]
+    if error:
+        children.append(html.Div(error, className="kb-field-error"))
+    elif help_text:
+        children.append(html.Div(help_text, className="kb-field-hint"))
+    return html.Div(children, className="kb-form-group")
 
 
 def number_input(label: str, id: str, value=None, min_val=None, max_val=None, step=None) -> html.Div:
     """Styled number input with label."""
     return html.Div([
-        html.Label(label, className="kb-stat-label", style={"marginBottom": "6px"}),
+        html.Label(label, className="kb-label"),
         dcc.Input(
             id=id,
             type="number",
@@ -71,7 +79,7 @@ def text_input(label: str, id: str, value: str = "", placeholder: str = "",
                input_type: str = "text") -> html.Div:
     """Styled text input with label."""
     return html.Div([
-        html.Label(label, className="kb-stat-label", style={"marginBottom": "6px"}),
+        html.Label(label, className="kb-label"),
         dcc.Input(
             id=id,
             type=input_type,
@@ -86,7 +94,7 @@ def slider_input(label: str, id: str, min_val=0, max_val=100, value=50, step=1,
                  marks: dict | None = None) -> html.Div:
     """Styled slider with label."""
     return html.Div([
-        html.Label(label, className="kb-stat-label", style={"marginBottom": "6px"}),
+        html.Label(label, className="kb-label"),
         dcc.Slider(
             id=id,
             min=min_val,
@@ -106,7 +114,7 @@ def checklist_input(label: str, id: str, options: list, value: list | None = Non
         opts = options
 
     return html.Div([
-        html.Label(label, className="kb-stat-label", style={"marginBottom": "6px"}),
+        html.Label(label, className="kb-label"),
         dcc.Checklist(
             id=id,
             options=opts,

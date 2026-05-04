@@ -1,4 +1,6 @@
 """p09_simulation – Scenario simulation page (Dash)."""
+import logging
+
 import dash
 from dash import html, dcc, callback, Input, Output, State, no_update
 import dash_bootstrap_components as dbc
@@ -6,16 +8,58 @@ import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
 
+logger = logging.getLogger(__name__)
+
 from app.state import (
-    get_df_from_store, STORE_DATASET, STORE_PREPARED, STORE_ACTIVE_DS,
+    get_df_from_store, get_df_from_stores, STORE_DATASET, STORE_PREPARED, STORE_ACTIVE_DS,
 )
 from app.figure_theme import apply_kibad_theme
 from app.components.layout import page_header, section_header, empty_state
 from app.components.table import data_table
 from app.components.cards import stat_card
 from app.components.alerts import alert_banner
-from core.simulation import run_scenario
 from core.audit import log_event
+
+
+def _simple_scenario(
+    df: pd.DataFrame,
+    target_col: str,
+    factors: list[str],
+    shocks: dict[str, float],
+) -> dict:
+    """Linear what-if scenario: estimate impact of factor shocks on target.
+
+    Uses OLS coefficients (factor → target) to attribute contribution of each
+    shock.  Returns a dict compatible with the results UI.
+    """
+    from sklearn.linear_model import LinearRegression
+
+    valid_factors = [f for f in factors if f in df.columns and f != target_col]
+    if not valid_factors:
+        return {"base_value": float(df[target_col].mean()), "scenario_value": float(df[target_col].mean()), "factor_impacts": []}
+
+    sub = df[[target_col] + valid_factors].dropna()
+    X = sub[valid_factors].values
+    y = sub[target_col].values
+
+    model = LinearRegression().fit(X, y)
+    base_value = float(y.mean())
+
+    factor_means = sub[valid_factors].mean()
+    impacts = []
+    total_delta = 0.0
+    for i, col in enumerate(valid_factors):
+        shock_pct = shocks.get(col, 0.0)
+        delta_x = factor_means[col] * shock_pct
+        delta_y = model.coef_[i] * delta_x
+        impacts.append({"Фактор": col, "Шок (%)": f"{shock_pct*100:+.1f}%", "Вклад": round(delta_y, 4)})
+        total_delta += delta_y
+
+    return {
+        "base_value": base_value,
+        "scenario_value": base_value + total_delta,
+        "factor_impacts": impacts,
+    }
 
 dash.register_page(__name__, path="/simulation", name="9. Симуляция", order=9, icon="dice-5")
 
@@ -57,7 +101,7 @@ def update_ds(datasets, active):
 def render_tab(tab, ds, datasets, prepared):
     if not ds:
         return empty_state("", "Выберите датасет", "")
-    df = get_df_from_store(prepared, ds) or get_df_from_store(datasets, ds)
+    df = get_df_from_stores(ds, prepared, datasets)
     if df is None:
         return alert_banner("Датасет не найден.", "danger")
 
@@ -139,12 +183,12 @@ def render_tab(tab, ds, datasets, prepared):
 def run_scenario_cb(n, ds, target, factors, shock_pct, datasets, prepared):
     if not all([ds, target, factors]):
         return alert_banner("Заполните все поля.", "warning")
-    df = get_df_from_store(prepared, ds) or get_df_from_store(datasets, ds)
+    df = get_df_from_stores(ds, prepared, datasets)
     if df is None:
         return alert_banner("Датасет не найден.", "danger")
     try:
         shock = {f: float(shock_pct) / 100.0 for f in factors}
-        result = run_scenario(df, target_col=target, shocks=shock)
+        result = _simple_scenario(df, target_col=target, factors=factors, shocks=shock)
         log_event("simulation", dataset=ds, details=f"scenario shock={shock_pct}%")
 
         base_val = result.get("base_value", 0)
@@ -178,7 +222,7 @@ def run_scenario_cb(n, ds, target, factors, shock_pct, datasets, prepared):
 def run_mc(n, ds, col, n_sims, horizon, datasets, prepared):
     if not all([ds, col]):
         return alert_banner("Выберите колонку.", "warning")
-    df = get_df_from_store(prepared, ds) or get_df_from_store(datasets, ds)
+    df = get_df_from_stores(ds, prepared, datasets)
     if df is None:
         return alert_banner("Датасет не найден.", "danger")
     try:

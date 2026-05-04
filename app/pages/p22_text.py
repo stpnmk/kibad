@@ -8,7 +8,7 @@ from collections import Counter
 import re
 
 from app.state import (
-    get_df_from_store, STORE_DATASET, STORE_PREPARED, STORE_ACTIVE_DS,
+    get_df_from_store, get_df_from_stores, STORE_DATASET, STORE_PREPARED, STORE_ACTIVE_DS,
 )
 from app.figure_theme import apply_kibad_theme
 from app.components.layout import page_header, section_header, empty_state
@@ -56,7 +56,7 @@ def update_ds(datasets, active):
 def update_cols(ds, datasets, prepared):
     if not ds:
         return []
-    df = get_df_from_store(prepared, ds) or get_df_from_store(datasets, ds)
+    df = get_df_from_stores(ds, prepared, datasets)
     if df is None:
         return []
     text_cols = df.select_dtypes(include="object").columns.tolist()
@@ -75,7 +75,7 @@ def render_tab(tab, col, ds, datasets, prepared):
     if not ds or not col:
         return empty_state("", "Выберите датасет и текстовую колонку", "")
 
-    df = get_df_from_store(prepared, ds) or get_df_from_store(datasets, ds)
+    df = get_df_from_stores(ds, prepared, datasets)
     if df is None:
         return alert_banner("Датасет не найден.", "danger")
 
@@ -141,7 +141,7 @@ def render_tab(tab, col, ds, datasets, prepared):
 def search_text(n, query, col, ds, datasets, prepared):
     if not query or not ds or not col:
         return ""
-    df = get_df_from_store(prepared, ds) or get_df_from_store(datasets, ds)
+    df = get_df_from_stores(ds, prepared, datasets)
     if df is None:
         return ""
     mask = df[col].astype(str).str.contains(query, case=False, na=False)

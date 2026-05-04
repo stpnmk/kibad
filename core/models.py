@@ -135,6 +135,35 @@ class NaiveForecast:
         return preds
 
 
+def _future_dates(dates: pd.Series, horizon: int) -> pd.DatetimeIndex:
+    """Generate future date index without integer arithmetic on Timestamps.
+
+    Uses ``pd.infer_freq`` when the series has a regular cadence; falls back
+    to the median observed step size for irregular / transaction-level data.
+    """
+    dates = pd.to_datetime(dates).sort_values().reset_index(drop=True)
+    last = dates.iloc[-1]
+    freq = pd.infer_freq(dates) if len(dates) >= 3 else None
+
+    if freq:
+        # Map deprecated aliases to their modern equivalents (pandas ≥ 2.2)
+        _alias_map = {"M": "ME", "Q": "QE", "A": "YE", "Y": "YE",
+                      "BM": "BME", "BQ": "BQE", "BA": "BYE", "BY": "BYE"}
+        freq = _alias_map.get(freq, freq)
+        try:
+            return pd.date_range(last, periods=horizon + 1, freq=freq)[1:]
+        except Exception:
+            pass  # fall through to timedelta approach
+
+    # Irregular / transaction data: use median inter-observation gap
+    diffs = dates.diff().dropna()
+    if diffs.empty or diffs.median().total_seconds() == 0:
+        step = pd.Timedelta(days=1)
+    else:
+        step = diffs.median()
+    return pd.DatetimeIndex([last + step * i for i in range(1, horizon + 1)])
+
+
 def run_naive_forecast(
     df: pd.DataFrame,
     date_col: str,
@@ -189,8 +218,7 @@ def run_naive_forecast(
     lower = preds - z * resid_std * h_factors
     upper = preds + z * resid_std * h_factors
 
-    freq = pd.infer_freq(dates) or "MS"
-    future_dates = pd.date_range(dates.iloc[-1], periods=horizon + 1, freq=freq)[1:]
+    future_dates = _future_dates(dates, horizon)
 
     hist_df = pd.DataFrame({
         "date": dates.values,
@@ -440,8 +468,7 @@ def run_arx_forecast(
     resid_std = float(np.nanstd(resid))
     z = float(_norm.ppf(1 - (1 - confidence) / 2))
 
-    freq = pd.infer_freq(dates) or "MS"
-    future_dates = pd.date_range(dates.iloc[-1], periods=horizon + 1, freq=freq)[1:]
+    future_dates = _future_dates(dates, horizon)
 
     hist_df = pd.DataFrame({
         "date": dates.values,
@@ -560,8 +587,7 @@ def run_sarimax_forecast(
     mean_forecast = forecast_res.predicted_mean
     ci = forecast_res.conf_int(alpha=alpha_ci)
 
-    freq = pd.infer_freq(dates) or "MS"
-    future_dates = pd.date_range(dates.iloc[-1], periods=horizon + 1, freq=freq)[1:]
+    future_dates = _future_dates(dates, horizon)
 
     hist_df = pd.DataFrame({
         "date": dates.values,
@@ -574,8 +600,8 @@ def run_sarimax_forecast(
         "date": future_dates,
         "actual": np.nan,
         "forecast": mean_forecast,
-        "lower": ci.iloc[:, 0].values,
-        "upper": ci.iloc[:, 1].values,
+        "lower": ci[:, 0] if isinstance(ci, np.ndarray) else ci.iloc[:, 0].values,
+        "upper": ci[:, 1] if isinstance(ci, np.ndarray) else ci.iloc[:, 1].values,
     })
     forecast_df = pd.concat([hist_df, fut_df], ignore_index=True)
 

@@ -25,9 +25,11 @@ def _ensure_dir() -> None:
 
 def log_event(
     event_type: str,
-    details: dict[str, Any] | None = None,
+    details: dict[str, Any] | str | None = None,
     *,
+    dataset: str | None = None,
     user: str | None = None,
+    **extra: Any,
 ) -> dict[str, Any]:
     """Append an audit event and return the record.
 
@@ -37,19 +39,31 @@ def log_event(
         Category such as ``"file_loaded"``, ``"transform_applied"``,
         ``"export_created"``, ``"analysis_run"``.
     details:
-        Free-form dictionary with event-specific information.
+        Free-form dictionary or string with event-specific information.
+    dataset:
+        Optional dataset name to include in the details.
     user:
         Optional user identifier; falls back to ``$USER`` env var.
+    **extra:
+        Additional key-value pairs merged into details.
 
     Returns
     -------
     dict  — the written record (useful for tests).
     """
+    if isinstance(details, str):
+        details_dict: dict[str, Any] = {"message": details}
+    else:
+        details_dict = dict(details) if details else {}
+    if dataset is not None:
+        details_dict["dataset"] = dataset
+    details_dict.update(extra)
+
     record: dict[str, Any] = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "event": event_type,
         "user": user or os.environ.get("USER", "unknown"),
-        "details": details or {},
+        "details": details_dict,
     }
 
     with _lock:

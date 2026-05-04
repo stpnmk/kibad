@@ -17,7 +17,7 @@ from dash import Input, Output, State, callback, dcc, html, dash_table, no_updat
 import dash_bootstrap_components as dbc
 
 from app.state import (
-    get_df_from_store, list_datasets, save_dataframe,
+    get_df_from_store, get_df_from_stores, list_datasets, save_dataframe,
     STORE_DATASET, STORE_ACTIVE_DS, STORE_PREPARED,
 )
 from app.figure_theme import apply_kibad_theme
@@ -130,9 +130,10 @@ def toggle_edges(col_type):
      Input(STORE_ACTIVE_DS, "data")],
 )
 def populate_columns(ds_data, prep_data, active_ds):
-    if not active_ds:
+    ds = active_ds or next(iter(prep_data or {}), None) or next(iter(ds_data or {}), None)
+    if not ds:
         return [], [], [], ""
-    df = get_df_from_store(prep_data, active_ds) or get_df_from_store(ds_data, active_ds)
+    df = get_df_from_stores(ds, prep_data, ds_data)
     if df is None:
         return [], [], [], ""
     cols = [{"label": c, "value": c} for c in df.columns]
@@ -160,7 +161,7 @@ def run_rollrate(n_clicks, ds_data, prep_data, active_ds,
     if not active_ds or not loan_id_col or not period_col or not bucket_col:
         return no_update, dbc.Alert("Заполните все параметры.", color="warning")
 
-    df = get_df_from_store(prep_data, active_ds) or get_df_from_store(ds_data, active_ds)
+    df = get_df_from_stores(active_ds, prep_data, ds_data)
     if df is None or df.empty:
         return no_update, dbc.Alert("Нет данных.", color="danger")
 

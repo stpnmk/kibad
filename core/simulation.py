@@ -17,6 +17,7 @@ from core.models import (
     ForecastResult,
     compute_all_metrics,
     run_arx_forecast,
+    _future_dates,
 )
 
 
@@ -157,8 +158,7 @@ def run_scenario(
     train_df = train_df.sort_values(date_col).dropna(subset=[target_col])
     y = train_df[target_col].reset_index(drop=True).astype(float)
     dates = pd.to_datetime(train_df[date_col])
-    freq = pd.infer_freq(dates) or "MS"
-    future_dates = pd.date_range(dates.iloc[-1], periods=horizon + 1, freq=freq)[1:]
+    future_dates = _future_dates(dates, horizon)
 
     exog_train = None
     exog_future_base = None

@@ -4,8 +4,11 @@ pages/p17_matching.py -- Сопоставление групп (PSM, Exact, NN, 
 from __future__ import annotations
 
 import json
+import logging
 
 import dash
+
+logger = logging.getLogger(__name__)
 from dash import html, dcc, callback, Input, Output, State, no_update, ctx
 import dash_bootstrap_components as dbc
 import numpy as np
@@ -19,7 +22,7 @@ from app.components.form import select_input, number_input
 from app.figure_theme import apply_kibad_theme
 from app.state import (
     STORE_DATASET, STORE_PREPARED, STORE_ACTIVE_DS,
-    get_df_from_store, save_dataframe, list_datasets,
+    get_df_from_store, get_df_from_stores, save_dataframe, list_datasets,
 )
 from core.matching import (
     balance_summary,
@@ -186,11 +189,16 @@ layout = html.Div([
 
 @callback(
     Output("match-ds-select", "options"),
+    Output("match-ds-select", "value"),
     Input(STORE_DATASET, "data"),
+    Input(STORE_PREPARED, "data"),
+    State(STORE_ACTIVE_DS, "data"),
 )
-def populate_datasets(ds_store):
-    names = list_datasets(ds_store)
-    return [{"label": n, "value": n} for n in names]
+def populate_datasets(ds_store, prep_store, active_ds):
+    names = sorted(set(list_datasets(ds_store) + list_datasets(prep_store)))
+    opts = [{"label": n, "value": n} for n in names]
+    val = active_ds if active_ds in names else (names[0] if names else None)
+    return opts, val
 
 
 @callback(
@@ -206,7 +214,7 @@ def on_dataset_select(ds_name, ds_store, prep_store):
     if not ds_name:
         return "", [], [], []
 
-    df = get_df_from_store(ds_name, ds_store, prep_store)
+    df = get_df_from_stores(ds_name, prep_store, ds_store)
     if df is None:
         return dbc.Alert("Датасет не найден.", color="warning"), [], [], []
 
@@ -235,7 +243,7 @@ def show_group_info(treatment_col, ds_name, ds_store, prep_store):
     if not treatment_col or not ds_name:
         return ""
 
-    df = get_df_from_store(ds_name, ds_store, prep_store)
+    df = get_df_from_stores(ds_name, prep_store, ds_store)
     if df is None:
         return ""
 
@@ -264,7 +272,7 @@ def show_pre_balance(covariates, treatment_col, ds_name, ds_store, prep_store):
     if not covariates or not treatment_col or not ds_name:
         return ""
 
-    df = get_df_from_store(ds_name, ds_store, prep_store)
+    df = get_df_from_stores(ds_name, prep_store, ds_store)
     if df is None:
         return ""
 
@@ -353,7 +361,7 @@ def run_matching(
     if not triggered or not ds_name or not treatment_col:
         return no_update
 
-    df = get_df_from_store(ds_name, ds_store, prep_store)
+    df = get_df_from_stores(ds_name, prep_store, ds_store)
     if df is None:
         return dbc.Alert("Датасет не найден.", color="warning")
 

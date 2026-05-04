@@ -1,11 +1,17 @@
 """p08_attribution – Factor Attribution / Decomposition page (Dash)."""
+import logging
+
 import dash
 from dash import html, dcc, callback, Input, Output, State, no_update
 import dash_bootstrap_components as dbc
 import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+logger = logging.getLogger(__name__)
 
 from app.state import (
-    get_df_from_store, STORE_DATASET, STORE_PREPARED, STORE_ACTIVE_DS, STORE_ATTRIBUTION,
+    get_df_from_store, get_df_from_stores, STORE_DATASET, STORE_PREPARED, STORE_ACTIVE_DS, STORE_ATTRIBUTION,
 )
 from app.figure_theme import apply_kibad_theme
 from app.components.layout import page_header, section_header, empty_state
@@ -21,6 +27,21 @@ from core.i18n import t
 from core.audit import log_event
 
 dash.register_page(__name__, path="/attribution", name="8. Атрибуция", order=8, icon="pie-chart")
+
+
+def _kpi_card(label: str, value: str) -> html.Div:
+    return html.Div([
+        html.Div(label, style={"fontSize": "0.72rem", "fontWeight": "600",
+                               "textTransform": "uppercase", "letterSpacing": "0.08em",
+                               "color": "var(--text-muted)", "marginBottom": "4px"}),
+        html.Div(value, style={"fontSize": "1.4rem", "fontWeight": "700",
+                               "color": "var(--text-primary)"}),
+    ], style={
+        "background": "var(--bg-card)",
+        "border": "1px solid var(--border-subtle)",
+        "borderRadius": "10px",
+        "padding": "16px 20px",
+    })
 
 _METHODS = {
     "additive": "Аддитивный (линейный)",
@@ -115,7 +136,7 @@ def update_ds(datasets, active):
 def update_cols(ds, datasets, prepared):
     if not ds:
         return [], [], [], []
-    df = get_df_from_store(prepared, ds) or get_df_from_store(datasets, ds)
+    df = get_df_from_stores(ds, prepared, datasets)
     if df is None:
         return [], [], [], []
     num = df.select_dtypes(include="number").columns.tolist()
@@ -146,7 +167,7 @@ def run_attribution(n, ds, target, target_prev, drivers, drivers_prev, method,
     if len(drivers) != len(drivers_prev):
         return alert_banner("Количество текущих и предыдущих факторов должно совпадать.", "warning"), no_update
 
-    df = get_df_from_store(prepared, ds) or get_df_from_store(datasets, ds)
+    df = get_df_from_stores(ds, prepared, datasets)
     if df is None:
         return alert_banner("Датасет не найден.", "danger"), no_update
 
@@ -167,22 +188,82 @@ def run_attribution(n, ds, target, target_prev, drivers, drivers_prev, method,
         attr_store = attr_store or []
         attr_store.append({"dataset": ds, "method": method, "target": target})
 
-        children = [section_header("Результаты декомпозиции")]
-
-        # Contributions table
         contrib_df = result.contributions
-        children.append(data_table(contrib_df, id="attr-contrib-tbl"))
+        total_delta = result.target_delta
+        residual = result.residual
+        explained = contrib_df["contribution"].abs().sum()
+        explained_pct = (explained / abs(total_delta) * 100) if total_delta else 0.0
 
-        # Waterfall chart
+        # ── KPI row ──────────────────────────────────────────────────────────
+        arrow = "▲" if total_delta >= 0 else "▼"
+        kpi_row = dbc.Row([
+            dbc.Col(_kpi_card("Изменение целевого", f"{arrow} {total_delta:+,.2f}"), md=3),
+            dbc.Col(_kpi_card("Объяснено", f"{explained_pct:.1f}%"), md=3),
+            dbc.Col(_kpi_card("Метод", _METHODS.get(method, method)), md=3),
+            dbc.Col(_kpi_card("Остаток", f"{residual:+,.2f}"), md=3),
+        ], className="mb-4")
+
+        # ── Horizontal bar — contributions ────────────────────────────────
+        contrib_sorted = contrib_df.sort_values("contribution", key=lambda s: s.abs(), ascending=True)
+        bar_colors = ["#ef4444" if v < 0 else "#4f8ef7" for v in contrib_sorted["contribution"]]
+        fig_bar = go.Figure(go.Bar(
+            y=contrib_sorted["driver"],
+            x=contrib_sorted["contribution"],
+            orientation="h",
+            marker_color=bar_colors,
+            text=[f"{v:+,.2f}" for v in contrib_sorted["contribution"]],
+            textposition="outside",
+        ))
+        fig_bar.update_layout(
+            title="Вклад факторов",
+            xaxis_title="Вклад",
+            height=max(300, len(contrib_df) * 40 + 80),
+            margin=dict(l=10, r=60, t=48, b=36),
+        )
+        apply_kibad_theme(fig_bar)
+
+        # ── Donut — share of absolute contribution ────────────────────────
+        abs_contrib = contrib_df.copy()
+        abs_contrib["abs_c"] = abs_contrib["contribution"].abs()
+        abs_contrib = abs_contrib[abs_contrib["abs_c"] > 0]
+        fig_donut = go.Figure(go.Pie(
+            labels=abs_contrib["driver"],
+            values=abs_contrib["abs_c"],
+            hole=0.55,
+            textinfo="label+percent",
+            textfont_size=11,
+        ))
+        fig_donut.update_layout(
+            title="Доля факторов (|вклад|)",
+            height=340,
+            margin=dict(l=10, r=10, t=48, b=10),
+            showlegend=False,
+        )
+        apply_kibad_theme(fig_donut)
+
+        # ── Waterfall ──────────────────────────────────────────────────────
+        waterfall_el = ""
         try:
             wf = waterfall_data(result)
-            fig = plot_waterfall(wf)
-            apply_kibad_theme(fig)
-            children.append(dcc.Graph(figure=fig))
+            fig_wf = plot_waterfall(wf)
+            apply_kibad_theme(fig_wf)
+            waterfall_el = dcc.Graph(figure=fig_wf)
         except Exception:
             pass
 
-        return html.Div(children), attr_store
+        charts_row = dbc.Row([
+            dbc.Col(dcc.Graph(figure=fig_bar), md=7),
+            dbc.Col(dcc.Graph(figure=fig_donut), md=5),
+        ], className="mb-3")
+
+        return html.Div([
+            section_header("Результаты декомпозиции"),
+            kpi_row,
+            charts_row,
+            waterfall_el,
+            section_header("Таблица вкладов"),
+            data_table(contrib_df, id="attr-contrib-tbl"),
+        ]), attr_store
 
     except Exception as e:
         return alert_banner(f"Ошибка: {e}", "danger"), no_update

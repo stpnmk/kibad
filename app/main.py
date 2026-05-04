@@ -4,13 +4,49 @@ app/main.py – KIBAD Analytics Studio (Dash).
 Run with:
     python app/main.py
 """
+import glob
+import logging
 import sys
+import time
 from pathlib import Path
 
 # Make project root importable when running from any directory
 ROOT = Path(__file__).parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+# ---------------------------------------------------------------------------
+# Logging — configure once here; all modules use getLogger(__name__)
+# ---------------------------------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("kibad")
+
+
+# ---------------------------------------------------------------------------
+# Session file cleanup — remove Parquet files older than 24 h on startup
+# ---------------------------------------------------------------------------
+def _cleanup_session_files(max_age_hours: int = 24) -> None:
+    session_dir = ROOT / "data" / "session"
+    if not session_dir.exists():
+        return
+    cutoff = time.time() - max_age_hours * 3600
+    removed = 0
+    for path in glob.glob(str(session_dir / "*.parquet")):
+        try:
+            if Path(path).stat().st_mtime < cutoff:
+                Path(path).unlink()
+                removed += 1
+        except OSError:
+            pass
+    if removed:
+        logger.info("Cleaned up %d stale session file(s) from data/session/", removed)
+
+
+_cleanup_session_files()
 
 import dash
 from dash import Dash, html, dcc
@@ -63,10 +99,47 @@ app.layout = dbc.Container([
                 dash.page_container,
             ],
             className="kb-main",
+            id="main-content",
         ),
     ], className="app-shell"),
 
-], fluid=True, className="app-shell", style={"padding": "0", "maxWidth": "100%"})
+], fluid=True, style={"padding": "0", "maxWidth": "100%", "minHeight": "100vh", "background": "var(--bg-base)"})
+
+
+from dash import Input, Output, State, clientside_callback
+
+# Toggle sidebar collapsed state on button click
+clientside_callback(
+    "function(n, current) { return n > 0 ? !current : (current || false); }",
+    Output(STORE_SIDEBAR, "data"),
+    Input("sidebar-toggle", "n_clicks"),
+    State(STORE_SIDEBAR, "data"),
+    prevent_initial_call=True,
+)
+
+# Apply/remove collapsed class on sidebar and adjust main margin
+clientside_callback(
+    """
+    function(collapsed) {
+        var sidebar = document.getElementById('sidebar');
+        var main = document.getElementById('main-content');
+        var toggle = document.getElementById('sidebar-toggle');
+        if (!sidebar) return window.dash_clientside.no_update;
+        if (collapsed) {
+            sidebar.classList.add('collapsed');
+            if (main) { main.style.marginLeft = '56px'; main.style.width = 'calc(100% - 56px)'; }
+            if (toggle) toggle.textContent = '›';
+        } else {
+            sidebar.classList.remove('collapsed');
+            if (main) { main.style.marginLeft = '216px'; main.style.width = 'calc(100% - 216px)'; }
+            if (toggle) toggle.textContent = '‹';
+        }
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output("sidebar-toggle", "title"),
+    Input(STORE_SIDEBAR, "data"),
+)
 
 
 if __name__ == "__main__":

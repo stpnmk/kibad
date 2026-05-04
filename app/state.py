@@ -11,11 +11,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import tempfile
 from pathlib import Path
 
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Session directory for large data (DataFrames serialized to Parquet)
@@ -80,6 +83,7 @@ def load_dataframe(path: str) -> pd.DataFrame | None:
     try:
         return pd.read_parquet(path)
     except Exception:
+        logger.exception("Failed to read Parquet file: %s", path)
         return None
 
 
@@ -88,6 +92,15 @@ def get_df_from_store(store_data: dict | None, name: str) -> pd.DataFrame | None
     if not store_data or name not in store_data:
         return None
     return load_dataframe(store_data[name])
+
+
+def get_df_from_stores(name: str, *stores) -> "pd.DataFrame | None":
+    """Try each store in order, return first non-None DataFrame (avoids `or` on DataFrames)."""
+    for store in stores:
+        df = get_df_from_store(store, name)
+        if df is not None:
+            return df
+    return None
 
 
 def list_datasets(store_data: dict | None) -> list[str]:
