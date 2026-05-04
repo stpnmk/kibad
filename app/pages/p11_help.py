@@ -1,529 +1,688 @@
-"""p11_help – Help & methodology page (Dash)."""
+"""p11_help – Help & methodology page (Dash) — handoff design + расширенная методология."""
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 
-from app.components.layout import page_header
-
 dash.register_page(__name__, path="/help", name="11. Справка", order=11, icon="question-circle")
 
-_MD_STYLE = {"color": "#8891a5", "lineHeight": "1.7"}
-_CODE_STYLE = {
-    "background": "#0a0c10",
-    "border": "1px solid #1e2232",
-    "borderRadius": "6px",
-    "padding": "14px 16px",
-    "fontFamily": "'IBM Plex Mono', monospace",
-    "fontSize": "0.82rem",
-    "color": "#e4e7ee",
-    "display": "block",
-    "marginBottom": "12px",
-    "whiteSpace": "pre",
-    "overflowX": "auto",
-}
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Helpers (handoff dark/eucalyptus)
+# ─────────────────────────────────────────────────────────────────────────────
 def _md(text):
-    return dcc.Markdown(text, style=_MD_STYLE, mathjax=False)
+    return dcc.Markdown(text, style={"color": "var(--text-secondary)", "lineHeight": "1.7"}, mathjax=False)
+
 
 def _formula(text):
-    return html.Pre(text, style=_CODE_STYLE)
-
-def _feature_card(title, desc, color):
-    return dbc.Col(html.Div([
-        html.Div(style={"width": "3px", "height": "100%", "background": color,
-                        "borderRadius": "2px", "position": "absolute", "left": "0", "top": "0"}),
-        html.Div(title, style={"fontWeight": "700", "color": "#e4e7ee", "fontSize": "0.85rem", "marginBottom": "4px"}),
-        html.Div(desc, style={"color": "#505872", "fontSize": "0.75rem", "lineHeight": "1.5"}),
-    ], style={"background": "#191c24", "border": "1px solid #1e2232", "borderRadius": "6px",
-              "padding": "12px 12px 12px 16px", "position": "relative", "overflow": "hidden",
-              "marginBottom": "10px"}), md=6, lg=3)
-
-
-def _method(title, what, formula_text, when_yes, when_no=None, pitfalls=None):
-    """Render a methodology block: title, what/formula/when."""
-    children = [
-        html.H4(title, style={"color": "#e4e7ee", "fontWeight": "700", "marginBottom": "8px"}),
-        html.P(what, style={"color": "#8891a5", "marginBottom": "10px"}),
-    ]
-    if formula_text:
-        children.append(_formula(formula_text))
-    children.append(html.P([html.Strong("✓ Когда применять: ", style={"color": "#10b981"}), when_yes],
-                            style={"color": "#8891a5", "fontSize": "0.85rem", "marginBottom": "6px"}))
-    if when_no:
-        children.append(html.P([html.Strong("✗ Когда не применять: ", style={"color": "#ef4444"}), when_no],
-                                style={"color": "#8891a5", "fontSize": "0.85rem", "marginBottom": "6px"}))
-    if pitfalls:
-        children.append(html.P([html.Strong("⚠ Подводные камни: ", style={"color": "#f59e0b"}), pitfalls],
-                                style={"color": "#8891a5", "fontSize": "0.85rem", "marginBottom": "6px"}))
-    return html.Div(children, style={
-        "background": "#111318",
-        "border": "1px solid #1e2232",
-        "borderRadius": "8px",
-        "padding": "20px 24px",
-        "marginBottom": "16px",
+    """Inline code/formula block (mono, dark surface)."""
+    return html.Pre(text, style={
+        "background": "var(--surface-0)",
+        "border": "1px solid var(--border-subtle)",
+        "borderRadius": "6px",
+        "padding": "12px 14px",
+        "fontFamily": "'JetBrains Mono', ui-monospace, Menlo, monospace",
+        "fontSize": "12px",
+        "color": "var(--text-primary)",
+        "display": "block",
+        "marginBottom": "10px",
+        "whiteSpace": "pre",
+        "overflowX": "auto",
+        "fontVariantNumeric": "tabular-nums",
     })
 
 
-# ── TAB: OVERVIEW ────────────────────────────────────────────────────────────
+def _feature_card(title, desc, accent="#21A066"):
+    """Mini feature tile with left accent bar."""
+    return dbc.Col(html.Div([
+        html.Div(style={
+            "width": "3px", "background": accent, "borderRadius": "2px",
+            "position": "absolute", "left": "0", "top": "10px", "bottom": "10px",
+        }),
+        html.Div(title, style={
+            "fontWeight": "600", "color": "var(--text-primary)",
+            "fontSize": "13px", "marginBottom": "4px",
+        }),
+        html.Div(desc, style={
+            "color": "var(--text-tertiary)", "fontSize": "12px", "lineHeight": "1.5",
+        }),
+    ], style={
+        "background": "var(--surface-1)",
+        "border": "1px solid var(--border-subtle)",
+        "borderRadius": "10px",
+        "padding": "12px 12px 12px 16px",
+        "position": "relative",
+        "marginBottom": "10px",
+    }), md=6, lg=3)
+
+
+def _method(title, what, formula_text=None, when_yes=None, when_no=None, pitfalls=None):
+    """Methodology card: title + description + formula + when yes/no + pitfalls."""
+    children = [
+        html.H4(title, style={"color": "var(--text-primary)", "fontWeight": "600",
+                              "marginBottom": "8px", "fontSize": "16px"}),
+        html.P(what, style={"color": "var(--text-secondary)", "marginBottom": "10px",
+                            "fontSize": "13px", "lineHeight": "1.6"}),
+    ]
+    if formula_text:
+        children.append(_formula(formula_text))
+    if when_yes:
+        children.append(html.P([
+            html.Strong("✓ Когда применять: ", style={"color": "var(--accent-300)"}),
+            when_yes,
+        ], style={"color": "var(--text-secondary)", "fontSize": "12px", "marginBottom": "6px"}))
+    if when_no:
+        children.append(html.P([
+            html.Strong("✗ Когда не применять: ", style={"color": "#E07563"}),
+            when_no,
+        ], style={"color": "var(--text-secondary)", "fontSize": "12px", "marginBottom": "6px"}))
+    if pitfalls:
+        children.append(html.P([
+            html.Strong("⚠ Подводные камни: ", style={"color": "#E3A953"}),
+            pitfalls,
+        ], style={"color": "var(--text-secondary)", "fontSize": "12px", "marginBottom": "0"}))
+    return html.Div(children, className="card", style={"padding": "20px 24px", "marginBottom": "14px"})
+
+
+def _info_block(title, body, kind="info"):
+    """Compact info block (alert-style)."""
+    border_map = {"info": "var(--info)", "warning": "var(--warning)",
+                  "danger": "var(--danger)", "success": "var(--success)"}
+    return html.Div([
+        html.Div(title, style={"fontWeight": "600", "color": "var(--text-primary)",
+                               "marginBottom": "6px", "fontSize": "13px"}),
+        html.Div(body, style={"color": "var(--text-secondary)", "fontSize": "12px",
+                              "lineHeight": "1.6"}),
+    ], style={
+        "background": "var(--surface-1)",
+        "border": "1px solid var(--border-subtle)",
+        "borderLeft": f"3px solid {border_map.get(kind, border_map['info'])}",
+        "borderRadius": "8px",
+        "padding": "12px 16px",
+        "marginBottom": "12px",
+    })
+
+
+def _kv_table(rows, header=("Ключ", "Значение")):
+    """Two-column key-value table styled per handoff."""
+    return html.Table([
+        html.Thead(html.Tr([html.Th(h) for h in header])),
+        html.Tbody([html.Tr([html.Td(k), html.Td(v)]) for k, v in rows]),
+    ], className="tbl", style={"width": "100%", "marginBottom": "14px"})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB: OVERVIEW
+# ─────────────────────────────────────────────────────────────────────────────
 tab_overview = html.Div([
-    dbc.Row([
-        dbc.Col([
-            html.Div([
-                html.H3("Что такое KIBAD?", style={"color": "#e4e7ee", "marginBottom": "12px"}),
-                html.P(
-                    "KIBAD Analytics Studio — интерактивная платформа для бизнес-аналитики, "
-                    "позволяющая проводить комплексный анализ данных без написания кода. "
-                    "Все расчёты выполняются локально — данные не покидают ваш контур.",
-                    style={"color": "#8891a5", "lineHeight": "1.7"}
-                ),
-            ], style={"background": "#111318", "border": "1px solid #1e2232",
-                      "borderRadius": "8px", "padding": "24px", "marginBottom": "16px"}),
-        ], width=12),
-    ]),
+    html.Div([
+        html.H3("Что такое KIBAD?", style={"color": "var(--text-primary)", "marginBottom": "12px",
+                                           "fontSize": "18px", "fontWeight": "600"}),
+        html.P([
+            "KIBAD Analytics Studio — интерактивная Dash-платформа для бизнес-аналитики, ",
+            "позволяющая проводить комплексный анализ данных без написания кода. ",
+            html.Strong("Все расчёты выполняются локально", style={"color": "var(--accent-300)"}),
+            " — данные не покидают ваш контур. ", html.Br(), html.Br(),
+            "20 страниц приложения покрывают полный цикл: загрузка, подготовка, ",
+            "разведочный анализ, статистические тесты, прогнозирование, факторная атрибуция, ",
+            "симуляция сценариев, кластеризация, сопоставление групп, отчётность.",
+        ], style={"color": "var(--text-secondary)", "lineHeight": "1.7", "fontSize": "13px"}),
+    ], className="card", style={"padding": "20px 24px", "marginBottom": "16px"}),
 
     html.Div([
-        html.Div("АНАЛИТИЧЕСКИЙ КОНВЕЙЕР", style={
-            "fontSize": "0.62rem", "fontWeight": "700", "letterSpacing": "0.12em",
-            "color": "#505872", "marginBottom": "16px", "textTransform": "uppercase",
-        }),
+        html.Div("АНАЛИТИЧЕСКИЙ КОНВЕЙЕР", className="overline", style={"marginBottom": "16px"}),
         dbc.Row([
             dbc.Col(html.Div([
-                html.Div("①", style={"fontSize": "1.4rem", "color": "#10b981", "marginBottom": "4px"}),
-                html.Div("Данные", style={"fontWeight": "700", "color": "#e4e7ee", "fontSize": "0.9rem"}),
-                html.Div("CSV, Excel, Parquet, PostgreSQL", style={"color": "#505872", "fontSize": "0.75rem"}),
-            ], style={"textAlign": "center", "padding": "16px"}), width=2),
-            dbc.Col(html.Div("→", style={"textAlign": "center", "color": "#505872", "fontSize": "1.5rem", "paddingTop": "20px"}), width=1),
+                html.Div("①", style={"fontSize": "22px", "color": "var(--accent-300)", "marginBottom": "4px"}),
+                html.Div("Данные", style={"fontWeight": "600", "color": "var(--text-primary)", "fontSize": "14px"}),
+                html.Div("CSV · Excel · Parquet · PostgreSQL", style={"color": "var(--text-tertiary)", "fontSize": "11px"}),
+            ], style={"textAlign": "center", "padding": "14px"}), width=2),
+            dbc.Col(html.Div("→", style={"textAlign": "center", "color": "var(--text-tertiary)",
+                                          "fontSize": "20px", "paddingTop": "20px"}), width=1),
             dbc.Col(html.Div([
-                html.Div("②", style={"fontSize": "1.4rem", "color": "#3b82f6", "marginBottom": "4px"}),
-                html.Div("Подготовка", style={"fontWeight": "700", "color": "#e4e7ee", "fontSize": "0.9rem"}),
-                html.Div("Очистка, типы, признаки", style={"color": "#505872", "fontSize": "0.75rem"}),
-            ], style={"textAlign": "center", "padding": "16px"}), width=2),
-            dbc.Col(html.Div("→", style={"textAlign": "center", "color": "#505872", "fontSize": "1.5rem", "paddingTop": "20px"}), width=1),
+                html.Div("②", style={"fontSize": "22px", "color": "var(--info)", "marginBottom": "4px"}),
+                html.Div("Подготовка", style={"fontWeight": "600", "color": "var(--text-primary)", "fontSize": "14px"}),
+                html.Div("Очистка · типы · признаки", style={"color": "var(--text-tertiary)", "fontSize": "11px"}),
+            ], style={"textAlign": "center", "padding": "14px"}), width=2),
+            dbc.Col(html.Div("→", style={"textAlign": "center", "color": "var(--text-tertiary)",
+                                          "fontSize": "20px", "paddingTop": "20px"}), width=1),
             dbc.Col(html.Div([
-                html.Div("③", style={"fontSize": "1.4rem", "color": "#8b5cf6", "marginBottom": "4px"}),
-                html.Div("Анализ", style={"fontWeight": "700", "color": "#e4e7ee", "fontSize": "0.9rem"}),
-                html.Div("EDA, тесты, прогнозы", style={"color": "#505872", "fontSize": "0.75rem"}),
-            ], style={"textAlign": "center", "padding": "16px"}), width=2),
-            dbc.Col(html.Div("→", style={"textAlign": "center", "color": "#505872", "fontSize": "1.5rem", "paddingTop": "20px"}), width=1),
+                html.Div("③", style={"fontSize": "22px", "color": "#A066C8", "marginBottom": "4px"}),
+                html.Div("Анализ", style={"fontWeight": "600", "color": "var(--text-primary)", "fontSize": "14px"}),
+                html.Div("EDA · тесты · прогнозы", style={"color": "var(--text-tertiary)", "fontSize": "11px"}),
+            ], style={"textAlign": "center", "padding": "14px"}), width=2),
+            dbc.Col(html.Div("→", style={"textAlign": "center", "color": "var(--text-tertiary)",
+                                          "fontSize": "20px", "paddingTop": "20px"}), width=1),
             dbc.Col(html.Div([
-                html.Div("④", style={"fontSize": "1.4rem", "color": "#f59e0b", "marginBottom": "4px"}),
-                html.Div("Отчёт", style={"fontWeight": "700", "color": "#e4e7ee", "fontSize": "0.9rem"}),
-                html.Div("HTML, PDF, Excel", style={"color": "#505872", "fontSize": "0.75rem"}),
-            ], style={"textAlign": "center", "padding": "16px"}), width=2),
+                html.Div("④", style={"fontSize": "22px", "color": "#C98A2E", "marginBottom": "4px"}),
+                html.Div("Отчёт", style={"fontWeight": "600", "color": "var(--text-primary)", "fontSize": "14px"}),
+                html.Div("HTML · PDF · Excel", style={"color": "var(--text-tertiary)", "fontSize": "11px"}),
+            ], style={"textAlign": "center", "padding": "14px"}), width=2),
         ], className="align-items-center"),
-    ], style={"background": "#111318", "border": "1px solid #1e2232", "borderRadius": "8px",
-              "padding": "20px", "marginBottom": "16px"}),
+    ], className="card", style={"padding": "20px 24px", "marginBottom": "16px"}),
 
     dbc.Row([
         dbc.Col([
-            html.Div("ИНСТРУМЕНТЫ АНАЛИЗА", style={
-                "fontSize": "0.62rem", "fontWeight": "700", "letterSpacing": "0.12em",
-                "color": "#505872", "marginBottom": "16px", "textTransform": "uppercase",
-            }),
+            html.Div("ИНСТРУМЕНТЫ АНАЛИЗА", className="overline", style={"marginBottom": "16px"}),
             dbc.Row([
-                _feature_card("Статистические тесты", "t-тест, Манна-Уитни, хи-квадрат, бутстрап, перестановочный, A/B, BH-поправка", "#3b82f6"),
-                _feature_card("Временные ряды", "SARIMAX, ARX, Naive, STL-декомпозиция, ACF/PACF, обнаружение аномалий", "#10b981"),
-                _feature_card("Факторная атрибуция", "Аддитивная, мультипликативная, регрессионная, значения Шепли", "#8b5cf6"),
-                _feature_card("Кластеризация", "K-Means, метод локтя, PCA-визуализация, профили кластеров", "#f59e0b"),
-                _feature_card("Сопоставление групп", "PSM, точное совпадение, ближайший сосед, CEM (coarsened exact)", "#ef4444"),
-                _feature_card("Симуляция", "Сценарный анализ, Монте-Карло, VaR, CVaR", "#06b6d4"),
-                _feature_card("Roll-Rate", "Марковские цепи, матрицы переходов, прогноз распределения", "#f97316"),
-                _feature_card("Подготовка данных", "9 шагов: даты, пропуски, выбросы, дедупликация, лаги, нормализация", "#a78bfa"),
+                _feature_card("Статистические тесты",
+                              "t-тест, Манна-Уитни, χ², корреляция, бутстрап, перестановочный, ANOVA, A/B, BH-поправка, мощность",
+                              "#21A066"),
+                _feature_card("Временные ряды",
+                              "SARIMAX, ARX, Naive, STL, ACF/PACF, аномалии, бэктест",
+                              "#4A7FB0"),
+                _feature_card("Факторная атрибуция",
+                              "Аддитивная, мультипликативная, регрессионная, Shapley",
+                              "#A066C8"),
+                _feature_card("Кластеризация",
+                              "K-Means, метод локтя, PCA-визуализация, профили",
+                              "#C98A2E"),
+                _feature_card("Сопоставление групп",
+                              "PSM, Exact, NN, CEM (coarsened exact)",
+                              "#C8503B"),
+                _feature_card("Симуляция и риск",
+                              "Сценарный анализ, Монте-Карло, VaR, CVaR",
+                              "#6B8E8A"),
+                _feature_card("Roll-Rate",
+                              "Марковские цепи, матрицы переходов, прогноз",
+                              "#21A066"),
+                _feature_card("Подготовка данных",
+                              "Даты, пропуски, выбросы, дедуп, лаги, нормализация",
+                              "#4A7FB0"),
             ]),
         ], width=12),
     ]),
 ])
 
 
-# ── TAB: GETTING STARTED ─────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB: GETTING STARTED
+# ─────────────────────────────────────────────────────────────────────────────
 tab_start = html.Div([
     dbc.Accordion([
         dbc.AccordionItem([
             html.Ol([
-                html.Li([html.Strong("Загрузка данных: "), "Перейдите на страницу «Данные». Загрузите CSV/Excel файл или подключитесь к PostgreSQL. Данные сохраняются в сессии — вы можете работать с несколькими датасетами одновременно."], style={"color": "#8891a5", "marginBottom": "10px"}),
-                html.Li([html.Strong("Подготовка: "), "На странице «Подготовка» запустите очистку: парсинг дат, заполнение пропусков, удаление выбросов, дедупликацию. Каждый шаг можно включить или выключить независимо."], style={"color": "#8891a5", "marginBottom": "10px"}),
+                html.Li([html.Strong("Загрузка: "), "страница «Данные» — CSV/Excel/Parquet или PostgreSQL. ",
+                         "Можно загрузить несколько датасетов и переключаться между ними."],
+                        style={"color": "var(--text-secondary)", "marginBottom": "10px"}),
+                html.Li([html.Strong("Подготовка: "), "«Подготовка» — парсинг дат, заполнение пропусков, ",
+                         "выбросы, дедупликация, нормализация. Каждый шаг переключается независимо."],
+                        style={"color": "var(--text-secondary)", "marginBottom": "10px"}),
                 html.Li([html.Strong("Анализ: "), html.Ul([
-                    html.Li("«Группировка» — сводные таблицы с агрегацией", style={"color": "#8891a5"}),
-                    html.Li("«Исследование» — EDA, корреляции, профилирование", style={"color": "#8891a5"}),
-                    html.Li("«Тесты» — проверка гипотез", style={"color": "#8891a5"}),
-                    html.Li("«Временные ряды» — прогнозирование", style={"color": "#8891a5"}),
-                    html.Li("«Атрибуция» — факторный анализ изменений", style={"color": "#8891a5"}),
-                ])], style={"color": "#8891a5", "marginBottom": "10px"}),
-                html.Li([html.Strong("Отчёт: "), "На странице «Отчёт» сгенерируйте финальный отчёт. Доступен экспорт в HTML, PDF и Excel."], style={"color": "#8891a5"}),
+                    html.Li("«Группировка» — сводные таблицы с агрегацией",
+                            style={"color": "var(--text-secondary)"}),
+                    html.Li("«Исследование» — EDA, корреляции, профилирование",
+                            style={"color": "var(--text-secondary)"}),
+                    html.Li("«Тесты» — проверка гипотез + поправка BH",
+                            style={"color": "var(--text-secondary)"}),
+                    html.Li("«Временные ряды» — прогнозирование + STL + аномалии",
+                            style={"color": "var(--text-secondary)"}),
+                    html.Li("«Атрибуция» — факторный анализ изменений",
+                            style={"color": "var(--text-secondary)"}),
+                ])], style={"color": "var(--text-secondary)", "marginBottom": "10px"}),
+                html.Li([html.Strong("Отчёт: "), "страница «Отчёт» — HTML, PDF, Excel."],
+                        style={"color": "var(--text-secondary)"}),
             ], style={"paddingLeft": "20px"}),
         ], title="Базовый рабочий процесс"),
 
         dbc.AccordionItem([
             _md("""
-**1. Анализ A/B-теста**
-- Данные → Тесты (вкладка A/B) → выбрать метрику и группы → получить p-value, lift, доверительный интервал
+**1. A/B-тест**
+- Данные → Тесты (вкладка A/B) → метрика и группы → p-value, lift, CI
 
 **2. Факторный анализ выручки**
-- Данные → Атрибуция → выбрать метрику и факторы → запустить метод Шепли
+- Данные → Атрибуция → метрика и факторы → Shapley
 
 **3. Прогноз временного ряда**
-- Данные → Временные ряды → выбрать метрику и горизонт → сравнить SARIMAX vs ARX vs Naive
+- Данные → Временные ряды → метрика и горизонт → SARIMAX vs ARX vs Naive
 
 **4. Сегментация клиентов**
-- Данные → Кластеризация → K-Means → проанализировать профили кластеров
+- Данные → Кластеризация → K-Means → профили кластеров
 
-**5. Сравнение групп**
-- Данные → Сопоставление (PSM/CEM) → Тесты → итоговые результаты с поправкой на смещение
+**5. Сравнение групп с поправкой на смещение**
+- Данные → Сопоставление (PSM/CEM) → Тесты → итог
             """),
         ], title="Типовые сценарии использования"),
 
         dbc.AccordionItem([
             html.Div([
-                html.P("Поддерживаемые форматы входных данных:", style={"color": "#8891a5", "fontWeight": "600"}),
+                html.P("Поддерживаемые форматы входных данных:",
+                       style={"color": "var(--text-secondary)", "fontWeight": "600"}),
                 html.Ul([
-                    html.Li("CSV / TSV (кодировки UTF-8, Windows-1251, Latin-1)", style={"color": "#8891a5"}),
-                    html.Li("Excel (.xlsx, .xls)", style={"color": "#8891a5"}),
-                    html.Li("Parquet", style={"color": "#8891a5"}),
-                    html.Li("PostgreSQL (прямое подключение по connection string)", style={"color": "#8891a5"}),
+                    html.Li("CSV / TSV (UTF-8, Windows-1251, Latin-1)",
+                            style={"color": "var(--text-secondary)"}),
+                    html.Li("Excel (.xlsx, .xls)", style={"color": "var(--text-secondary)"}),
+                    html.Li("Parquet", style={"color": "var(--text-secondary)"}),
+                    html.Li("PostgreSQL · ClickHouse · Oracle · MS SQL (через no-code SQL)",
+                            style={"color": "var(--text-secondary)"}),
                 ]),
-                html.P("Рекомендуется до 1 млн строк для комфортной работы. Для больших объёмов рекомендуется предварительная агрегация.", style={"color": "#8891a5", "marginTop": "12px"}),
+                html.P("Рекомендуется до 1 млн строк для комфортной работы. "
+                       "Для больших объёмов — предварительная агрегация или Parquet.",
+                       style={"color": "var(--text-secondary)", "marginTop": "12px"}),
             ]),
         ], title="Форматы данных"),
     ], start_collapsed=True, className="kb-accordion"),
 ])
 
 
-# ── TAB: STATISTICAL TESTS ───────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB: STATISTICAL TESTS
+# ─────────────────────────────────────────────────────────────────────────────
 tab_tests = html.Div([
+    _info_block(
+        "Подбор теста",
+        "Сначала прогоняйте «Диагностику» (Shapiro-Wilk + Levene): "
+        "если обе группы нормальны и дисперсии равны — t-тест Стьюдента; "
+        "если нормальны но дисперсии неравны — t-тест Уэлча; "
+        "если хоть одна группа не нормальна — Манна-Уитни.",
+        "info",
+    ),
     _method(
         "t-тест Уэлча",
         "Сравнивает средние двух независимых выборок без предположения о равенстве дисперсий.",
-        "t = (X̄₁ - X̄₂) / √(s₁²/n₁ + s₂²/n₂)\n\ndf = (s₁²/n₁ + s₂²/n₂)² / ((s₁²/n₁)²/(n₁-1) + (s₂²/n₂)²/(n₂-1))",
-        "Сравнение метрики (выручка, конверсия) между двумя группами (контроль vs. тест, регион A vs. B).",
-        "Порядковые данные или сильно скошенные выборки малого размера — используйте критерий Манна-Уитни.",
-        "Значимое p-значение не означает практической значимости. Всегда указывайте величину эффекта.",
+        "t  = (X̄₁ - X̄₂) / √(s₁²/n₁ + s₂²/n₂)\n\ndf = (s₁²/n₁ + s₂²/n₂)² / ((s₁²/n₁)²/(n₁-1) + (s₂²/n₂)²/(n₂-1))",
+        "Сравнение метрики (выручка, конверсия) между двумя группами (контроль vs тест, регион A vs B).",
+        "Порядковые данные или сильно скошенные малые выборки — используйте Манна-Уитни.",
+        "Значимое p-значение ≠ практическая значимость. Всегда указывайте Cohen's d.",
     ),
     _method(
         "Критерий Манна-Уитни U",
         "Непараметрический тест, сравнивающий ранговые распределения двух независимых выборок.",
         "U = n₁·n₂ + n₁·(n₁+1)/2 - R₁\n\nгде R₁ = сумма рангов выборки 1",
         "Скошенные распределения, порядковые данные, малые выборки с сомнительной нормальностью.",
-        "Для парных данных. Когда необходимо сравнить именно средние.",
-        "Менее мощный, чем t-тест при выполнении условия нормальности. Связанные ранги снижают мощность.",
+        "Парные данные. Когда нужно сравнивать именно средние.",
+        "Менее мощный, чем t-тест при выполнении нормальности. Связанные ранги снижают мощность.",
     ),
     _method(
         "Критерий хи-квадрат независимости",
         "Проверяет гипотезу о независимости двух категориальных переменных.",
-        "χ² = Σ (O_ij - E_ij)² / E_ij\n\nE_ij = (итог_строки_i × итог_столбца_j) / общий_итог",
-        "Сравнение долей по категориям (коэффициенты конверсии по сегментам).",
-        "Непрерывные переменные; малые ожидаемые частоты (< 5) — используйте точный критерий Фишера.",
+        "χ² = Σ (O_ij - E_ij)² / E_ij\n\nE_ij = (итог_строки_i × итог_столбца_j) / общий_итог\nCramer's V = √(χ² / (n · min(r-1, c-1)))",
+        "Сравнение долей по категориям (конверсии по сегментам, доля по регионам).",
+        "Непрерывные переменные; ожидаемые частоты < 5 — точный критерий Фишера.",
+        "При больших n даже малые отклонения значимы — оценивайте величину эффекта Cramer's V.",
     ),
     _method(
-        "Корреляция: Пирсон и Спирмен",
-        "Пирсон измеряет силу линейной связи. Спирмен — ранговой монотонной связи.",
-        "r_Пирсон = cov(X, Y) / (std(X) · std(Y))\n\nr_Спирмен = 1 - 6·Σd_i² / (n·(n²-1))  где d_i = разность рангов",
-        "Пирсон — для линейных связей непрерывных переменных. Спирмен — при выбросах или нелинейности.",
-        "Пирсон вводит в заблуждение при нелинейных зависимостях. Всегда сначала визуализируйте scatter plot.",
+        "Корреляция: Пирсон, Спирмен, Кендалл",
+        "Пирсон — линейная связь. Спирмен — ранговая монотонная. Кендалл — для малых выборок и порядковых данных.",
+        "r_Pearson  = cov(X, Y) / (std(X) · std(Y))\nr_Spearman = 1 - 6·Σdᵢ² / (n(n²-1))   где dᵢ = разность рангов\nτ_Kendall  = (concordant - discordant) / C(n,2)",
+        "Pearson — линейные связи непрерывных. Spearman — при выбросах/нелинейности. Kendall — n < 50 или ties.",
+        "Pearson вводит в заблуждение при нелинейности. Всегда сначала смотрите scatter plot.",
+        "|r| > 0.8 → высокая мультиколлинеарность; одну из переменных стоит исключить.",
     ),
     _method(
         "Bootstrap-доверительный интервал",
         "Оценивает выборочное распределение статистики путём повторной выборки с возвращением.",
-        "1. Формируем B бутстреп-выборок (B = 10 000) из исходных данных\n2. Вычисляем целевую статистику для каждой выборки\n3. ДИ = [quantile(alpha/2), quantile(1 - alpha/2)]",
-        "Неопределённость параметрических допущений; статистики без аналитических формул ДИ (медиана, отношение средних).",
+        "1. Формируем B бутстрап-выборок (B = 10 000)\n2. Вычисляем статистику θ̂_b для каждой\n3. Percentile CI = [q(α/2), q(1-α/2)]\n4. BCa CI = поправка на смещение и ассиметрию (для скошенных распределений)",
+        "Параметрические допущения нарушены; статистики без аналитических CI (медиана, отношение средних).",
         None,
-        "ДИ с поправкой на смещение (BCa) предпочтительны для скошенных распределений, но вычислительно дороже.",
+        "BCa предпочтительнее Percentile для скошенных распределений, но дороже вычислительно.",
     ),
     _method(
         "Перестановочный тест",
-        "Проверяет, может ли наблюдаемое различие возникнуть случайно путём перестановки групповых меток.",
-        "1. Вычислить наблюдаемую тестовую статистику (разность средних)\n2. Случайно переставить метки N раз (N = 10 000)\n3. p-value = доля переставленных статистик ≥ наблюдаемой",
-        "Малые выборки, нестандартные тестовые статистики, несостоятельность параметрических допущений.",
+        "Проверяет, может ли наблюдаемое различие возникнуть случайно через перестановку групповых меток.",
+        "1. Вычислить наблюдаемую T₀ (Δmean / Δmedian / t-stat)\n2. Случайно переставить метки N раз (N = 50 000)\n3. p-value = доля переставленных |T| ≥ |T₀|",
+        "Малые выборки, нестандартные тестовые статистики, нарушение параметрических допущений.",
+        None,
+        "Чем больше N, тем точнее p-value. Для редких хвостов используйте N ≥ 100 000.",
     ),
     _method(
         "Дельта Клиффа (величина эффекта)",
-        "Непараметрическая величина эффекта: вероятность того, что случайное наблюдение из одной группы больше наблюдения из другой.",
-        "δ = (count(xᵢ > yⱼ) - count(xᵢ < yⱼ)) / (n₁ × n₂)\n\n|d| < 0.147 → пренебрежимо | < 0.33 → малый | < 0.474 → средний | иначе → большой",
-        "Всегда вместе с непараметрическими тестами для оценки практической значимости.",
+        "Непараметрическая величина эффекта: вероятность доминирования одной группы над другой.",
+        "δ = (count(xᵢ > yⱼ) - count(xᵢ < yⱼ)) / (n₁ · n₂)\n\n|δ| < 0.147 → пренебрежимо\n|δ| < 0.330 → малый\n|δ| < 0.474 → средний\n|δ| ≥ 0.474 → большой",
+        "Всегда вместе с Манна-Уитни для оценки практической значимости.",
     ),
     _method(
         "Поправка Бенджамини-Хохберга (FDR)",
-        "Контролирует частоту ложных обнаружений при одновременном проведении нескольких тестов.",
-        "1. Сортируем p-значения: p(1) ≤ p(2) ≤ ... ≤ p(m)\n2. Для каждого p(i) порог BH = (i/m) × α\n3. Находим наибольшее i: p(i) ≤ порог → отвергаем H₁...Hᵢ",
-        "Всегда при проведении более одного теста в рамках одного анализа (несколько метрик или сегментов).",
-        "Поправка Бонферрони более консервативна — используйте BH когда много тестов.",
+        "Контролирует частоту ложных обнаружений (FDR) при множественных тестах.",
+        "1. Сортируем p-значения: p₍₁₎ ≤ p₍₂₎ ≤ ... ≤ p₍ₘ₎\n2. Для каждого pᵢ порог BH = (i/m) · α\n3. Находим наибольшее i: p₍ᵢ₎ ≤ порог → отвергаем H₀ для всех j ≤ i",
+        "Всегда при > 1 тесте в анализе (несколько метрик / сегментов / комбинаций).",
+        None,
+        "Поправка Бонферрони более консервативна — используйте BH когда тестов много.",
     ),
     _method(
         "Анализ мощности (Power Analysis)",
         "Определяет минимальный размер выборки для обнаружения заданной величины эффекта.",
-        "n = f(α, β, effect_size)\n\nα — вероятность ошибки I рода (обычно 0.05)\nβ — вероятность ошибки II рода; мощность = 1 - β (обычно 0.80)\nd Коэна — для средних; w — для долей",
-        "При планировании A/B-тестов для определения необходимого объёма выборки до сбора данных.",
+        "n = f(α, β, effect_size)\n\nα — ошибка I рода (обычно 0.05)\nβ — ошибка II рода; мощность = 1 - β (обычно 0.80)\nd Коэна — для средних; w — для долей; f — для ANOVA",
+        "Планирование A/B-тестов: расчёт необходимого объёма выборки до сбора данных.",
+        None,
+        "Малый эффект (d=0.2) требует n ≈ 400 на группу; большой (d=0.8) — всего 26.",
     ),
     _method(
-        "ANOVA (дисперсионный анализ)",
+        "ANOVA (one-way)",
         "Сравнивает средние трёх и более независимых групп через разложение дисперсии.",
-        "F = MS_between / MS_within\n\nMS_between = SS_between / (k-1)\nMS_within  = SS_within / (N-k)\n\nгде k = число групп, N = общее число наблюдений",
-        "Сравнение метрики по трём+ сегментам (регионы, каналы, когорты).",
-        "Только два сравниваемых уровня — используйте t-тест.",
-        "Значимый F-тест говорит лишь о том, что различие есть, но не указывает, где именно. Применяйте post-hoc тесты (Tukey).",
+        "F = MS_between / MS_within\n\nMS_between = SS_between / (k-1)\nMS_within  = SS_within / (N-k)\nη²         = SS_between / SS_total\nω²         = (SS_between - (k-1)·MS_within) / (SS_total + MS_within)",
+        "Сравнение метрики по 3+ сегментам (регионы, каналы, когорты).",
+        "Только два уровня — t-тест. Сильно неравные дисперсии — Welch's ANOVA или Kruskal-Wallis.",
+        "Значимый F говорит лишь что различие есть. Где именно — post-hoc Tukey HSD.",
+    ),
+    _method(
+        "Kruskal-Wallis (непараметрическая ANOVA)",
+        "Ранговый аналог one-way ANOVA — без предположения о нормальности.",
+        "H = (12 / (N(N+1))) · Σⱼ Rⱼ²/nⱼ - 3(N+1)\n\nε² = (H - k + 1) / (N - k)   — величина эффекта",
+        "Скошенные распределения, малые выборки 3+ групп. Post-hoc — Mann-Whitney + Bonferroni.",
     ),
 ])
 
 
-# ── TAB: TIME SERIES ─────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB: TIME SERIES
+# ─────────────────────────────────────────────────────────────────────────────
 tab_timeseries = html.Div([
     _method(
         "STL-декомпозиция",
-        "Разбивает временной ряд на трендовую, сезонную и остаточную компоненты с помощью LOESS-сглаживания.",
+        "Разбивает временной ряд на тренд, сезонность и остаток через LOESS-сглаживание.",
         "Y(t) = T(t) + S(t) + R(t)\n\nT(t) — тренд    S(t) — сезонность    R(t) — остаток",
-        "Выявление базовых закономерностей в месячных или недельных данных перед прогнозированием.",
-        "Нерегулярные ряды с пропусками или непериодические данные.",
+        "Базовый анализ месячных/недельных рядов перед прогнозированием. Декомпозиция помогает выбрать модель.",
+        "Нерегулярные ряды с пропусками; непериодические данные.",
+        "Период сезонности s должен соответствовать данным: 12 — месячные, 7 — дневные, 52 — недельные.",
     ),
     _method(
         "ACF / PACF",
-        "ACF — автокорреляционная функция: корреляция ряда со своими лагами (определяет порядок MA). PACF — частная ACF: корреляция после устранения промежуточных лагов (определяет порядок AR).",
+        "ACF — автокорреляционная функция (порядок MA). PACF — частная автокорреляция (порядок AR).",
         "ACF(k)  = corr(Y_t, Y_{t-k})\nPACF(k) = corr(Y_t, Y_{t-k} | Y_{t-1}, ..., Y_{t-k+1})",
-        "Идентификация порядков p, q для ARIMA-модели. Диагностика остатков модели.",
-        "Нестационарные ряды — сначала примените дифференцирование.",
+        "Идентификация порядков p, q для ARIMA. Диагностика остатков модели.",
+        "Нестационарные ряды — сначала примените дифференцирование (d=1).",
     ),
     _method(
-        "SARIMAX (Seasonal ARIMA + exogenous)",
-        "Сезонная ARIMA с экзогенными регрессорами. Сочетает авторегрессию, дифференцирование, скользящее среднее, сезонные компоненты и внешние переменные.",
+        "SARIMAX (Seasonal ARIMA + exog)",
+        "Сезонная ARIMA с экзогенными регрессорами. Сочетает AR, MA, дифференцирование, сезонные компоненты и внешние переменные.",
         "ARIMA(p,d,q) × (P,D,Q,s) + X·β\n\np,d,q — несезонные: AR, дифференцирование, MA\nP,D,Q — сезонные порядки    s — период сезонности\nX     — матрица экзогенных переменных",
-        "Прогнозирование рядов с трендом, сезонностью и внешними факторами (маркетинговые затраты, события).",
-        "Короткие ряды (< 3 сезонов). Ряды без явной сезонности — ARX достаточно.",
-        "Требует стационарности. Чувствителен к выбросам. Выбор p,d,q — через AIC/BIC.",
+        "Ряды с трендом, сезонностью и внешними факторами (маркетинговые затраты, события).",
+        "Короткие ряды (< 3 сезонов). Без явной сезонности — ARX достаточно.",
+        "Требует стационарности. Чувствителен к выбросам. Выбор p,d,q — по AIC/BIC.",
     ),
     _method(
         "ARX (авторегрессия с внешними переменными)",
-        "Упрощённая авторегрессионная модель с экзогенными регрессорами на базе Ridge-регрессии.",
+        "Упрощённая авторегрессия с экзогенными регрессорами на базе Ridge-регрессии.",
         "Y(t) = a₁·Y(t-1) + ... + aₚ·Y(t-p) + b·X(t) + ε(t)",
-        "Когда SARIMAX избыточен и достаточна простая AR-модель с ковариатами. Быстрый бейзлайн.",
+        "Когда SARIMAX избыточен и достаточна простая AR с ковариатами. Быстрый бейзлайн.",
         "Сильная сезонность — SARIMAX предпочтительнее.",
     ),
     _method(
-        "Наивный прогноз (Seasonal Naive)",
+        "Naive (сезонный наивный)",
         "Базовая модель: последнее значение или значение прошлого сезона.",
-        "Наивный:          Y(t+h) = Y(t)\nСезонный наивный: Y(t+h) = Y(t - s + h)",
+        "Naive:           Y(t+h) = Y(t)\nSeasonal Naive:  Y(t+h) = Y(t - s + h)",
         "Всегда вычисляйте как базовый ориентир. Если ваша модель не превосходит Naive — она не несёт ценности.",
     ),
     _method(
         "Обнаружение аномалий",
-        "Два метода: скользящий z-показатель и STL-остатки.",
-        "Скользящий z:  |x - rolling_mean| / rolling_std  > threshold\n\nSTL-остатки:   |R(t)| > k · std(R)  (обычно k = 3)",
-        "Мониторинг ключевых метрик для автоматического выявления отклонений.",
+        "Два метода: rolling z-score и STL-остатки.",
+        "Rolling z:  |x - rolling_mean| / rolling_std  > threshold\n\nSTL-остатки:   |R(t)| > k · std(R)   (обычно k = 3)",
+        "Мониторинг ключевых метрик — автоматическое выявление отклонений.",
         None,
         "Короткое окно → шумные алерты. Слишком широкое → пропуск реальных аномалий.",
     ),
     _method(
-        "Rolling Backtest (скользящая валидация)",
-        "Оценка качества прогноза путём последовательного обучения и прогнозирования на расширяющемся окне.",
-        "Для каждого шага t = t_start ... t_end:\n  1. Обучить на [0, t]\n  2. Спрогнозировать [t+1, t+horizon]\n  3. Рассчитать ошибки (MAE, RMSE, MAPE)",
-        "Честная оценка качества прогноза без data leakage.",
+        "Rolling Backtest",
+        "Оценка качества прогноза через последовательное обучение и прогнозирование на расширяющемся окне.",
+        "Для каждого t = t_start ... t_end:\n  1. Обучить на [0, t]\n  2. Спрогнозировать [t+1, t+horizon]\n  3. Рассчитать MAE, RMSE, MAPE / sMAPE",
+        "Честная оценка прогноза без data leakage.",
         None,
-        "При малом числе периодов backtest даёт нестабильные оценки.",
+        "При малом числе периодов backtest даёт нестабильные оценки. sMAPE предпочтительна при значениях близких к нулю.",
+    ),
+    _method(
+        "Метрики прогноза",
+        "MAE — устойчива; RMSE — штрафует крупные ошибки; MAPE — масштаб-инвариантна; sMAPE — без blow-up при нуле.",
+        "MAE   = mean(|y - ŷ|)\nRMSE  = √mean((y - ŷ)²)\nMAPE  = mean(|y - ŷ| / |y|) · 100%\nsMAPE = mean(|y - ŷ| / ((|y| + |ŷ|)/2)) · 100%\nBias  = mean(ŷ - y)",
+        "Сравнение моделей. Sanity-check: prog должен бить Naive по всем метрикам.",
+        None,
+        "MAPE взрывается при y близких к нулю — KIBAD автоматически переключается на sMAPE.",
     ),
 ])
 
 
-# ── TAB: ATTRIBUTION ─────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB: ATTRIBUTION
+# ─────────────────────────────────────────────────────────────────────────────
 tab_attribution = html.Div([
     _method(
         "Аддитивная атрибуция",
         "Разбивает общее изменение метрики на аддитивные вклады каждого фактора при фиксации остальных.",
         "ΔY = Σ Δfactor_i\n\nВклад фактора i = Y(factor_i = new, rest = old) - Y(factor_i = old, rest = old)",
-        "Когда метрика — линейная сумма факторов (затраты по статьям, сумма продаж по каналам).",
+        "Метрика — линейная сумма факторов (затраты по статьям, продажи по каналам).",
     ),
     _method(
-        "Мультипликативная атрибуция (логарифмическое разложение)",
-        "Разбивает изменение отношения на мультипликативные вклады с применением натурального логарифма.",
-        "ln(Y₁/Y₀) = Σ ln(factor_i_1 / factor_i_0)\n\nВклад фактора i (%) = ln(f_i_1/f_i_0) / ln(Y₁/Y₀) × 100%",
-        "Метрика — произведение факторов: Выручка = Пользователи × Конверсия × ARPU.",
+        "Мультипликативная атрибуция (log-разложение)",
+        "Разбивает изменение отношения на мультипликативные вклады с натуральным логарифмом.",
+        "ln(Y₁/Y₀) = Σ ln(factor_i_1 / factor_i_0)\n\nВклад фактора i (%) = ln(f_i_1/f_i_0) / ln(Y₁/Y₀) · 100%",
+        "Метрика — произведение факторов. Пример: Выручка = Пользователи × Конверсия × ARPU.",
         None,
-        "Неприменимо если факторы не мультипликативны или если Y₀ = 0.",
+        "Неприменимо если факторы не мультипликативны или Y₀ = 0.",
     ),
     _method(
         "Регрессионная атрибуция",
         "Использует коэффициенты Ridge-регрессии для атрибуции изменения метрики.",
-        "ΔY = Σ β_i × ΔX_i + ε\n\nβ_i получены из OLS/Ridge-регрессии\nVIF = 1/(1 - R²_i) — проверка мультиколлинеарности",
-        "Когда факторы взаимодействуют между собой и не являются строго мультипликативными.",
+        "ΔY = Σ βᵢ · ΔXᵢ + ε\n\nβᵢ из OLS / Ridge\nVIF = 1 / (1 - Rᵢ²)   — проверка мультиколлинеарности",
+        "Факторы взаимодействуют между собой и не строго мультипликативны.",
         None,
-        "Мультиколлинеарность завышает неопределённость коэффициентов. Проверяйте VIF (тревога при VIF > 10).",
+        "Мультиколлинеарность завышает неопределённость коэффициентов. Тревога при VIF > 10.",
     ),
     _method(
-        "Значения Шепли (Shapley Values)",
-        "Справедливое распределение общего изменения между факторами на основе теории игр. Учитывает все возможные порядки вклада факторов.",
-        "φ_i = (1/|N|!) × Σ_{перестановки π} [v(S∪{i}) - v(S)]\n\nS — подмножество факторов без i\nv(S) — значение метрики при факторах S\n\nKIBAD использует аппроксимацию (1000 перестановок)",
-        "Теоретически справедливая атрибуция, учитывающая взаимодействия факторов.",
+        "Shapley Values",
+        "Справедливое распределение общего изменения между факторами на основе теории игр.",
+        "φᵢ = (1/|N|!) · Σ_{перестановки π} [v(S∪{i}) - v(S)]\n\nS — подмножество факторов без i\nv(S) — значение метрики при факторах S\n\nKIBAD использует аппроксимацию (1000 перестановок)",
+        "Теоретически справедливая атрибуция, учитывающая все взаимодействия факторов.",
         None,
         "Вычислительно затратно при > 15 факторах. Аппроксимация вносит дисперсию в оценки.",
     ),
 ])
 
 
-# ── TAB: SIMULATION ──────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB: SIMULATION
+# ─────────────────────────────────────────────────────────────────────────────
 tab_simulation = html.Div([
     _method(
         "Сценарный анализ",
-        "Применение пользовательских шоков к ключевым параметрам (рост, ставки, затраты) и наблюдение их влияния на итоговые показатели.",
-        "Базовый сценарий:      Y_base = f(X)\nОптимистичный:        Y_opt  = f(X × (1 + shock_up))\nПессимистичный:       Y_pess = f(X × (1 - shock_down))",
+        "Применение пользовательских шоков к ключевым параметрам и наблюдение влияния на итог.",
+        "Базовый:        Y_base = f(X)\nОптимистичный:  Y_opt  = f(X · (1 + shock_up))\nПессимистичный: Y_pess = f(X · (1 - shock_down))",
         "Оценка чувствительности результатов к изменению ключевых допущений.",
+        None,
+        "Без экзогенных переменных total_shock = sum(shocks); baseline берётся из последнего исторического (flat).",
     ),
     _method(
         "Монте-Карло симуляция",
         "Генерирует N случайных сценариев путём выборки параметров из заданных распределений.",
-        "1. Задать распределения для ключевых параметров: X_i ~ N(μ_i, σ_i²)\n2. Выполнить N итераций (N = 10 000+)\n3. В каждой итерации вычислить Y = f(X)\n4. Получить распределение Y: mean, std, перцентили",
-        "Оценка риска, прогноз при неопределённых входных параметрах.",
+        "1. Задать распределения: Xᵢ ~ N(μᵢ, σᵢ²)\n2. Выполнить N итераций (N ≥ 10 000)\n3. В каждой итерации Y = f(X)\n4. Получить распределение Y: mean, std, перцентили",
+        "Оценка риска при неопределённых параметрах. Прогноз с количественной оценкой неопределённости.",
+        None,
+        "Требует обоснованных распределений входов. Кризисные корреляции могут резко расти (0.3 → 0.9).",
     ),
     _method(
         "VaR (Value at Risk)",
-        "Оценивает максимальный убыток с заданным уровнем достоверности за определённый период.",
-        "VaR(α) = -quantile(returns, α)\n\nПример: VaR(0.05) — потери, которые не превысят данного уровня\nс вероятностью 95%",
-        "Оценка рыночного риска, планирование резервов.",
+        "Максимальный убыток с заданным уровнем достоверности за определённый период.",
+        "Исторический:    VaR(α) = -r[floor(α·n)]\nПараметрический: VaR(α) = -(μ + σ·Z_α)\n  Z_0.05 ≈ -1.645, Z_0.01 ≈ -2.326",
+        "Оценка рыночного риска. Планирование резервов и лимитов.",
         None,
-        "VaR не учитывает размер потерь за порогом. Используйте CVaR для анализа хвостовых рисков.",
+        "Не учитывает размер потерь за порогом — используйте CVaR. Один выброс смещает на 30–50%.",
     ),
     _method(
-        "CVaR (Conditional VaR / Expected Shortfall)",
-        "Среднее значение убытков, превышающих VaR. Более консервативная мера хвостового риска.",
-        "CVaR(α) = -E[returns | returns < -VaR(α)]\n       = среднее худших (1-α)% сценариев",
-        "Анализ хвостовых рисков: CVaR предпочтительнее VaR так как учитывает размер экстремальных убытков.",
+        "CVaR / Expected Shortfall",
+        "Среднее значение убытков, превышающих VaR. Когерентная мера риска (субаддитивна).",
+        "CVaR(α) = -E[returns | returns < -VaR(α)]\n        = среднее худших (1-α)% сценариев\n\nCVaR / VaR ≈ 1.27   при нормальности\nCVaR / VaR > 2.0    → жирный хвост → требует стресс-теста",
+        "Хвостовые риски: CVaR предпочтительнее VaR так как учитывает размер экстремальных убытков.",
+        None,
+        "Нормальное распределение недооценивает хвост на 30–40% при реальных жирных хвостах.",
     ),
 ])
 
 
-# ── TAB: CLUSTERING ──────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB: CLUSTERING
+# ─────────────────────────────────────────────────────────────────────────────
 tab_clustering = html.Div([
     _method(
-        "K-Means кластеризация",
+        "K-Means",
         "Разбивает наблюдения на K кластеров путём итеративной минимизации внутрикластерной дисперсии.",
-        "Целевая функция: min Σᵢ Σₓ∈Cᵢ ||x - μᵢ||²\n\nАлгоритм:\n1. Инициализировать K центроидов (K-Means++)\n2. Назначить каждую точку ближайшему центроиду\n3. Пересчитать центроиды как средние кластеров\n4. Повторять до сходимости",
+        "min Σᵢ Σ_{x∈Cᵢ} ||x - μᵢ||²\n\n1. Инициализировать K центроидов (K-Means++)\n2. Назначить точку ближайшему центроиду\n3. Пересчитать центроиды как средние кластеров\n4. Повторять до сходимости",
         "Сегментация клиентов, товаров, регионов по нескольким числовым признакам.",
         None,
-        "Чувствителен к масштабу — нормализуйте признаки. Результат зависит от инициализации. Не работает с категориальными признаками напрямую.",
+        "Чувствителен к масштабу — нормализуйте признаки. Зависит от инициализации (запускайте 10+ раз).",
     ),
     _method(
-        "Метод локтя (Elbow Method)",
+        "Метод локтя (Elbow)",
         "Определяет оптимальное число кластеров K по точке перегиба на кривой инерции.",
-        "Inertia(K) = Σᵢ Σₓ∈Cᵢ ||x - μᵢ||²\n\nОптимальный K — там, где дальнейшее увеличение K\nдаёт незначительный прирост качества",
+        "Inertia(K) = Σᵢ Σ_{x∈Cᵢ} ||x - μᵢ||²\n\nОптимальный K — там, где дальнейшее увеличение K\nдаёт незначительный прирост качества",
         "Выбор K перед кластеризацией. Ищите 'локоть' — точку резкого замедления снижения инерции.",
     ),
     _method(
-        "PCA-визуализация кластеров",
+        "PCA-визуализация",
         "Снижение размерности признакового пространства для визуализации кластеров в 2D.",
-        "PC₁, PC₂ = argmax Var(X·w)   s.t. ||w|| = 1, w₁⊥w₂\n\nОбъяснённая дисперсия: Σ λᵢ / Σ λ_total",
+        "PC₁, PC₂ = argmax Var(X · w)   s.t. ||w|| = 1, w₁ ⊥ w₂\n\nОбъяснённая дисперсия: Σ λᵢ / Σ λ_total",
         "Визуализация качества разделения кластеров и выявление выбросов.",
         None,
-        "PCA линеен — t-SNE или UMAP лучше для нелинейных структур, но вычислительно дороже.",
+        "PCA линеен — t-SNE или UMAP лучше для нелинейных структур, но дороже.",
+    ),
+    _method(
+        "Метрики качества кластеризации",
+        "Silhouette — насколько точка ближе к своему кластеру чем к соседнему. Davies-Bouldin — соотношение внутри/между.",
+        "Silhouette(i) = (b(i) - a(i)) / max(a(i), b(i))\n  a(i) — среднее расстояние внутри кластера\n  b(i) — расстояние до ближайшего соседнего кластера\n\nDavies-Bouldin ↓ — лучше; Silhouette ↑ — лучше",
+        "Сравнение разных K и алгоритмов кластеризации.",
     ),
 ])
 
 
-# ── TAB: MATCHING ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB: MATCHING
+# ─────────────────────────────────────────────────────────────────────────────
 tab_matching = html.Div([
-    html.Div([
-        html.P("Методы сопоставления используются для снижения систематической погрешности при сравнении групп в наблюдательных исследованиях (когда нет случайного распределения).", style={"color": "#8891a5", "marginBottom": "20px"}),
-    ]),
-    _method(
-        "PSM — Propensity Score Matching",
-        "Сопоставляет наблюдения из группы лечения и контроля по вероятности попасть в группу лечения (propensity score), оцененной логистической регрессией.",
-        "e(X) = P(T=1 | X) = logistic(Xβ)\n\nАтте (ATT) = E[Y(1) - Y(0) | T=1]\nОценивается как среднее по matched парам",
-        "Оценка эффекта программ/вмешательств при нерандомизированных данных.",
-        None,
-        "Предполагает, что все конфаундеры наблюдаемы (strong ignorability). Неизмеренные конфаундеры смещают оценку.",
+    _info_block(
+        "Зачем сопоставление?",
+        "Когда нет рандомизации (наблюдательные данные), прямое сравнение групп смещено из-за конфаундеров. "
+        "Методы matching выравнивают распределения ковариат и снижают bias.",
+        "info",
     ),
     _method(
-        "Точное совпадение (Exact Matching)",
-        "Каждое наблюдение из группы лечения сопоставляется с наблюдением из контроля, имеющим идентичные значения всех признаков.",
-        "Пара (i,j) совпадает если X_i = X_j для всех признаков",
-        "Небольшое число категориальных ковариат. Максимальная балансировка групп.",
+        "PSM — Propensity Score Matching",
+        "Сопоставляет наблюдения по вероятности попасть в группу лечения (propensity score).",
+        "e(X) = P(T=1 | X) = logistic(X·β)\n\nATT = E[Y(1) - Y(0) | T=1]\nоценка: среднее по matched парам",
+        "Оценка эффекта программ/вмешательств при нерандомизированных данных.",
+        None,
+        "Предполагает, что все конфаундеры наблюдаемы (strong ignorability). Неизмеренные смещают оценку.",
+    ),
+    _method(
+        "Exact Matching",
+        "Каждое наблюдение из группы лечения матчится с контролем имеющим идентичные значения всех признаков.",
+        "Пара (i, j) совпадает если X_i = X_j для всех признаков",
+        "Несколько категориальных ковариат. Максимальная балансировка.",
         "Много непрерывных признаков — большинство наблюдений не найдут пары.",
     ),
     _method(
         "CEM — Coarsened Exact Matching",
-        "Огрубляет непрерывные переменные до категорий, затем применяет точное совпадение на огрублённых данных.",
-        "1. Огрубить каждую переменную X_i: X̃_i = coarsen(X_i)\n2. Exact match по X̃\n3. Взвесить немatch-наблюдения для балансировки",
-        "Сбалансированное сопоставление при смешанных типах переменных. Лучше PSM по L1-балансу.",
+        "Огрубляет непрерывные переменные до категорий, затем применяет exact match на огрублённых данных.",
+        "1. Coarsen каждой переменной: X̃ᵢ = coarsen(Xᵢ)\n2. Exact match по X̃\n3. Взвесить unmatched для балансировки",
+        "Сбалансированное сопоставление при смешанных типах. Лучше PSM по L1-балансу.",
     ),
     _method(
         "Nearest Neighbor Matching",
-        "Для каждого наблюдения из группы лечения ищет ближайшего соседа в контрольной группе по евклидову расстоянию в пространстве признаков.",
-        "distance(i,j) = ||X_i - X_j||₂  (или Mahalanobis)\nmatched_j = argmin_{j ∈ control} distance(i,j)",
+        "Для каждого наблюдения treatment ищет ближайшего соседа в control по евклиду / Mahalanobis.",
+        "distance(i, j) = ||Xᵢ - Xⱼ||₂   (или Mahalanobis)\nmatched_j = argmin_{j∈control} distance(i, j)",
         "Непрерывные ковариаты. Хорошая масштабируемость.",
         None,
-        "Качество сопоставления зависит от масштабирования признаков. Нормализуйте перед matching.",
+        "Качество зависит от масштабирования признаков. Нормализуйте перед matching.",
+    ),
+    _method(
+        "Балансировка: SMD",
+        "Standardized Mean Difference — основной диагностический метрик после matching.",
+        "SMD = (mean_treatment - mean_control) / pooled_std\n\n|SMD| < 0.10 — отличный баланс\n|SMD| < 0.25 — приемлемо\n|SMD| ≥ 0.25 — несбалансировано",
+        "После любого matching проверяйте SMD по всем ковариатам.",
     ),
 ])
 
 
-# ── TAB: DATA PREP ───────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB: PREPARE
+# ─────────────────────────────────────────────────────────────────────────────
 tab_prepare = html.Div([
     _method(
         "Парсинг и обработка дат",
-        "Автоматическое распознавание формата даты и конвертация строковых полей в datetime.",
+        "Автоматическое распознавание формата даты и конвертация строк в datetime.",
         "Стратегии: автоопределение pandas / dateutil\nЭкстракция: год, месяц, квартал, день недели, номер недели",
-        "Временной анализ требует datetime-типов. Нечитаемые строки-даты → ошибки в агрегации.",
+        "Временной анализ требует datetime-типов. Нечитаемые строки → ошибки в агрегации.",
     ),
     _method(
         "Заполнение пропусков (импутация)",
         "Замена NaN значениями на основе выбранной стратегии.",
-        "median:   NaN → median(колонки)\nmean:     NaN → mean(колонки)\nffill:    NaN → предыдущее значение\nbfill:    NaN → следующее значение\nconstant: NaN → заданное значение",
+        "median:   NaN → median(колонки)\nmean:     NaN → mean(колонки)\nffill:    NaN → предыдущее значение\nbfill:    NaN → следующее значение\nconstant: NaN → заданное значение\nKNN:      NaN → среднее по k ближайшим (по другим колонкам)",
         "Алгоритмы, не переносящие NaN (PCA, большинство ML-моделей).",
         None,
-        "Mean/median не сохраняет временную структуру. Для временных рядов предпочтительнее ffill.",
+        "Mean/median не сохраняют временную структуру. Для временных рядов предпочтительнее ffill.",
     ),
     _method(
         "Обнаружение и обработка выбросов",
-        "Два метода: IQR-фильтр и z-показатель.",
-        "IQR:  Q1 - 1.5·IQR  <  x  <  Q3 + 1.5·IQR\n\nz:    |x - mean| / std  <  threshold (обычно 3)",
-        "Устранение ошибок ввода данных и экстремальных точек перед обучением моделей.",
+        "Два метода: IQR-фильтр и z-показатель. Также Isolation Forest для многомерных.",
+        "IQR:  Q₁ - 1.5·IQR  <  x  <  Q₃ + 1.5·IQR\nz:    |x - mean| / std  <  threshold (обычно 3)\nIsolation Forest: contamination=0.05 (доля выбросов)",
+        "Устранение ошибок ввода и экстремальных точек перед моделями.",
         None,
         "Не удаляйте выбросы автоматически — возможно это реальные аномалии (мошенничество, кризис).",
     ),
     _method(
         "Нормализация и стандартизация",
         "Приведение числовых признаков к сопоставимому масштабу.",
-        "MinMax:   x̃ = (x - min) / (max - min)  → [0, 1]\nStandard: x̃ = (x - mean) / std             → N(0,1)\nRobust:   x̃ = (x - median) / IQR           → устойчиво к выбросам",
-        "Алгоритмы, чувствительные к масштабу: K-Means, PCA, Ridge-регрессия, KNN.",
-        "Дерево-based алгоритмы (Random Forest, XGBoost) — масштабирование не нужно.",
+        "MinMax:   x̃ = (x - min) / (max - min)  → [0, 1]\nStandard: x̃ = (x - mean) / std            → N(0, 1)\nRobust:   x̃ = (x - median) / IQR          → устойчиво к выбросам\nLog:      x̃ = log(x + 1)                  → для скошенных",
+        "Алгоритмы, чувствительные к масштабу: K-Means, PCA, Ridge, KNN, SVM.",
+        "Tree-based (RF, XGBoost) — масштабирование не нужно.",
     ),
     _method(
         "Лаги и скользящие статистики",
         "Создание временно-зависимых признаков для моделей временных рядов.",
-        "Лаг-признак:      X_lag(k) = X(t - k)\nСкользящее среднее: MA(w) = mean(X[t-w:t])\nEMA:               EMA(t) = α·X(t) + (1-α)·EMA(t-1)",
+        "Лаг-признак:        X_lag(k) = X(t - k)\nСкользящее среднее: MA(w) = mean(X[t-w:t])\nEMA:                EMA(t) = α·X(t) + (1-α)·EMA(t-1)\nDiff:               ΔX(t) = X(t) - X(t-1)",
         "Feature engineering для ML-моделей на временных рядах.",
         None,
-        "Создание лагов уменьшает число строк (первые k строк будут NaN).",
+        "Лаги уменьшают число доступных строк (первые k строк → NaN). Используйте dropna.",
     ),
     _method(
         "Дедупликация",
         "Удаление дублирующихся строк по заданному набору ключевых полей.",
-        "Стратегии при дубликатах:\n  keep='first' — оставить первую запись\n  keep='last'  — оставить последнюю\n  keep=False   — удалить все дубликаты",
+        "Стратегии:\n  keep='first' — оставить первую\n  keep='last'  — оставить последнюю\n  keep=False   — удалить все дубликаты",
         "Очистка перед расчётом уникальных метрик (уникальные пользователи, транзакции).",
+    ),
+    _method(
+        "Винзоризация (winsorization)",
+        "Усечение крайних значений до перцентилей вместо удаления.",
+        "x̃ = clip(x, q(α), q(1-α))\n\nТипично α = 0.01 (1%) или α = 0.05 (5%)",
+        "Когда удаление выбросов нежелательно но их влияние нужно ограничить.",
     ),
 ])
 
 
-# ── TAB: ROLL-RATE ────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB: ROLL-RATE
+# ─────────────────────────────────────────────────────────────────────────────
 tab_rollrate = html.Div([
     _method(
         "Матрица Roll-Rate",
-        "Отслеживает переходы наблюдений между состояниями (категориями просроченной задолженности) за последовательные периоды.",
-        "P[i][j] = count(переход i → j) / count(начальное состояние i)\n\nСвойства: P[i][j] ≥ 0,  Σⱼ P[i][j] = 1",
-        "Кредитный риск: прогноз движения задолженности по DPD-бакетам. Управление клиентским портфелем.",
+        "Отслеживает переходы наблюдений между состояниями (DPD-бакеты) за последовательные периоды.",
+        "P[i][j] = count(переход i → j) / count(начальное состояние i)\n\nСвойства: P[i][j] ≥ 0,  Σⱼ P[i][j] = 1   (стохастическая матрица)",
+        "Кредитный риск: прогноз движения задолженности по DPD-бакетам. Управление портфелем.",
     ),
     _method(
-        "Марковские цепи — прогноз распределения",
-        "Прогноз будущего распределения по состояниям путём многократного применения матрицы переходов.",
-        "S(t+1) = S(t) · P\nS(t+n) = S(0) · Pⁿ\n\nStationarity: S* = S* · P  →  S*(I - P) = 0",
+        "Марковская цепь — прогноз распределения",
+        "Прогноз будущего распределения по состояниям через многократное применение матрицы переходов.",
+        "S(t+1) = S(t) · P\nS(t+n) = S(0) · Pⁿ\n\nСтационарное распределение: S* · (I - P) = 0",
         "Прогноз уровня дефолта через N периодов. Оценка стационарного распределения портфеля.",
         None,
-        "Предполагает стационарность переходов (P не меняется во времени). В реальности — проверяйте стабильность P по когортам.",
+        "Предполагает стационарность переходов (P не меняется). Проверяйте стабильность по когортам.",
+    ),
+    _method(
+        "Vintage анализ",
+        "Сравнение поведения когорт (vintage) клиентов выданных в разные периоды.",
+        "Vintage[v][t] = метрика когорты v в момент времени t от выдачи\n\nПример: % просрочки на 90+ DPD к концу 12-го месяца жизни",
+        "Сравнение качества когорт. Раннее обнаружение ухудшения скоринга.",
+        None,
+        "Требует достаточного объёма каждой когорты (минимум 1000 наблюдений).",
     ),
 ])
 
 
-# ── TAB: TRIGGERS ────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB: TRIGGERS
+# ─────────────────────────────────────────────────────────────────────────────
 tab_triggers = html.Div([
     _method(
         "Пересечение порогового значения",
         "Срабатывает когда метрика пересекает абсолютный пороговый уровень.",
-        "ALERT если metric > upper_threshold\n       ИЛИ metric < lower_threshold",
-        "Мониторинг KPI с известными допустимыми диапазонами (конверсия < 1%, время ответа > 5 сек).",
+        "ALERT если metric > upper_threshold\n        ИЛИ metric < lower_threshold",
+        "Мониторинг KPI с известными допустимыми диапазонами (конверсия < 1%, latency > 5 сек).",
     ),
     _method(
         "Отклонение от скользящей базы",
@@ -536,75 +695,407 @@ tab_triggers = html.Div([
     _method(
         "Изменение наклона тренда",
         "Срабатывает когда наклон метрики за недавнее окно значительно отличается от исторического.",
-        "slope = coef линейной регрессии метрики по времени\n\nslope_recent  = slope(metric, window=w_short)\nslope_history = slope(metric, window=w_long)\n\nALERT если |slope_recent - slope_history| > threshold",
+        "slope = коэф. линейной регрессии метрики по времени\n\nslope_recent  = slope(metric, window=w_short)\nslope_history = slope(metric, window=w_long)\n\nALERT если |slope_recent - slope_history| > threshold",
         "Обнаружение разворотов тренда, которые пропустят пороговые правила (плавное ухудшение).",
         None,
         "Чувствителен к выбору ширины окна. Требует достаточного числа точек для устойчивой регрессии.",
     ),
+    _method(
+        "Композитное правило (AND/OR)",
+        "Комбинация нескольких триггеров с логикой AND или OR.",
+        "ALERT(AND) = trigger_1  ∧  trigger_2  ∧  ...\nALERT(OR)  = trigger_1  ∨  trigger_2  ∨  ...\n\nDelayed: ALERT срабатывает только если условие держится N периодов подряд",
+        "Снижение шума: вместо одного спайка требуется устойчивое нарушение условий.",
+    ),
 ])
 
 
-# ── TAB: FAQ ─────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB: ARCHITECTURE (новая)
+# ─────────────────────────────────────────────────────────────────────────────
+tab_architecture = html.Div([
+    _info_block(
+        "5 архитектурных слоёв",
+        "KIBAD построен по принципу строгого разделения слоёв. UI зависит от core/ — никогда наоборот. "
+        "Все вычисления — чистые функции на pandas / numpy / scipy.",
+        "info",
+    ),
+    html.Div([
+        html.Div("СЛОИ ПРИЛОЖЕНИЯ", className="overline", style={"marginBottom": "12px"}),
+        _kv_table([
+            ("① Слой данных",
+             "core/data.py · core/validate.py · core/prepare.py · core/aggregate.py · core/merge.py"),
+            ("② Аналитический",
+             "core/tests.py · core/models.py · core/attribution.py · core/simulation.py · core/triggers.py · "
+             "core/explore.py · core/rollrate.py · core/cluster.py · core/cohort.py · core/matching.py · "
+             "core/weighted_avg.py · core/vintage.py · core/insights.py"),
+            ("③ Визуализация",
+             "Plotly go.Figure · единая тема app/figure_theme.py (apply_kibad_theme + apply_eda_theme)"),
+            ("④ UI (Dash)",
+             "20 страниц app/pages/p*.py · общие компоненты app/components/* · стили app/assets/theme.css"),
+            ("⑤ Хранение",
+             "core/audit.py (append-only лог) · core/i18n.py (RU/EN) · core/report.py (HTML/PDF/Excel) · "
+             "app/state.py (session store + parquet snapshots)"),
+        ], header=("Слой", "Модули")),
+    ], className="card", style={"padding": "16px 20px", "marginBottom": "14px"}),
+
+    _method(
+        "5 правил архитектуры",
+        "Жёсткие правила, которым подчиняются все страницы и core-модули.",
+        "1. Нет циклических зависимостей между страницами\n"
+        "2. UI без бизнес-логики — вся логика в core/\n"
+        "3. Чистые функции в core/: примитивы/pandas → примитивы/dict/DataFrame\n"
+        "4. Единый app/state.py для сессионного состояния\n"
+        "5. Явные ошибки: {'error': str, 'data': Any} вместо raise",
+        "При добавлении нового анализа.",
+        None,
+        "Нарушение правила 2 (логика в UI) делает невозможным юнит-тесты — всегда выносите вычисления в core/.",
+    ),
+    _method(
+        "Поток данных",
+        "Любой анализ следует одному паттерну: загрузка → подготовка → вычисление → визуализация.",
+        "1. p*.py page загружает df через get_df_from_stores()\n"
+        "2. UI собирает параметры из контролов (Dropdown, Slider, RadioItems)\n"
+        "3. Callback вызывает функцию из core/* возвращающую TestResult / dict / DataFrame\n"
+        "4. Page рендерит результат через apply_eda_theme(fig) и handoff-классы\n"
+        "5. Optional: запись в audit-log через core.audit.log_event(...)",
+        "Один путь данных → проще тестировать, дебажить, расширять.",
+    ),
+    _method(
+        "Поддерживаемые СУБД (no-code SQL)",
+        "Прямое подключение через SQLAlchemy с визуальным конструктором запросов.",
+        "MVP:    PostgreSQL · ClickHouse · Oracle · MS SQL Server\nПлан:   Greenplum · Hive · MySQL · SQLite",
+        "Когда CSV/Excel недостаточно или данные в DWH.",
+        None,
+        "Все запросы параметризованы через text() — SQL-инъекции невозможны (см. вкладку «Безопасность»).",
+    ),
+])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB: SECURITY (новая)
+# ─────────────────────────────────────────────────────────────────────────────
+tab_security = html.Div([
+    _info_block(
+        "Принципы безопасности",
+        "Локальное выполнение · нет внешних запросов · нет eval()/exec() · параметризованные SQL · "
+        "AST-валидация формул · whitelist форматов файлов · лимит размера 200 МБ.",
+        "success",
+    ),
+    _method(
+        "Обработка файлов",
+        "Whitelist форматов и лимиты размера для защиты от вредоносного контента.",
+        "Whitelist:    .csv · .xlsx · .xls · .parquet\nЛимит:        200 МБ\nExcel macros: НЕ выполняются (read_only режим)\nКодировки:    UTF-8 · Windows-1251 · Latin-1 · auto-detect",
+        "Все источники файловой загрузки.",
+        None,
+        "Файлы открываются в read-only режиме openpyxl — формулы не вычисляются.",
+    ),
+    _method(
+        "Санитизация ввода",
+        "Жёсткая типизация и валидация всех пользовательских значений.",
+        "Числа:    pd.to_numeric(series, errors='coerce')\nДаты:     pd.to_datetime() с диапазоном 1900–2100\nФормулы:  AST-парсер с whitelist'ом имён, max 500 символов\n          ALLOWED_NAMES = {abs, round, min, max, sum,\n                          mean, std, log, exp, sqrt, pow}",
+        "Везде где принимается ввод от пользователя (Dropdown, Input, Formula builder).",
+        None,
+        "Вычисление формул через ast.parse + walk проверяет каждый узел — eval/exec/__import__ заблокированы.",
+    ),
+    _method(
+        "PostgreSQL и SQL",
+        "Защита от SQL-инъекций и утечки учётных данных.",
+        "Запросы:    параметризованные через SQLAlchemy text()\nИмена:      валидация через inspector.get_table_names()\nКредент.:   только в памяти, не логируются\nРоль:       рекомендуется kibad_readonly (только SELECT)\nTimeout:    30 сек на запрос",
+        "Все подключения к внешним БД.",
+        None,
+        "Использование роли с правами INSERT/UPDATE/DELETE недопустимо — KIBAD задумано как read-only клиент.",
+    ),
+    html.Div([
+        html.Div("МОДЕЛЬ УГРОЗ — 8 ЗАЩИТ", className="overline", style={"marginBottom": "12px"}),
+        _kv_table([
+            ("Утечка данных",        "Нет сетевых вызовов · телеметрия отключена"),
+            ("Вредоносный файл",     "Whitelist форматов · лимит 200 МБ · read-only Excel"),
+            ("SQL-инъекция",         "Параметризованные запросы через text()"),
+            ("Инъекция кода",        "AST-валидация формул · whitelist имён"),
+            ("Исчерпание памяти",    "Лимит файла · pagination больших таблиц"),
+            ("Утечка credentials",   "Только в памяти процесса · не пишутся в логи"),
+            ("Cross-session leak",   "Изолированное состояние через app/state.py"),
+            ("Macros execution",     "openpyxl read_only · pandas безопасный engine"),
+        ], header=("Угроза", "Защита")),
+    ], className="card", style={"padding": "16px 20px", "marginBottom": "14px"}),
+    _method(
+        "Аудит-лог",
+        "Append-only журнал всех значимых действий через core/audit.py.",
+        "log_event(event_type, user, details, ts)\n\nТипы событий:\n  'load'       — загрузка файла / SQL\n  'transform'  — операции prepare\n  'analysis'   — запуск теста / прогноза\n  'export'     — выгрузка отчёта\n  'error'      — исключение",
+        "Compliance · восстановление действий · разбор инцидентов.",
+        None,
+        "Лог хранится локально (.kibad/audit.log) и не передаётся вовне.",
+    ),
+])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB: TESTING (новая)
+# ─────────────────────────────────────────────────────────────────────────────
+tab_testing = html.Div([
+    _info_block(
+        "Стратегия тестирования",
+        "Текущее покрытие: 362 теста проходят (pytest tests/). 4 уровня: модульные, интеграционные, "
+        "золотые (golden), диагностические предупреждения.",
+        "info",
+    ),
+    html.Div([
+        html.Div("ПОКРЫТИЕ ПО МОДУЛЯМ", className="overline", style={"marginBottom": "12px"}),
+        _kv_table([
+            ("core/validate.py",     "≥ 90% — критичный модуль валидации входов"),
+            ("core/prepare.py",      "≥ 90% — все шаги очистки данных"),
+            ("core/tests.py",        "≥ 90% — все статистические тесты"),
+            ("core/triggers.py",     "≥ 90% — алёрт-логика"),
+            ("core/data.py",         "≥ 85% — IO и загрузка"),
+            ("core/aggregate.py",    "≥ 85% — групповые агрегации"),
+            ("core/attribution.py",  "≥ 85% — факторная атрибуция"),
+            ("core/merge.py",        "≥ 85% — слияния таблиц"),
+            ("core/models.py",       "≥ 80% — прогнозные модели"),
+            ("core/simulation.py",   "≥ 80% — сценарии и Монте-Карло"),
+            ("core/weighted_avg.py", "≥ 95% — взвешенные средние и duration"),
+        ], header=("Модуль", "Целевое покрытие")),
+    ], className="card", style={"padding": "16px 20px", "marginBottom": "14px"}),
+    _method(
+        "Уровень 1 — модульные тесты",
+        "Каждая функция core/ имеет тесты на нормальные кейсы, граничные, ошибочные входы.",
+        "tests/test_validate.py    — валидация типов и диапазонов\n"
+        "tests/test_prepare.py     — все 9 шагов подготовки\n"
+        "tests/test_tests.py       — все 11 стат-тестов с эталонными значениями\n"
+        "tests/test_triggers.py    — 4 типа правил\n"
+        "tests/test_attribution.py — все 4 метода атрибуции\n"
+        "tests/test_models.py      — SARIMAX/ARX/Naive + метрики\n"
+        "tests/test_weighted_avg.py — wa, wstd, percentile, mix-rate, duration",
+        "При любом изменении core/.",
+    ),
+    _method(
+        "Уровень 2 — интеграционные тесты",
+        "End-to-end проверка пайплайна: загрузка → валидация → очистка → агрегация → тесты → экспорт.",
+        "smoke_test.py:\n  1. Создаём фейковый CSV\n  2. Загружаем через core/data.py\n  3. Профилируем через core/validate.py\n  4. Парсим даты + ресэмплинг через core/prepare.py\n  5. Строим график через core/explore.py\n  6. Запускаем t-test и Mann-Whitney через core/tests.py\n  7. SARIMAX/ARX через core/models.py\n  8. Сценарий через core/simulation.py\n  9. Генерируем HTML через core/report.py",
+        "Перед коммитом и в CI.",
+    ),
+    _method(
+        "Уровень 3 — золотые тесты",
+        "Сравнение с эталонными значениями для воспроизводимости результатов.",
+        "tests/golden/\n  stl_decomposition.csv      — ожидаемая STL для синтетического ряда\n  attribution_shapley.csv    — Shapley-вклады для эталонного датасета\n  bootstrap_ci.csv           — bootstrap CI для известного распределения\n  power_analysis.csv         — n для (α=0.05, β=0.20, d=0.5)",
+        "Защита от регрессий после рефакторинга алгоритмов.",
+        None,
+        "Эталоны обновляются осознанно: коммит должен явно описать ПОЧЕМУ значения изменились.",
+    ),
+    _method(
+        "Уровень 4 — диагностические предупреждения",
+        "8 типов предупреждений выдаются пользователю до запуска анализа.",
+        "1. < 5 наблюдений в группе\n"
+        "2. Нулевая дисперсия (константная колонка)\n"
+        "3. Отсутствует обязательная колонка\n"
+        "4. NaN в ключевой переменной > 5%\n"
+        "5. Даты вне диапазона 1900–2100\n"
+        "6. Группа с 1 строкой (нельзя посчитать дисперсию)\n"
+        "7. VIF > 10 (мультиколлинеарность)\n"
+        "8. Высокая корреляция |r| > 0.8 между признаками",
+        "До запуска любой модели — пользователь видит проблемы заранее.",
+    ),
+    html.Div([
+        html.Div("РАБОЧИЙ ПРОЦЕСС", className="overline", style={"marginBottom": "12px"}),
+        _formula(
+            "# Запуск всех тестов\n"
+            "pytest tests/ -v\n\n"
+            "# Один модуль\n"
+            "pytest tests/test_<модуль>.py -v\n\n"
+            "# Покрытие\n"
+            "pytest --cov=core tests/\n\n"
+            "# Smoke-тест end-to-end\n"
+            "python smoke_test.py"
+        ),
+    ], className="card", style={"padding": "16px 20px", "marginBottom": "14px"}),
+])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB: DEPENDENCIES (новая)
+# ─────────────────────────────────────────────────────────────────────────────
+tab_dependencies = html.Div([
+    _info_block(
+        "Системные требования",
+        "Python 3.10+ (рекомендуется 3.11) · 4 ГБ RAM · 500 МБ диска · macOS / Linux / Windows. "
+        "Полностью offline — все пакеты устанавливаются один раз.",
+        "info",
+    ),
+    html.Div([
+        html.Div("КЛЮЧЕВЫЕ ПАКЕТЫ", className="overline", style={"marginBottom": "12px"}),
+        _kv_table([
+            ("dash ≥ 2.18",                 "UI-фреймворк, компоненты, callback-движок"),
+            ("dash-bootstrap-components",   "Bootstrap-компоненты (Tabs, Accordion, Cards)"),
+            ("plotly ≥ 5.18.0",             "Интерактивные графики · экспорт PNG/HTML"),
+            ("pandas ≥ 2.1.0",              "Табличные данные, временные ряды, IO"),
+            ("numpy",                       "Численные операции, массивы"),
+            ("scipy ≥ 1.11.0",              "Статистические тесты (t, MW, χ², ANOVA)"),
+            ("statsmodels ≥ 0.14.1",        "Временные ряды (SARIMAX), регрессия, power"),
+            ("scikit-learn ≥ 1.4.0",        "Кластеризация (KMeans, PCA), Ridge, IsolationForest"),
+            ("openpyxl",                    "Чтение / запись Excel (.xlsx)"),
+            ("xlsxwriter",                  "Форматированный Excel-экспорт"),
+            ("weasyprint ≥ 61.0",           "PDF-рендеринг отчётов"),
+            ("psycopg2-binary ≥ 2.9.9",     "PostgreSQL-драйвер"),
+            ("sqlalchemy",                  "ORM для no-code SQL"),
+        ], header=("Пакет", "Назначение")),
+    ], className="card", style={"padding": "16px 20px", "marginBottom": "14px"}),
+    _method(
+        "Системные зависимости WeasyPrint",
+        "Для PDF-экспорта требуются нативные библиотеки.",
+        "macOS:    brew install pango libffi\nUbuntu:   apt-get install libpango-1.0-0 libpangoft2-1.0-0\nFedora:   dnf install pango cairo\nWindows:  GTK+ runtime (см. docs.weasyprint.org)",
+        "Только если планируете экспорт в PDF.",
+        None,
+        "Без этих библиотек PDF-экспорт деградирует к HTML с уведомлением пользователю.",
+    ),
+    _method(
+        "Деградация при отсутствии пакета",
+        "Опциональные пакеты — приложение продолжает работать без них с понижением функциональности.",
+        "weasyprint:    PDF → откат к HTML\nkaleido:       PNG-экспорт графиков → только интерактивные\npsycopg2:      SQL-вкладка скрыта\nxlrd:          .xls недоступен (только .xlsx и .csv)\nstatsmodels:   SARIMAX недоступен (только Naive + ARX)\nscikit-learn:  кластеризация недоступна, атрибуция → только аддитивная и log",
+        "При установке в ограниченной среде (нет интернета, корпоративный proxy).",
+    ),
+    _method(
+        "Offline-установка",
+        "Если на целевой машине нет интернета — заранее скачайте wheels на машине с доступом.",
+        "# На машине с интернетом:\npip download -d ./wheels -r requirements.txt\n\n# Перенос ./wheels на целевую машину\n\n# Установка офлайн:\npip install --no-index --find-links=./wheels -r requirements.txt",
+        "Закрытый контур · корпоративные среды · production-серверы.",
+    ),
+    _method(
+        "Запуск приложения",
+        "Один скрипт поднимает Dash-сервер на http://localhost:8501.",
+        "# Установка зависимостей\npip install -r requirements.txt\n\n# Запуск\npython app/main.py\n\n# Альтернатива: gunicorn (production)\ngunicorn app.main:server -b 0.0.0.0:8501 -w 4",
+        "Локальная разработка / production-деплой.",
+        None,
+        "Для production используйте gunicorn + nginx (НЕ встроенный Flask dev-server).",
+    ),
+])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB: FAQ
+# ─────────────────────────────────────────────────────────────────────────────
 tab_faq = html.Div([
     dbc.Accordion([
         dbc.AccordionItem(
-            html.P("CSV, Excel (.xlsx, .xls), Parquet, а также прямое подключение к PostgreSQL.", style={"color": "#8891a5"}),
+            html.P("CSV, Excel (.xlsx, .xls), Parquet, а также прямое подключение к PostgreSQL, "
+                   "ClickHouse, Oracle и MS SQL через no-code SQL.",
+                   style={"color": "var(--text-secondary)"}),
             title="Какие форматы файлов поддерживаются?",
         ),
         dbc.AccordionItem(
-            html.P("На каждой странице анализа есть кнопки экспорта результатов в CSV или Excel. Полный отчёт в HTML/PDF/Excel генерируется на странице «Отчёт».", style={"color": "#8891a5"}),
+            html.P("На каждой странице анализа есть кнопки экспорта в CSV или Excel. "
+                   "Полный отчёт в HTML/PDF/Excel генерируется на странице «Отчёт».",
+                   style={"color": "var(--text-secondary)"}),
             title="Как экспортировать результаты?",
         ),
         dbc.AccordionItem(
-            html.P("Рекомендуется до 1 млн строк для комфортной интерактивной работы. Для больших объёмов используйте предварительную агрегацию или Parquet-формат.", style={"color": "#8891a5"}),
+            html.P("Рекомендуется до 1 млн строк для интерактивной работы. "
+                   "Для больших объёмов используйте предварительную агрегацию или Parquet-формат.",
+                   style={"color": "var(--text-secondary)"}),
             title="Какой максимальный размер данных?",
         ),
         dbc.AccordionItem(
-            html.P("Нет. KIBAD работает полностью локально. Никакие данные не передаются на внешние серверы. Все вычисления выполняются на вашей машине.", style={"color": "#8891a5"}),
+            html.P([
+                html.Strong("Нет.", style={"color": "var(--accent-300)"}),
+                " KIBAD работает полностью локально. Никакие данные не передаются на внешние серверы. "
+                "Все вычисления выполняются на вашей машине. Подробнее — на вкладке «Безопасность».",
+            ], style={"color": "var(--text-secondary)"}),
             title="Данные уходят на внешние серверы?",
         ),
         dbc.AccordionItem(
-            html.P("Данные хранятся в оперативной памяти в рамках сессии браузера. При закрытии вкладки или перезапуске приложения данные сбрасываются. Для постоянного хранения используйте экспорт в Parquet.", style={"color": "#8891a5"}),
+            html.P("Данные хранятся в оперативной памяти + Parquet-снимки в .kibad/ в рамках сессии. "
+                   "При закрытии приложения снимки удаляются. Для постоянного хранения используйте экспорт.",
+                   style={"color": "var(--text-secondary)"}),
             title="Как долго хранятся загруженные данные?",
         ),
         dbc.AccordionItem(
-            html.P("KIBAD поддерживает русский и английский языки через встроенный i18n-модуль. Переключатель языка доступен в настройках.", style={"color": "#8891a5"}),
-            title="Есть ли поддержка русского языка в интерфейсе?",
+            html.P("KIBAD поддерживает русский и английский через core/i18n.py. Переключатель языка — в настройках.",
+                   style={"color": "var(--text-secondary)"}),
+            title="Есть ли поддержка русского языка?",
         ),
         dbc.AccordionItem([
-            html.P("Установите зависимости и запустите:", style={"color": "#8891a5"}),
+            html.P("Установите зависимости и запустите:", style={"color": "var(--text-secondary)"}),
             _formula("pip install -r requirements.txt\npython app/main.py"),
-            html.P("Приложение будет доступно на http://localhost:8501", style={"color": "#8891a5"}),
+            html.P("Приложение будет доступно на http://localhost:8501",
+                   style={"color": "var(--text-secondary)"}),
         ], title="Как запустить KIBAD локально?"),
         dbc.AccordionItem(
             html.P([
                 "Запустите тесты командой: ",
-                html.Code("python -m pytest tests/ -v", style={"background": "#0a0c10", "padding": "2px 6px",
-                           "borderRadius": "4px", "fontFamily": "monospace", "color": "#10b981"}),
+                html.Code("pytest tests/ -v",
+                         style={"background": "var(--surface-0)", "padding": "2px 6px",
+                                "borderRadius": "4px", "fontFamily": "'JetBrains Mono', monospace",
+                                "color": "var(--accent-300)"}),
                 ". Текущее покрытие: 362 теста.",
-            ], style={"color": "#8891a5"}),
+            ], style={"color": "var(--text-secondary)"}),
             title="Как запустить тесты?",
+        ),
+        dbc.AccordionItem(
+            html.P("Да, через core/audit.py ведётся append-only журнал всех значимых событий: "
+                   "загрузки, трансформации, анализы, экспорты, ошибки. Лог хранится локально в .kibad/audit.log "
+                   "и не передаётся вовне.",
+                   style={"color": "var(--text-secondary)"}),
+            title="Ведётся ли аудит-лог действий?",
+        ),
+        dbc.AccordionItem(
+            html.P([
+                "Да. Опциональные пакеты (weasyprint, psycopg2, scikit-learn, statsmodels) — приложение "
+                "корректно деградирует без них с понижением функциональности. Подробнее — на вкладке «Зависимости».",
+            ], style={"color": "var(--text-secondary)"}),
+            title="Можно ли работать без некоторых зависимостей?",
         ),
     ], start_collapsed=True, className="kb-accordion"),
 ])
 
 
-# ── FINAL LAYOUT ─────────────────────────────────────────────────────────────
-layout = html.Div([
-    page_header("Справка по KIBAD", "Методология, формулы и руководство пользователя"),
+# ─────────────────────────────────────────────────────────────────────────────
+# FINAL LAYOUT (handoff design — className="tests-page")
+# ─────────────────────────────────────────────────────────────────────────────
+def _kpi_card(label, value, sub=""):
+    return html.Div([
+        html.Div(label, className="label"),
+        html.Div(value, className="value"),
+        html.Div(sub, className="sub"),
+    ], className="kpi eda")
 
+
+layout = html.Div([
+    # Hero: overline + title + caption
+    html.Div([
+        html.Div("СПРАВКА", className="overline"),
+        html.H1("11. Справка и методология", className="page-title", style={"marginTop": "4px"}),
+        html.P("Полное руководство, формулы статистических методов, архитектура и безопасность",
+               className="caption", style={"marginTop": "2px"}),
+    ], style={"marginBottom": "14px"}),
+
+    # 5 KPI tiles overview
+    html.Div([
+        _kpi_card("СТРАНИЦ", "20", "модулей анализа"),
+        _kpi_card("МЕТОДОВ", "40+", "статистика · ML · TS"),
+        _kpi_card("ТЕСТОВ", "362", "pytest, all green"),
+        _kpi_card("ВКЛАДОК СПРАВКИ", "16", "обзор · методы · инфра"),
+        _kpi_card("ЯЗЫКИ UI", "RU · EN", "i18n module"),
+    ], className="grid-5", style={"marginBottom": "14px"}),
+
+    # Main tabs (16 — 12 existing + 4 new)
     dbc.Tabs([
-        dbc.Tab(tab_overview,     label="Обзор платформы",   tab_id="tab-overview"),
-        dbc.Tab(tab_start,        label="Начало работы",     tab_id="tab-start"),
+        dbc.Tab(tab_overview,     label="Обзор платформы",      tab_id="tab-overview"),
+        dbc.Tab(tab_start,        label="Начало работы",        tab_id="tab-start"),
         dbc.Tab(tab_tests,        label="Статистические тесты", tab_id="tab-tests"),
-        dbc.Tab(tab_timeseries,   label="Временные ряды",    tab_id="tab-ts"),
-        dbc.Tab(tab_attribution,  label="Факторная атрибуция", tab_id="tab-attr"),
-        dbc.Tab(tab_simulation,   label="Симуляция / VaR",   tab_id="tab-sim"),
-        dbc.Tab(tab_clustering,   label="Кластеризация",     tab_id="tab-clust"),
-        dbc.Tab(tab_matching,     label="Сопоставление групп", tab_id="tab-match"),
-        dbc.Tab(tab_prepare,      label="Подготовка данных", tab_id="tab-prep"),
-        dbc.Tab(tab_rollrate,     label="Roll-Rate",         tab_id="tab-roll"),
-        dbc.Tab(tab_triggers,     label="Триггеры",          tab_id="tab-trig"),
-        dbc.Tab(tab_faq,          label="FAQ",               tab_id="tab-faq"),
+        dbc.Tab(tab_timeseries,   label="Временные ряды",       tab_id="tab-ts"),
+        dbc.Tab(tab_attribution,  label="Факторная атрибуция",  tab_id="tab-attr"),
+        dbc.Tab(tab_simulation,   label="Симуляция / VaR",      tab_id="tab-sim"),
+        dbc.Tab(tab_clustering,   label="Кластеризация",        tab_id="tab-clust"),
+        dbc.Tab(tab_matching,     label="Сопоставление групп",  tab_id="tab-match"),
+        dbc.Tab(tab_prepare,      label="Подготовка данных",    tab_id="tab-prep"),
+        dbc.Tab(tab_rollrate,     label="Roll-Rate",            tab_id="tab-roll"),
+        dbc.Tab(tab_triggers,     label="Триггеры",             tab_id="tab-trig"),
+        dbc.Tab(tab_architecture, label="Архитектура",          tab_id="tab-arch"),
+        dbc.Tab(tab_security,     label="Безопасность",         tab_id="tab-sec"),
+        dbc.Tab(tab_testing,      label="Тестирование",         tab_id="tab-test"),
+        dbc.Tab(tab_dependencies, label="Зависимости",          tab_id="tab-deps"),
+        dbc.Tab(tab_faq,          label="FAQ",                  tab_id="tab-faq"),
     ], id="help-tabs", active_tab="tab-overview"),
-])
+],
+    id="help-root",
+    className="tests-page",
+    style={"padding": "24px 32px"},
+)
