@@ -5145,6 +5145,19 @@ input:focus, textarea:focus {
 
 /* ─── Empty state ──────────────────────────────────────────── */
 .kb-ts-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 56px 24px 64px;
+  background: linear-gradient(180deg, var(--surface-0) 0%, var(--surface-1) 100%);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+  min-height: 360px;
+  margin-bottom: 24px;
+}
+
 /* ══════════════════════════════════════════════════════════════
    CLUSTERING PAGE (Slide 12)
    ══════════════════════════════════════════════════════════════ */
@@ -5260,6 +5273,7 @@ input:focus, textarea:focus {
   border: 1px dashed var(--border-default);
   border-radius: var(--radius-lg);
   min-height: 360px;
+  margin-bottom: 24px;
 }
 .kb-ts-empty__icon {
   width: 72px; height: 72px;
@@ -5316,8 +5330,6 @@ input:focus, textarea:focus {
   .kb-ts-anom-grid            { grid-template-columns: 1fr; }
   .kb-ts-verdict              { grid-template-columns: 1fr; }
   .kb-ts-stl-row              { grid-template-columns: 80px 1fr; }
-  box-shadow: 0 0 40px rgba(33,160,102,0.25), inset 0 0 20px rgba(33,160,102,0.10);
-  margin-bottom: 24px;
 }
 .kb-cluster-empty__icn { color: var(--accent-300); display: inline-flex; }
 .kb-cluster-empty__h {
@@ -5366,23 +5378,67 @@ input:focus, textarea:focus {
 /* ─── Grids (2-col pair panels) ─────────────────────────── */
 .kb-cluster-grid {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
-.kb-cluster-grid--2 { grid-template-columns: 1fr 1fr; }
+.kb-cluster-grid--2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.kb-cluster-grid > .kb-card {
+  margin-bottom: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
 
-/* ─── KPI strip — share qtile shorthand with EDA ────────── */
-.kb-cluster-kpis   { grid-template-columns: repeat(4, 1fr); margin-bottom: 4px; }
-.kb-eda-qtile__lbl { color: var(--text-tertiary); }
+/* Cluster results container — pure stacking block, no flex collapse */
+.kb-cluster-results {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ─── KPI strip — tiled, framed, 4-up at base ─────────────── */
+.kb-eda-kpis,
+.kb-cluster-kpis {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 6px 0 8px;
+}
+.kb-eda-qtile {
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 14px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  min-height: 96px;
+  transition: border-color 0.2s ease;
+}
+.kb-eda-qtile:hover { border-color: var(--border-strong); }
+.kb-eda-qtile__lbl {
+  color: var(--text-tertiary);
+  font: 600 10px/12px var(--font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0;
+}
 .kb-eda-qtile__v {
   font: 500 26px/30px var(--font-mono);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
   color: var(--text-primary);
+  margin: 0;
 }
 .kb-eda-qtile__v--success { color: var(--accent-300); }
 .kb-eda-qtile__v--warning { color: var(--warning); }
 .kb-eda-qtile__v--danger  { color: var(--danger); }
 .kb-eda-qtile__v--neutral { color: var(--text-primary); }
+.kb-eda-qtile .caption {
+  font: 400 11px/14px var(--font-ui);
+  color: var(--text-tertiary);
+  margin: 0;
+}
 
 /* ─── Legend rows & extra dot shapes ────────────────────── */
 .kb-legend-row {
@@ -5413,16 +5469,17 @@ input:focus, textarea:focus {
 /* ─── Centroid heatmap (z-score grid) ───────────────────── */
 .kb-cheat-wrap {
   display: grid;
-  grid-template-columns: 1fr 72px;
+  grid-template-columns: minmax(0, 1fr) 72px;
   gap: 14px;
   align-items: start;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 .kb-cheat {
-  display: grid;
+  display: grid !important;
   gap: 2px;
   font: 500 11px/14px var(--font-mono);
   font-variant-numeric: tabular-nums;
+  min-width: 0;
 }
 .kb-cheat-cell {
   padding: 8px 8px;
