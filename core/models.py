@@ -151,33 +151,100 @@ class NaiveForecast:
         return preds
 
 
-def _future_dates(dates: pd.Series, horizon: int) -> pd.DatetimeIndex:
-    """Generate future date index without integer arithmetic on Timestamps.
+def _coerce_datetime_series(dates) -> pd.Series:
+    """Coerce a date-like input to ``datetime64[ns]`` **preserving length & order**.
 
-    Uses ``pd.infer_freq`` when the series has a regular cadence; falls back
-    to the median observed step size for irregular / transaction-level data.
+    Use this in forecast functions where the resulting series must stay
+    aligned with ``y``. Returns NaT for unparseable values rather than
+    dropping them. PeriodDtype is converted via ``to_timestamp()`` (since
+    ``pd.to_datetime`` errors on PeriodDtype).
     """
-    dates = pd.to_datetime(dates).sort_values().reset_index(drop=True)
-    last = dates.iloc[-1]
-    freq = pd.infer_freq(dates) if len(dates) >= 3 else None
+    if isinstance(dates, pd.DatetimeIndex):
+        s = pd.Series(dates)
+    elif isinstance(dates, pd.Series):
+        s = dates
+    else:
+        s = pd.Series(list(dates))
 
+    if isinstance(s.dtype, pd.PeriodDtype):
+        s = s.dt.to_timestamp()
+    else:
+        s = pd.to_datetime(s, errors="coerce")
+
+    if isinstance(s.dtype, pd.DatetimeTZDtype):
+        s = s.dt.tz_localize(None)
+
+    return s
+
+
+def _ensure_datetime(dates) -> pd.Series:
+    """Like ``_coerce_datetime_series`` but also drops NaT and sorts.
+
+    Use only when length/order need not stay aligned with another array
+    (e.g. inside ``_future_dates``).
+    """
+    return _coerce_datetime_series(dates).dropna().sort_values().reset_index(drop=True)
+
+
+def _future_dates(dates, horizon: int) -> pd.DatetimeIndex:
+    """Generate ``horizon`` future timestamps after the last date.
+
+    Always uses ``Timedelta``- or ``DateOffset``-based arithmetic — never
+    ``Timestamp + int`` (deprecated since pandas 2.x:
+    "Addition/subtraction of integers and integer-arrays with Timestamp is no
+    longer supported. Instead of adding/subtracting `n`, use `n * obj.freq`").
+
+    Strategy:
+      1. ``pd.infer_freq`` on a regular series → ``pd.date_range`` with the
+         alias-mapped frequency (handles ME/QE/YE/W/D/H/min etc.).
+      2. Irregular series → step from ``Timedelta`` median of observed gaps.
+      3. Defensive fallback: 1-day step if median gap is NaT / zero / missing.
+    """
+    horizon = int(horizon)
+    if horizon <= 0:
+        return pd.DatetimeIndex([])
+
+    dates = _ensure_datetime(dates)
+    if len(dates) == 0:
+        # No usable dates; return a placeholder daily index from "now".
+        return pd.date_range(pd.Timestamp.now().normalize(),
+                             periods=horizon, freq="D")
+
+    last = pd.Timestamp(dates.iloc[-1])
+
+    # ── (1) regular cadence via inferred frequency ──────────────────────────
+    freq = pd.infer_freq(dates) if len(dates) >= 3 else None
     if freq:
-        # Map deprecated aliases to their modern equivalents (pandas ≥ 2.2)
+        # Map deprecated aliases to modern equivalents (pandas ≥ 2.2).
         _alias_map = {"M": "ME", "Q": "QE", "A": "YE", "Y": "YE",
                       "BM": "BME", "BQ": "BQE", "BA": "BYE", "BY": "BYE"}
-        freq = _alias_map.get(freq, freq)
+        freq_mapped = _alias_map.get(freq, freq)
         try:
-            return pd.date_range(last, periods=horizon + 1, freq=freq)[1:]
+            return pd.date_range(last, periods=horizon + 1, freq=freq_mapped)[1:]
         except Exception:
             pass  # fall through to timedelta approach
 
-    # Irregular / transaction data: use median inter-observation gap
-    diffs = dates.diff().dropna()
-    if diffs.empty or diffs.median().total_seconds() == 0:
-        step = pd.Timedelta(days=1)
+    # ── (2/3) irregular cadence: median Timedelta step ──────────────────────
+    if len(dates) >= 2:
+        diffs = dates.diff().dropna()
+        try:
+            median_step = diffs.median() if not diffs.empty else pd.NaT
+        except Exception:
+            median_step = pd.NaT
     else:
-        step = diffs.median()
-    return pd.DatetimeIndex([last + step * i for i in range(1, horizon + 1)])
+        median_step = pd.NaT
+
+    if (
+        not isinstance(median_step, pd.Timedelta)
+        or pd.isna(median_step)
+        or median_step.total_seconds() == 0
+    ):
+        median_step = pd.Timedelta(days=1)
+
+    # Build via Timedelta arithmetic only (Timestamp + Timedelta is supported).
+    return pd.DatetimeIndex(
+        [last + median_step * int(i) for i in range(1, horizon + 1)]
+    )
 
 
 def run_naive_forecast(
@@ -214,7 +281,7 @@ def run_naive_forecast(
     """
     df = df.sort_values(date_col).dropna(subset=[target_col])
     y = df[target_col].values.astype(float)
-    dates = pd.to_datetime(df[date_col])
+    dates = _coerce_datetime_series(df[date_col])
 
     model = NaiveForecast(seasonal=seasonal, period=period)
     model.fit(y)
@@ -459,7 +526,7 @@ def run_arx_forecast(
     """
     df = df.sort_values(date_col).dropna(subset=[target_col])
     y = df[target_col].reset_index(drop=True).astype(float)
-    dates = pd.to_datetime(df[date_col])
+    dates = _coerce_datetime_series(df[date_col])
 
     exog = None
     future_exog = None
@@ -562,7 +629,7 @@ def run_sarimax_forecast(
 
     df = df.sort_values(date_col).dropna(subset=[target_col])
     y = df[target_col].astype(float).values
-    dates = pd.to_datetime(df[date_col])
+    dates = _coerce_datetime_series(df[date_col])
 
     exog_train = None
     future_exog = None
@@ -882,7 +949,7 @@ def run_stl_decomposition(
 
     df = df.sort_values(date_col).dropna(subset=[target_col])
     y = df[target_col].astype(float).values
-    dates = pd.to_datetime(df[date_col])
+    dates = _coerce_datetime_series(df[date_col])
 
     if multiplicative:
         if np.any(y <= 0):
