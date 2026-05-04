@@ -53,3 +53,12 @@ logs/
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Runtime data
+data/session/
+
+# Nested clone (legacy)
+/kibad/
+
+# Claude Code local config
+/.claude/

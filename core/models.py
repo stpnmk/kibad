@@ -43,11 +43,23 @@ def bias(actual: np.ndarray, predicted: np.ndarray) -> float:
     return float(np.mean(predicted - actual))
 
 
+def smape(actual: np.ndarray, predicted: np.ndarray) -> float:
+    """Symmetric Mean Absolute Percentage Error (avoids MAPE blow-up near zero)."""
+    denom = (np.abs(actual) + np.abs(predicted)) / 2
+    mask = denom > 0
+    if not mask.any():
+        return float("nan")
+    return float(np.mean(np.abs(actual[mask] - predicted[mask]) / denom[mask]) * 100)
+
+
 def compute_all_metrics(
     actual: np.ndarray | pd.Series,
     predicted: np.ndarray | pd.Series,
 ) -> dict[str, float]:
-    """Compute MAE, RMSE, MAPE, Bias for a forecast.
+    """Compute MAE, RMSE, MAPE or sMAPE, Bias for a forecast.
+
+    Uses sMAPE instead of MAPE when min(|actual|) < 5% of mean(|actual|)
+    to avoid distortion from near-zero values.
 
     Parameters
     ----------
@@ -62,10 +74,14 @@ def compute_all_metrics(
     p = np.array(predicted, dtype=float)
     mask = ~(np.isnan(a) | np.isnan(p))
     a, p = a[mask], p[mask]
+    mean_abs = np.abs(a).mean() if len(a) > 0 else 0
+    use_smape = mean_abs > 0 and np.abs(a).min() < 0.05 * mean_abs
+    pct_metric_name = "sMAPE" if use_smape else "MAPE"
+    pct_metric_val = smape(a, p) if use_smape else mape(a, p)
     return {
         "MAE": round(mae(a, p), 4),
         "RMSE": round(rmse(a, p), 4),
-        "MAPE": round(mape(a, p), 4),
+        pct_metric_name: round(pct_metric_val, 4),
         "Bias": round(bias(a, p), 4),
     }
 
@@ -477,12 +493,14 @@ def run_arx_forecast(
         "lower": in_sample_preds - z * resid_std,
         "upper": in_sample_preds + z * resid_std,
     })
+    # CI grows with sqrt(h) — each step accumulates forecast error
+    h_factors = np.sqrt(np.arange(1, horizon + 1))
     fut_df = pd.DataFrame({
         "date": future_dates,
         "actual": np.nan,
         "forecast": future_preds,
-        "lower": future_preds - z * resid_std,
-        "upper": future_preds + z * resid_std,
+        "lower": future_preds - z * resid_std * h_factors,
+        "upper": future_preds + z * resid_std * h_factors,
     })
     forecast_df = pd.concat([hist_df, fut_df], ignore_index=True)
 
@@ -769,6 +787,7 @@ def detect_anomalies(
         result["is_anomaly"] = z_score.abs() > threshold
         result["upper"] = rolling_mean + threshold * rolling_std
         result["lower"] = rolling_mean - threshold * rolling_std
+        result["severity"] = z_score.abs() / threshold
 
     elif method == "stl_residual":
         try:
@@ -786,6 +805,7 @@ def detect_anomalies(
             result["is_anomaly"] = z_score.abs() > threshold
             result["upper"] = stl_fit.trend + stl_fit.seasonal + res_mean + threshold * res_std
             result["lower"] = stl_fit.trend + stl_fit.seasonal + res_mean - threshold * res_std
+            result["severity"] = z_score.abs() / threshold
         except Exception:
             # Fallback to rolling_zscore
             return detect_anomalies(series, method="rolling_zscore",
@@ -794,3 +814,190 @@ def detect_anomalies(
         raise ValueError(f"Unknown method: {method!r}. Use 'rolling_zscore' or 'stl_residual'.")
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# STL Decomposition
+# ---------------------------------------------------------------------------
+
+@dataclass
+class STLDecompResult:
+    """Container for STL decomposition output.
+
+    Attributes
+    ----------
+    dates : pd.DatetimeIndex
+    observed : np.ndarray
+    trend : np.ndarray
+    seasonal : np.ndarray
+    residual : np.ndarray
+    seasonality_strength : float
+        Fs = max(0, 1 - Var(R) / Var(S+R)). >0.6 = strong seasonality.
+    model_type : str
+        'additive' or 'multiplicative'.
+    """
+    dates: pd.DatetimeIndex
+    observed: np.ndarray
+    trend: np.ndarray
+    seasonal: np.ndarray
+    residual: np.ndarray
+    seasonality_strength: float
+    model_type: str
+
+
+def run_stl_decomposition(
+    df: pd.DataFrame,
+    date_col: str,
+    target_col: str,
+    period: int = 12,
+    robust: bool = True,
+    multiplicative: bool = False,
+) -> STLDecompResult:
+    """Decompose a time series using STL (Seasonal and Trend decomposition using Loess).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Time series data.
+    date_col : str
+        Date column name.
+    target_col : str
+        Target column name.
+    period : int
+        Seasonal period (12=monthly, 4=quarterly, 52=weekly).
+    robust : bool
+        Use robust LOESS fitting (reduces outlier influence).
+    multiplicative : bool
+        If True, apply log-transform before STL for multiplicative decomposition.
+        Requires all y > 0.
+
+    Returns
+    -------
+    STLDecompResult
+    """
+    try:
+        from statsmodels.tsa.seasonal import STL
+    except ImportError:
+        raise ImportError("statsmodels required for STL decomposition.")
+
+    df = df.sort_values(date_col).dropna(subset=[target_col])
+    y = df[target_col].astype(float).values
+    dates = pd.to_datetime(df[date_col])
+
+    if multiplicative:
+        if np.any(y <= 0):
+            raise ValueError(
+                "Мультипликативная модель требует y > 0 для log-преобразования. "
+                "Обнаружены нулевые или отрицательные значения."
+            )
+        y_fit = np.log(y)
+    else:
+        y_fit = y
+
+    stl = STL(y_fit, period=period, robust=robust)
+    res = stl.fit()
+
+    # Seasonality strength on transformed scale (per vault formula)
+    var_r = np.var(res.resid)
+    var_sr = np.var(res.seasonal + res.resid)
+    fs = float(max(0.0, 1.0 - var_r / var_sr)) if var_sr > 0 else 0.0
+
+    if multiplicative:
+        # Back-transform trend and seasonal; recompute residual on original scale
+        trend = np.exp(res.trend)
+        seasonal = np.exp(res.seasonal)
+        residual = y - trend * seasonal
+    else:
+        trend = res.trend
+        seasonal = res.seasonal
+        residual = res.resid
+
+    return STLDecompResult(
+        dates=dates,
+        observed=y,
+        trend=trend,
+        seasonal=seasonal,
+        residual=residual,
+        seasonality_strength=fs,
+        model_type="multiplicative" if multiplicative else "additive",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Residual Diagnostics
+# ---------------------------------------------------------------------------
+
+@dataclass
+class DiagnosticsResult:
+    """Residual diagnostics for a fitted forecast model.
+
+    Attributes
+    ----------
+    model_name : str
+    residuals : np.ndarray
+    fitted : np.ndarray
+    ljung_box : pd.DataFrame
+        Columns lb_stat, lb_pvalue for lags [10, 20].
+    acf_residuals : np.ndarray
+    ci_bound : float
+        95% significance boundary = 1.96 / sqrt(n).
+    """
+    model_name: str
+    residuals: np.ndarray
+    fitted: np.ndarray
+    ljung_box: pd.DataFrame
+    acf_residuals: np.ndarray
+    ci_bound: float
+
+
+def compute_residual_diagnostics(result: ForecastResult) -> DiagnosticsResult:
+    """Compute residual diagnostics for a ForecastResult.
+
+    Runs Ljung-Box test and ACF of residuals.
+
+    Parameters
+    ----------
+    result : ForecastResult
+        A fitted forecast (from run_naive_forecast, run_arx_forecast, etc.).
+
+    Returns
+    -------
+    DiagnosticsResult
+    """
+    try:
+        from statsmodels.stats.diagnostic import acorr_ljungbox
+        from statsmodels.tsa.stattools import acf
+    except ImportError:
+        raise ImportError("statsmodels required for residual diagnostics.")
+
+    fd = result.forecast_df
+    hist = fd[fd["actual"].notna()].copy()
+
+    actual = hist["actual"].values.astype(float)
+    fitted_vals = hist["forecast"].values.astype(float)
+
+    valid = ~(np.isnan(actual) | np.isnan(fitted_vals))
+    actual = actual[valid]
+    fitted_vals = fitted_vals[valid]
+    residuals = actual - fitted_vals
+
+    n = len(residuals)
+    max_lag = min(20, n // 2 - 1)
+    lags = [l for l in [10, 20] if l <= max_lag]
+    if not lags:
+        lags = [max(1, max_lag)]
+
+    lb_result = acorr_ljungbox(residuals, lags=lags, return_df=True)
+
+    nlags = min(30, n // 2 - 1)
+    acf_vals = acf(residuals, nlags=max(1, nlags), fft=True)
+    ci_bound = 1.96 / np.sqrt(n) if n > 0 else 0.0
+
+    return DiagnosticsResult(
+        model_name=result.model_name,
+        residuals=residuals,
+        fitted=fitted_vals,
+        ljung_box=lb_result,
+        acf_residuals=acf_vals,
+        ci_bound=ci_bound,
+    )
