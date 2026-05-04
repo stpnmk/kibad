@@ -3439,10 +3439,10 @@ input:focus, textarea:focus {
 /* ============================================================
    HANDOFF-8 EDA DESIGN SYSTEM (scoped to /5_Explore page)
    KIBAD Design System v2026.04 - dark-only, eucalyptus accent
-   All rules scoped via .eda-page to isolate from rest
+   All rules scoped via .eda-page to isolate from rest, .tests-page to isolate from rest
    ============================================================ */
 
-.eda-page {
+.eda-page , .tests-page {
   /* Surfaces */
   --canvas:#0A0F0D;
   --surface-0:#0F1613;
@@ -3490,11 +3490,11 @@ input:focus, textarea:focus {
 }
 
 /* ===== Typography ===== */
-.eda-page .eda-mono {
+.eda-page .eda-mono , .tests-page .eda-mono {
   font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
   font-variant-numeric: tabular-nums;
 }
-.eda-page .overline {
+.eda-page .overline , .tests-page .overline {
   font-size: 11px;
   line-height: 14px;
   text-transform: uppercase;
@@ -3502,35 +3502,35 @@ input:focus, textarea:focus {
   color: var(--text-tertiary);
   font-weight: 500;
 }
-.eda-page .page-title,
-.eda-page h1.page-title {
+.eda-page .page-title, .tests-page .page-title,
+.eda-page h1.page-title , .tests-page h1.page-title {
   font-size: 28px;
   line-height: 36px;
   font-weight: 600;
   letter-spacing: -.01em;
   color: var(--text-primary);
 }
-.eda-page .caption {
+.eda-page .caption , .tests-page .caption {
   font-size: 12px;
   line-height: 16px;
   color: var(--text-secondary);
 }
 
 /* ===== Card ===== */
-.eda-page .card {
+.eda-page .card , .tests-page .card {
   background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-radius: var(--r-10);
   padding: 20px;
 }
-.eda-page .card.accent  { border-color: var(--accent-700); }
-.eda-page .card.success { border-color: var(--success); }
-.eda-page .card.danger  { border-color: var(--danger); }
-.eda-page .card.warning { border-color: var(--warning); }
-.eda-page .card.info    { border-color: var(--info); }
+.eda-page .card.accent  , .tests-page .card.accent  { border-color: var(--accent-700); }
+.eda-page .card.success , .tests-page .card.success { border-color: var(--success); }
+.eda-page .card.danger  , .tests-page .card.danger  { border-color: var(--danger); }
+.eda-page .card.warning , .tests-page .card.warning { border-color: var(--warning); }
+.eda-page .card.info    , .tests-page .card.info    { border-color: var(--info); }
 
 /* ===== KPI ===== */
-.eda-page .kpi {
+.eda-page .kpi , .tests-page .kpi {
   background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-radius: var(--r-10);
@@ -3541,14 +3541,14 @@ input:focus, textarea:focus {
   justify-content: space-between;
   gap: 6px;
 }
-.eda-page .kpi .label {
+.eda-page .kpi .label , .tests-page .kpi .label {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: .08em;
   color: var(--text-tertiary);
   font-weight: 500;
 }
-.eda-page .kpi .value {
+.eda-page .kpi .value , .tests-page .kpi .value {
   font-family: 'JetBrains Mono', monospace;
   font-variant-numeric: tabular-nums;
   font-size: 24px;
@@ -3556,18 +3556,18 @@ input:focus, textarea:focus {
   font-weight: 500;
   letter-spacing: -.01em;
 }
-.eda-page .kpi .sub {
+.eda-page .kpi .sub , .tests-page .kpi .sub {
   font-size: 11px;
   color: var(--text-tertiary);
   font-family: 'JetBrains Mono', monospace;
 }
-.eda-page .kpi.big .value { font-size: 28px; line-height: 32px; }
-.eda-page .kpi.eda { min-height: 96px; padding: 16px; }
-.eda-page .kpi.eda .value { font-size: 26px; line-height: 30px; }
-.eda-page .kpi.eda .value.muted { color: var(--text-tertiary); }
+.eda-page .kpi.big .value , .tests-page .kpi.big .value { font-size: 28px; line-height: 32px; }
+.eda-page .kpi.eda , .tests-page .kpi.eda { min-height: 96px; padding: 16px; }
+.eda-page .kpi.eda .value , .tests-page .kpi.eda .value { font-size: 26px; line-height: 30px; }
+.eda-page .kpi.eda .value.muted , .tests-page .kpi.eda .value.muted { color: var(--text-tertiary); }
 
 /* ===== Chips ===== */
-.eda-page .chip {
+.eda-page .chip , .tests-page .chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -3581,15 +3581,15 @@ input:focus, textarea:focus {
   border: 1px solid transparent;
   font-family: Inter, sans-serif;
 }
-.eda-page .chip.success { background: rgba(33,160,102,.12); color: var(--accent-300); border-color: rgba(33,160,102,.28); }
-.eda-page .chip.warning { background: rgba(201,138,46,.12); color: #E3A953; border-color: rgba(201,138,46,.28); }
-.eda-page .chip.danger  { background: rgba(200,80,59,.14); color: #E07563; border-color: rgba(200,80,59,.3); }
-.eda-page .chip.info    { background: rgba(74,127,176,.14); color: #7AA6CF; border-color: rgba(74,127,176,.3); }
-.eda-page .chip.neutral { background: var(--surface-2); color: var(--text-secondary); border-color: var(--border-default); }
-.eda-page .chip.accent  { background: var(--accent-900); color: var(--accent-300); border-color: var(--accent-700); }
+.eda-page .chip.success , .tests-page .chip.success { background: rgba(33,160,102,.12); color: var(--accent-300); border-color: rgba(33,160,102,.28); }
+.eda-page .chip.warning , .tests-page .chip.warning { background: rgba(201,138,46,.12); color: #E3A953; border-color: rgba(201,138,46,.28); }
+.eda-page .chip.danger  , .tests-page .chip.danger  { background: rgba(200,80,59,.14); color: #E07563; border-color: rgba(200,80,59,.3); }
+.eda-page .chip.info    , .tests-page .chip.info    { background: rgba(74,127,176,.14); color: #7AA6CF; border-color: rgba(74,127,176,.3); }
+.eda-page .chip.neutral , .tests-page .chip.neutral { background: var(--surface-2); color: var(--text-secondary); border-color: var(--border-default); }
+.eda-page .chip.accent  , .tests-page .chip.accent  { background: var(--accent-900); color: var(--accent-300); border-color: var(--accent-700); }
 
 /* ===== Alerts ===== */
-.eda-page .alert {
+.eda-page .alert , .tests-page .alert {
   background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-left: 3px solid var(--info);
@@ -3599,22 +3599,22 @@ input:focus, textarea:focus {
   gap: 12px;
   align-items: flex-start;
 }
-.eda-page .alert.info    { border-left-color: var(--info); }
-.eda-page .alert.warning { border-left-color: var(--warning); }
-.eda-page .alert.danger  { border-left-color: var(--danger); }
-.eda-page .alert.success { border-left-color: var(--success); }
-.eda-page .alert .alert-icon { flex-shrink: 0; margin-top: 1px; }
-.eda-page .alert .alert-title { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
-.eda-page .alert .alert-body  { font-size: 12px; color: var(--text-secondary); line-height: 17px; }
+.eda-page .alert.info    , .tests-page .alert.info    { border-left-color: var(--info); }
+.eda-page .alert.warning , .tests-page .alert.warning { border-left-color: var(--warning); }
+.eda-page .alert.danger  , .tests-page .alert.danger  { border-left-color: var(--danger); }
+.eda-page .alert.success , .tests-page .alert.success { border-left-color: var(--success); }
+.eda-page .alert .alert-icon , .tests-page .alert .alert-icon { flex-shrink: 0; margin-top: 1px; }
+.eda-page .alert .alert-title , .tests-page .alert .alert-title { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+.eda-page .alert .alert-body  , .tests-page .alert .alert-body  { font-size: 12px; color: var(--text-secondary); line-height: 17px; }
 
 /* ===== Tabs ===== */
-.eda-page .tabs {
+.eda-page .tabs , .tests-page .tabs {
   display: flex;
   gap: 4px;
   border-bottom: 1px solid var(--border-subtle);
   overflow-x: auto;
 }
-.eda-page .tabs .tab {
+.eda-page .tabs .tab , .tests-page .tabs .tab {
   padding: 10px 14px;
   font-size: 13px;
   color: var(--text-secondary);
@@ -3627,13 +3627,13 @@ input:focus, textarea:focus {
   align-items: center;
   gap: 6px;
 }
-.eda-page .tabs .tab:hover { color: var(--text-primary); }
-.eda-page .tabs .tab.active {
+.eda-page .tabs .tab:hover , .tests-page .tabs .tab:hover { color: var(--text-primary); }
+.eda-page .tabs .tab.active , .tests-page .tabs .tab.active {
   color: var(--text-primary);
   border-bottom-color: var(--accent-500);
   font-weight: 500;
 }
-.eda-page .tabs .tab .badge {
+.eda-page .tabs .tab .badge , .tests-page .tabs .tab .badge {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
   color: var(--text-tertiary);
@@ -3643,7 +3643,7 @@ input:focus, textarea:focus {
 }
 
 /* ===== Buttons (renamed to .eda-btn to avoid global .btn collision) ===== */
-.eda-page .eda-btn {
+.eda-page .eda-btn , .tests-page .eda-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -3656,33 +3656,33 @@ input:focus, textarea:focus {
   transition: all .15s;
   cursor: pointer;
 }
-.eda-page .eda-btn.primary   { background: var(--accent-700); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.1); }
-.eda-page .eda-btn.primary:hover { background: var(--accent-500); }
-.eda-page .eda-btn.secondary { background: var(--surface-1); border-color: var(--border-default); color: var(--text-primary); }
-.eda-page .eda-btn.secondary:hover { background: var(--surface-2); }
-.eda-page .eda-btn.ghost     { color: var(--text-secondary); background: transparent; }
-.eda-page .eda-btn.ghost:hover { background: var(--surface-1); color: var(--text-primary); }
-.eda-page .eda-btn.sm        { height: 28px; padding: 0 10px; font-size: 12px; }
+.eda-page .eda-btn.primary   , .tests-page .eda-btn.primary   { background: var(--accent-700); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.1); }
+.eda-page .eda-btn.primary:hover , .tests-page .eda-btn.primary:hover { background: var(--accent-500); }
+.eda-page .eda-btn.secondary , .tests-page .eda-btn.secondary { background: var(--surface-1); border-color: var(--border-default); color: var(--text-primary); }
+.eda-page .eda-btn.secondary:hover , .tests-page .eda-btn.secondary:hover { background: var(--surface-2); }
+.eda-page .eda-btn.ghost     , .tests-page .eda-btn.ghost     { color: var(--text-secondary); background: transparent; }
+.eda-page .eda-btn.ghost:hover , .tests-page .eda-btn.ghost:hover { background: var(--surface-1); color: var(--text-primary); }
+.eda-page .eda-btn.sm        , .tests-page .eda-btn.sm        { height: 28px; padding: 0 10px; font-size: 12px; }
 
 /* ===== Progress ===== */
-.eda-page .progress {
+.eda-page .progress , .tests-page .progress {
   height: 6px;
   background: var(--surface-2);
   border-radius: 3px;
   overflow: hidden;
   position: relative;
 }
-.eda-page .progress .bar {
+.eda-page .progress .bar , .tests-page .progress .bar {
   height: 100%;
   background: var(--accent-500);
   border-radius: 3px;
   transition: width .3s;
 }
-.eda-page .progress .bar.warn { background: var(--warning); }
-.eda-page .progress .bar.dang { background: var(--danger); }
+.eda-page .progress .bar.warn , .tests-page .progress .bar.warn { background: var(--warning); }
+.eda-page .progress .bar.dang , .tests-page .progress .bar.dang { background: var(--danger); }
 
 /* ===== Score card ===== */
-.eda-page .score-card {
+.eda-page .score-card , .tests-page .score-card {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 28px;
@@ -3692,7 +3692,7 @@ input:focus, textarea:focus {
   border: 1px solid var(--border-subtle);
   border-radius: var(--r-10);
 }
-.eda-page .score-num {
+.eda-page .score-num , .tests-page .score-num {
   font-family: 'JetBrains Mono', monospace;
   font-variant-numeric: tabular-nums;
   font-size: 48px;
@@ -3701,25 +3701,25 @@ input:focus, textarea:focus {
   color: var(--accent-300);
   letter-spacing: -.02em;
 }
-.eda-page .score-num.warn { color: #E3A953; }
-.eda-page .score-num.dang { color: #E07563; }
-.eda-page .score-den {
+.eda-page .score-num.warn , .tests-page .score-num.warn { color: #E3A953; }
+.eda-page .score-num.dang , .tests-page .score-num.dang { color: #E07563; }
+.eda-page .score-den , .tests-page .score-den {
   font-family: 'JetBrains Mono', monospace;
   font-size: 20px;
   color: var(--text-tertiary);
 }
 
 /* ===== Severity card (collapsible) ===== */
-.eda-page .sev-card {
+.eda-page .sev-card , .tests-page .sev-card {
   background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-radius: var(--r-10);
   overflow: hidden;
 }
-.eda-page .sev-card.danger  { border-left: 3px solid var(--danger); }
-.eda-page .sev-card.warning { border-left: 3px solid var(--warning); }
-.eda-page .sev-card.info    { border-left: 3px solid var(--info); }
-.eda-page .sev-head {
+.eda-page .sev-card.danger  , .tests-page .sev-card.danger  { border-left: 3px solid var(--danger); }
+.eda-page .sev-card.warning , .tests-page .sev-card.warning { border-left: 3px solid var(--warning); }
+.eda-page .sev-card.info    , .tests-page .sev-card.info    { border-left: 3px solid var(--info); }
+.eda-page .sev-head , .tests-page .sev-head {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -3727,15 +3727,15 @@ input:focus, textarea:focus {
   border-bottom: 1px solid var(--border-subtle);
   cursor: pointer;
 }
-.eda-page .sev-head h3 { font-size: 14px; font-weight: 600; }
-.eda-page .sev-head .count {
+.eda-page .sev-head h3 , .tests-page .sev-head h3 { font-size: 14px; font-weight: 600; }
+.eda-page .sev-head .count , .tests-page .sev-head .count {
   font-family: 'JetBrains Mono', monospace;
   color: var(--text-tertiary);
   font-size: 12px;
   margin-left: 4px;
 }
-.eda-page .sev-head .chev { margin-left: auto; color: var(--text-tertiary); }
-.eda-page .sev-row {
+.eda-page .sev-head .chev , .tests-page .sev-head .chev { margin-left: auto; color: var(--text-tertiary); }
+.eda-page .sev-row , .tests-page .sev-row {
   padding: 12px 18px;
   display: flex;
   align-items: center;
@@ -3743,20 +3743,20 @@ input:focus, textarea:focus {
   border-bottom: 1px solid var(--border-subtle);
   font-size: 13px;
 }
-.eda-page .sev-row:last-child { border-bottom: 0; }
-.eda-page .sev-row .text { color: var(--text-secondary); flex: 1; }
-.eda-page .sev-row .text b { color: var(--text-primary); font-weight: 500; }
+.eda-page .sev-row:last-child , .tests-page .sev-row:last-child { border-bottom: 0; }
+.eda-page .sev-row .text , .tests-page .sev-row .text { color: var(--text-secondary); flex: 1; }
+.eda-page .sev-row .text b , .tests-page .sev-row .text b { color: var(--text-primary); font-weight: 500; }
 
 /* ===== Bullet row (auto-analysis) ===== */
-.eda-page .bullet {
+.eda-page .bullet , .tests-page .bullet {
   display: flex;
   align-items: flex-start;
   gap: 12px;
   padding: 10px 0;
   border-bottom: 1px solid var(--border-subtle);
 }
-.eda-page .bullet:last-child { border-bottom: 0; }
-.eda-page .bullet .icn {
+.eda-page .bullet:last-child , .tests-page .bullet:last-child { border-bottom: 0; }
+.eda-page .bullet .icn , .tests-page .bullet .icn {
   width: 22px;
   height: 22px;
   border-radius: 6px;
@@ -3765,23 +3765,23 @@ input:focus, textarea:focus {
   flex-shrink: 0;
   margin-top: 1px;
 }
-.eda-page .bullet .icn.up   { background: rgba(33,160,102,.15); color: var(--accent-300); border: 1px solid rgba(33,160,102,.3); }
-.eda-page .bullet .icn.down { background: rgba(200,80,59,.15); color: #E07563; border: 1px solid rgba(200,80,59,.3); }
-.eda-page .bullet .icn.info { background: rgba(74,127,176,.15); color: #7AA6CF; border: 1px solid rgba(74,127,176,.3); }
-.eda-page .bullet .main { flex: 1; min-width: 0; }
-.eda-page .bullet .mono-line {
+.eda-page .bullet .icn.up   , .tests-page .bullet .icn.up   { background: rgba(33,160,102,.15); color: var(--accent-300); border: 1px solid rgba(33,160,102,.3); }
+.eda-page .bullet .icn.down , .tests-page .bullet .icn.down { background: rgba(200,80,59,.15); color: #E07563; border: 1px solid rgba(200,80,59,.3); }
+.eda-page .bullet .icn.info , .tests-page .bullet .icn.info { background: rgba(74,127,176,.15); color: #7AA6CF; border: 1px solid rgba(74,127,176,.3); }
+.eda-page .bullet .main , .tests-page .bullet .main { flex: 1; min-width: 0; }
+.eda-page .bullet .mono-line , .tests-page .bullet .mono-line {
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
   color: var(--text-primary);
 }
-.eda-page .bullet .explain {
+.eda-page .bullet .explain , .tests-page .bullet .explain {
   font-size: 12px;
   color: var(--text-secondary);
   margin-top: 2px;
 }
 
 /* ===== Stat chip ===== */
-.eda-page .stat-chip {
+.eda-page .stat-chip , .tests-page .stat-chip {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -3791,13 +3791,13 @@ input:focus, textarea:focus {
   border-radius: var(--r-7);
   font-size: 12px;
 }
-.eda-page .stat-chip .k {
+.eda-page .stat-chip .k , .tests-page .stat-chip .k {
   color: var(--text-tertiary);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: .06em;
 }
-.eda-page .stat-chip .v {
+.eda-page .stat-chip .v , .tests-page .stat-chip .v {
   font-family: 'JetBrains Mono', monospace;
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
@@ -3805,12 +3805,12 @@ input:focus, textarea:focus {
 }
 
 /* ===== Legend pills ===== */
-.eda-page .legend-row {
+.eda-page .legend-row , .tests-page .legend-row {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
-.eda-page .legend-pill {
+.eda-page .legend-pill , .tests-page .legend-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -3821,14 +3821,14 @@ input:focus, textarea:focus {
   font-size: 12px;
   color: var(--text-secondary);
 }
-.eda-page .legend-pill .dot {
+.eda-page .legend-pill .dot , .tests-page .legend-pill .dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
 }
 
 /* ===== Delta chip ===== */
-.eda-page .delta {
+.eda-page .delta , .tests-page .delta {
   display: inline-flex;
   align-items: center;
   gap: 3px;
@@ -3839,11 +3839,11 @@ input:focus, textarea:focus {
   padding: 3px 8px;
   border-radius: var(--r-6);
 }
-.eda-page .delta.up   { color: var(--accent-300); background: rgba(33,160,102,.12); border: 1px solid rgba(33,160,102,.28); }
-.eda-page .delta.down { color: #E07563; background: rgba(200,80,59,.14); border: 1px solid rgba(200,80,59,.3); }
+.eda-page .delta.up   , .tests-page .delta.up   { color: var(--accent-300); background: rgba(33,160,102,.12); border: 1px solid rgba(33,160,102,.28); }
+.eda-page .delta.down , .tests-page .delta.down { color: #E07563; background: rgba(200,80,59,.14); border: 1px solid rgba(200,80,59,.3); }
 
 /* ===== Mono column-name chip (mchip) ===== */
-.eda-page .mchip {
+.eda-page .mchip , .tests-page .mchip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -3856,20 +3856,20 @@ input:focus, textarea:focus {
   border: 1px solid var(--accent-700);
   font-variant-numeric: tabular-nums;
 }
-.eda-page .mchip.neutral {
+.eda-page .mchip.neutral , .tests-page .mchip.neutral {
   color: var(--text-secondary);
   background: var(--surface-2);
   border-color: var(--border-default);
 }
-.eda-page .mchip .x {
+.eda-page .mchip .x , .tests-page .mchip .x {
   color: var(--text-tertiary);
   cursor: pointer;
   margin-left: 2px;
 }
-.eda-page .mchip .x:hover { color: var(--danger); }
+.eda-page .mchip .x:hover , .tests-page .mchip .x:hover { color: var(--danger); }
 
 /* ===== Dataset select (44px full-width) ===== */
-.eda-page .dataset-select {
+.eda-page .dataset-select , .tests-page .dataset-select {
   height: 44px;
   background: var(--surface-1);
   border: 1px solid var(--border-default);
@@ -3880,22 +3880,22 @@ input:focus, textarea:focus {
   gap: 12px;
   cursor: pointer;
 }
-.eda-page .dataset-select:hover {
+.eda-page .dataset-select:hover , .tests-page .dataset-select:hover {
   border-color: var(--border-strong);
   background: var(--surface-2);
 }
-.eda-page .dataset-select .ds-name {
+.eda-page .dataset-select .ds-name , .tests-page .dataset-select .ds-name {
   font-family: 'JetBrains Mono', monospace;
   font-size: 14px;
   color: var(--text-primary);
 }
-.eda-page .dataset-select .ds-meta {
+.eda-page .dataset-select .ds-meta , .tests-page .dataset-select .ds-meta {
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
   color: var(--text-tertiary);
 }
-.eda-page .dataset-select .ds-sep { color: var(--text-tertiary); }
-.eda-page .dataset-select .clear {
+.eda-page .dataset-select .ds-sep , .tests-page .dataset-select .ds-sep { color: var(--text-tertiary); }
+.eda-page .dataset-select .clear , .tests-page .dataset-select .clear {
   margin-left: auto;
   color: var(--text-tertiary);
   width: 20px;
@@ -3904,26 +3904,26 @@ input:focus, textarea:focus {
   place-items: center;
   border-radius: 4px;
 }
-.eda-page .dataset-select .clear:hover {
+.eda-page .dataset-select .clear:hover , .tests-page .dataset-select .clear:hover {
   background: var(--surface-2);
   color: var(--text-primary);
 }
 
 /* ===== Form controls ===== */
-.eda-page .field {
+.eda-page .field , .tests-page .field {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.eda-page .field label {
+.eda-page .field label , .tests-page .field label {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: .08em;
   color: var(--text-tertiary);
   font-weight: 500;
 }
-.eda-page .input,
-.eda-page .select {
+.eda-page .input, .tests-page .input,
+.eda-page .select , .tests-page .select {
   height: 32px;
   padding: 0 12px;
   background: var(--surface-0);
@@ -3937,24 +3937,24 @@ input:focus, textarea:focus {
   width: 100%;
   transition: all .15s;
 }
-.eda-page .input:hover,
-.eda-page .select:hover { border-color: var(--border-strong); }
-.eda-page .input:focus-within,
-.eda-page .select:focus-within,
-.eda-page .input.focus {
+.eda-page .input:hover, .tests-page .input:hover,
+.eda-page .select:hover , .tests-page .select:hover { border-color: var(--border-strong); }
+.eda-page .input:focus-within, .tests-page .input:focus-within,
+.eda-page .select:focus-within, .tests-page .select:focus-within,
+.eda-page .input.focus , .tests-page .input.focus {
   outline: none;
   border-color: var(--accent-700);
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
-.eda-page .select {
+.eda-page .select , .tests-page .select {
   justify-content: space-between;
   cursor: pointer;
 }
-.eda-page .select .chev { color: var(--text-tertiary); }
-.eda-page .input.mono { font-family: 'JetBrains Mono', monospace; }
+.eda-page .select .chev , .tests-page .select .chev { color: var(--text-tertiary); }
+.eda-page .input.mono , .tests-page .input.mono { font-family: 'JetBrains Mono', monospace; }
 
 /* ===== Radio group (pill switcher) ===== */
-.eda-page .radio-group {
+.eda-page .radio-group , .tests-page .radio-group {
   display: inline-flex;
   background: var(--surface-2);
   border: 1px solid var(--border-subtle);
@@ -3962,7 +3962,7 @@ input:focus, textarea:focus {
   padding: 3px;
   gap: 2px;
 }
-.eda-page .radio-group .opt {
+.eda-page .radio-group .opt , .tests-page .radio-group .opt {
   padding: 5px 12px;
   border-radius: var(--r-6);
   font-size: 12px;
@@ -3970,15 +3970,15 @@ input:focus, textarea:focus {
   cursor: pointer;
   transition: all .15s;
 }
-.eda-page .radio-group .opt:hover { color: var(--text-primary); }
-.eda-page .radio-group .opt.active {
+.eda-page .radio-group .opt:hover , .tests-page .radio-group .opt:hover { color: var(--text-primary); }
+.eda-page .radio-group .opt.active , .tests-page .radio-group .opt.active {
   background: var(--surface-0);
   color: var(--text-primary);
   box-shadow: inset 0 0 0 1px var(--border-default);
 }
 
 /* ===== Chips select (multi-chip input) ===== */
-.eda-page .chips-select {
+.eda-page .chips-select , .tests-page .chips-select {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -3989,7 +3989,7 @@ input:focus, textarea:focus {
   border-radius: var(--r-7);
   min-height: 32px;
 }
-.eda-page .chips-select .ms-chip {
+.eda-page .chips-select .ms-chip , .tests-page .chips-select .ms-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -4001,20 +4001,20 @@ input:focus, textarea:focus {
   border: 1px solid var(--accent-700);
   font-family: 'JetBrains Mono', monospace;
 }
-.eda-page .chips-select .ms-chip.muted {
+.eda-page .chips-select .ms-chip.muted , .tests-page .chips-select .ms-chip.muted {
   background: var(--surface-2);
   color: var(--text-secondary);
   border-color: var(--border-default);
 }
 
 /* ===== Table ===== */
-.eda-page .tbl {
+.eda-page .tbl , .tests-page .tbl {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 13px;
 }
-.eda-page .tbl thead th {
+.eda-page .tbl thead th , .tests-page .tbl thead th {
   position: sticky;
   top: 0;
   background: var(--surface-0);
@@ -4027,29 +4027,29 @@ input:focus, textarea:focus {
   padding: 10px 12px;
   border-bottom: 1px solid var(--border-default);
 }
-.eda-page .tbl tbody td {
+.eda-page .tbl tbody td , .tests-page .tbl tbody td {
   padding: 10px 12px;
   border-bottom: 1px solid var(--border-subtle);
   color: var(--text-primary);
 }
-.eda-page .tbl tbody tr:nth-child(even) td { background: var(--surface-0); }
-.eda-page .tbl tbody tr:nth-child(odd) td  { background: var(--surface-1); }
-.eda-page .tbl tbody tr.significant td      { background: rgba(31,122,77,.14); }
-.eda-page .tbl tbody tr:hover td            { background: var(--surface-2); }
-.eda-page .tbl td.mono,
-.eda-page .tbl th.mono {
+.eda-page .tbl tbody tr:nth-child(even) td , .tests-page .tbl tbody tr:nth-child(even) td { background: var(--surface-0); }
+.eda-page .tbl tbody tr:nth-child(odd) td  , .tests-page .tbl tbody tr:nth-child(odd) td  { background: var(--surface-1); }
+.eda-page .tbl tbody tr.significant td      , .tests-page .tbl tbody tr.significant td      { background: rgba(31,122,77,.14); }
+.eda-page .tbl tbody tr:hover td            , .tests-page .tbl tbody tr:hover td            { background: var(--surface-2); }
+.eda-page .tbl td.mono, .tests-page .tbl td.mono,
+.eda-page .tbl th.mono , .tests-page .tbl th.mono {
   font-family: 'JetBrains Mono', monospace;
   font-variant-numeric: tabular-nums;
 }
 
 /* ===== Correlation heatmap ===== */
-.eda-page .corr-wrap {
+.eda-page .corr-wrap , .tests-page .corr-wrap {
   display: grid;
   grid-template-columns: 1fr 52px;
   gap: 16px;
   align-items: stretch;
 }
-.eda-page .corr-grid {
+.eda-page .corr-grid , .tests-page .corr-grid {
   display: grid;
   gap: 2px;
   padding: 2px;
@@ -4057,7 +4057,7 @@ input:focus, textarea:focus {
   border-radius: var(--r-8);
   border: 1px solid var(--border-subtle);
 }
-.eda-page .corr-cell {
+.eda-page .corr-cell , .tests-page .corr-cell {
   min-height: 28px;
   display: grid;
   place-items: center;
@@ -4066,26 +4066,26 @@ input:focus, textarea:focus {
   font-size: 11px;
   border-radius: 3px;
 }
-.eda-page .corr-head {
+.eda-page .corr-head , .tests-page .corr-head {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   color: var(--text-secondary);
   padding: 6px;
 }
-.eda-page .corr-head.rot {
+.eda-page .corr-head.rot , .tests-page .corr-head.rot {
   transform: rotate(-45deg) translateX(-14px);
   transform-origin: left top;
   white-space: nowrap;
   text-align: left;
   padding: 0;
 }
-.eda-page .colorbar {
+.eda-page .colorbar , .tests-page .colorbar {
   background: linear-gradient(to top, var(--viz-5), var(--surface-1) 50%, var(--viz-2));
   border-radius: var(--r-6);
   border: 1px solid var(--border-subtle);
   position: relative;
 }
-.eda-page .colorbar .tick {
+.eda-page .colorbar .tick , .tests-page .colorbar .tick {
   position: absolute;
   right: 100%;
   padding-right: 6px;
@@ -4094,7 +4094,7 @@ input:focus, textarea:focus {
   color: var(--text-tertiary);
   transform: translateY(50%);
 }
-.eda-page .colorbar .label {
+.eda-page .colorbar .label , .tests-page .colorbar .label {
   position: absolute;
   left: 50%;
   top: -18px;
@@ -4105,7 +4105,7 @@ input:focus, textarea:focus {
 }
 
 /* ===== Pair matrix ===== */
-.eda-page .pair-matrix {
+.eda-page .pair-matrix , .tests-page .pair-matrix {
   display: grid;
   gap: 2px;
   background: var(--surface-0);
@@ -4113,18 +4113,18 @@ input:focus, textarea:focus {
   border-radius: var(--r-8);
   padding: 2px;
 }
-.eda-page .pair-cell {
+.eda-page .pair-cell , .tests-page .pair-cell {
   background: var(--surface-1);
   border-radius: 3px;
   position: relative;
   overflow: hidden;
   min-height: 90px;
 }
-.eda-page .pair-cell.diag {
+.eda-page .pair-cell.diag , .tests-page .pair-cell.diag {
   background: var(--accent-900);
   border: 1px solid var(--accent-700);
 }
-.eda-page .pair-cell .axis-lbl {
+.eda-page .pair-cell .axis-lbl , .tests-page .pair-cell .axis-lbl {
   position: absolute;
   inset: auto 0 2px 0;
   text-align: center;
@@ -4134,12 +4134,12 @@ input:focus, textarea:focus {
 }
 
 /* ===== Missing-bar (inline in table) ===== */
-.eda-page .miss-bar {
+.eda-page .miss-bar , .tests-page .miss-bar {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.eda-page .miss-bar .bar-track {
+.eda-page .miss-bar .bar-track , .tests-page .miss-bar .bar-track {
   flex: 1;
   height: 4px;
   background: var(--surface-2);
@@ -4147,28 +4147,28 @@ input:focus, textarea:focus {
   overflow: hidden;
   min-width: 80px;
 }
-.eda-page .miss-bar .bar-fill {
+.eda-page .miss-bar .bar-fill , .tests-page .miss-bar .bar-fill {
   height: 100%;
   background: var(--accent-700);
   border-radius: 2px;
 }
 
 /* ===== Sparkline ===== */
-.eda-page .spark {
+.eda-page .spark , .tests-page .spark {
   height: 32px;
   width: 100%;
   display: block;
 }
 
 /* ===== Empty state ===== */
-.eda-page .empty {
+.eda-page .empty , .tests-page .empty {
   padding: 32px;
   text-align: center;
   border: 1px dashed var(--border-default);
   border-radius: var(--r-10);
   color: var(--text-secondary);
 }
-.eda-page .empty .icn {
+.eda-page .empty .icn , .tests-page .empty .icn {
   width: 40px;
   height: 40px;
   margin: 0 auto 12px;
@@ -4181,15 +4181,15 @@ input:focus, textarea:focus {
 }
 
 /* ===== Layout helpers ===== */
-.eda-page .row-16 { display: flex; gap: 16px; }
-.eda-page .col-16 { display: flex; flex-direction: column; gap: 16px; }
-.eda-page .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.eda-page .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.eda-page .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-.eda-page .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.eda-page .row-16 , .tests-page .row-16 { display: flex; gap: 16px; }
+.eda-page .col-16 , .tests-page .col-16 { display: flex; flex-direction: column; gap: 16px; }
+.eda-page .grid-2 , .tests-page .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.eda-page .grid-3 , .tests-page .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.eda-page .grid-4 , .tests-page .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.eda-page .grid-5 , .tests-page .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
 
 /* ===== Search & kbd ===== */
-.eda-page .search {
+.eda-page .search , .tests-page .search {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -4201,8 +4201,8 @@ input:focus, textarea:focus {
   font-size: 12px;
   color: var(--text-tertiary);
 }
-.eda-page .search kbd,
-.eda-page .kbd {
+.eda-page .search kbd, .tests-page .search kbd,
+.eda-page .kbd , .tests-page .kbd {
   margin-left: auto;
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
@@ -4211,4 +4211,213 @@ input:focus, textarea:focus {
   padding: 1px 5px;
   border-radius: 4px;
   color: var(--text-secondary);
+}
+
+/* ============================================================
+   HANDOFF-9 STATISTICAL TESTS COMPONENTS
+   Scoped to .eda-page, .tests-page (extends handoff-8 system)
+   Components used across 11 artboards of section 9
+   ============================================================ */
+
+/* --- .metric: compact metric card --- */
+.eda-page .metric .m-label, .tests-page .metric .m-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--text-tertiary); margin-bottom: 4px;
+}
+.eda-page .metric .m-value, .tests-page .metric .m-value {
+  font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums;
+  font-size: 18px; font-weight: 500; color: var(--text-primary); letter-spacing: -.01em;
+}
+.eda-page .metric .m-sub, .tests-page .metric .m-sub {
+  font-size: 11px; color: var(--text-tertiary); margin-top: 2px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* --- .verdict: headline + 4-metric grid --- */
+.eda-page .verdict, .tests-page .verdict {
+  display: flex; gap: 20px; align-items: flex-start;
+}
+.eda-page .verdict .headline, .tests-page .verdict .headline { flex: 1; }
+.eda-page .verdict .headline h2, .tests-page .verdict .headline h2 {
+  margin-top: 8px; margin-bottom: 6px;
+}
+.eda-page .verdict .metrics, .tests-page .verdict .metrics {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px; margin-top: 14px;
+}
+
+/* --- .chart: standalone SVG plot frame --- */
+.eda-page .chart, .tests-page .chart {
+  position: relative; width: 100%; height: 100%;
+  background: var(--surface-0); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-8);
+}
+.eda-page .chart .axis-x, .tests-page .chart .axis-x,
+.eda-page .chart .axis-y, .tests-page .chart .axis-y {
+  position: absolute; font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; color: var(--text-tertiary);
+}
+.eda-page .chart .axis-x, .tests-page .chart .axis-x {
+  bottom: 4px; left: 36px; right: 10px;
+  display: flex; justify-content: space-between;
+}
+.eda-page .chart .axis-y, .tests-page .chart .axis-y {
+  left: 4px; top: 10px; bottom: 24px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  align-items: flex-end; width: 28px;
+}
+.eda-page .chart .plot, .tests-page .chart .plot {
+  position: absolute; left: 36px; right: 10px; top: 10px; bottom: 24px;
+}
+.eda-page .chart .grid-h, .tests-page .chart .grid-h {
+  position: absolute; left: 0; right: 0; height: 1px; background: var(--border-subtle);
+}
+
+/* --- .gauge: half-circle gauge for Cliff's δ --- */
+.eda-page .gauge, .tests-page .gauge {
+  position: relative; width: 180px; height: 100px; margin: 0 auto;
+}
+.eda-page .gauge svg, .tests-page .gauge svg {
+  width: 100%; height: 100%; overflow: visible;
+}
+.eda-page .gauge .g-val, .tests-page .gauge .g-val {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 500;
+  padding-top: 28px;
+}
+.eda-page .gauge .g-label, .tests-page .gauge .g-label {
+  position: absolute; bottom: -6px; left: 0; right: 0;
+  text-align: center; font-size: 11px; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: .08em;
+}
+
+/* --- .heat: contingency-table heatmap (chi²) --- */
+.eda-page .heat, .tests-page .heat {
+  display: grid; border: 1px solid var(--border-subtle);
+  border-radius: var(--r-8); overflow: hidden;
+}
+.eda-page .heat .cell, .tests-page .heat .cell {
+  padding: 10px; font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums; font-size: 12px; text-align: center;
+  border-right: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  min-height: 42px; display: grid; place-items: center;
+}
+.eda-page .heat .cell.head, .tests-page .heat .cell.head {
+  background: var(--surface-0); color: var(--text-tertiary);
+  font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+}
+
+/* --- .vline: vertical reference line on plots --- */
+.eda-page .vline, .tests-page .vline {
+  position: absolute; top: 8px; bottom: 24px; width: 2px;
+  background: var(--accent-300);
+  box-shadow: 0 0 0 1px rgba(79, 209, 139, .2);
+}
+.eda-page .vline.danger, .tests-page .vline.danger {
+  background: var(--danger);
+  box-shadow: 0 0 0 1px rgba(200, 80, 59, .3);
+}
+.eda-page .vline .tip, .tests-page .vline .tip {
+  position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  color: var(--accent-300); white-space: nowrap;
+  background: var(--canvas); padding: 1px 4px; border-radius: 3px;
+}
+.eda-page .vline.danger .tip, .tests-page .vline.danger .tip { color: #E07563; }
+
+/* --- .sticky-bar: A/B-test result strip --- */
+.eda-page .sticky-bar, .tests-page .sticky-bar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 18px;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-10); border-left: 3px solid var(--accent-500);
+}
+.eda-page .sticky-bar .lift, .tests-page .sticky-bar .lift {
+  font-family: 'JetBrains Mono', monospace; font-size: 24px;
+  font-weight: 500; color: var(--accent-300);
+}
+.eda-page .sticky-bar .lift.neg, .tests-page .sticky-bar .lift.neg { color: #E07563; }
+
+/* --- .num: number input with +/- (bootstrap N, alpha, etc.) --- */
+.eda-page .num, .tests-page .num {
+  display: flex; align-items: center;
+  background: var(--surface-0); border: 1px solid var(--border-default);
+  border-radius: var(--r-7); height: 32px;
+  font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums;
+}
+.eda-page .num input, .tests-page .num input {
+  flex: 1; background: none; border: 0; padding: 0 12px;
+  color: var(--text-primary); font-family: inherit; font-size: 13px;
+  width: 100%; min-width: 0;
+}
+.eda-page .num input:focus, .tests-page .num input:focus { outline: none; }
+.eda-page .num button, .tests-page .num button {
+  width: 28px; border-left: 1px solid var(--border-subtle);
+  color: var(--text-secondary); height: 100%;
+  background: none; cursor: pointer;
+}
+.eda-page .num button:hover, .tests-page .num button:hover {
+  background: var(--surface-2); color: var(--text-primary);
+}
+
+/* --- .check: custom checkbox (e.g. equal-variances toggle) --- */
+.eda-page .check, .tests-page .check {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--text-secondary); cursor: pointer;
+}
+.eda-page .check input, .tests-page .check input {
+  appearance: none; width: 16px; height: 16px;
+  border: 1px solid var(--border-strong); border-radius: 4px;
+  background: var(--surface-0); display: grid; place-items: center;
+  transition: all .15s;
+}
+.eda-page .check input:checked, .tests-page .check input:checked {
+  background: var(--accent-700); border-color: var(--accent-500);
+}
+.eda-page .check input:checked::after, .tests-page .check input:checked::after {
+  content: ""; width: 8px; height: 8px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>");
+  background-size: contain; background-repeat: no-repeat;
+}
+.eda-page .check:has(input:checked), .tests-page .check:has(input:checked) {
+  color: var(--text-primary);
+}
+
+/* --- .slider: alpha-slider in header --- */
+.eda-page .slider-wrap, .tests-page .slider-wrap {
+  display: flex; align-items: center; gap: 12px; min-width: 280px;
+}
+.eda-page .slider, .tests-page .slider {
+  position: relative; flex: 1; height: 24px;
+  display: flex; align-items: center;
+}
+.eda-page .slider .track, .tests-page .slider .track {
+  width: 100%; height: 4px; background: var(--surface-2);
+  border-radius: 2px; position: relative;
+}
+.eda-page .slider .fill, .tests-page .slider .fill {
+  position: absolute; top: 0; left: 0; height: 100%;
+  background: var(--accent-500); border-radius: 2px;
+}
+.eda-page .slider .thumb, .tests-page .slider .thumb {
+  position: absolute; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent-300); border: 2px solid var(--canvas);
+  top: 50%; transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 4px var(--accent-glow);
+}
+.eda-page .slider .ticks, .tests-page .slider .ticks {
+  position: absolute; width: 100%; top: 50%;
+  display: flex; justify-content: space-between; pointer-events: none;
+}
+.eda-page .slider .ticks span, .tests-page .slider .ticks span {
+  width: 1px; height: 6px; background: var(--border-default); margin-top: -3px;
+}
+
+/* --- .ctrl-bar: horizontal control panel --- */
+.eda-page .ctrl-bar, .tests-page .ctrl-bar {
+  display: flex; align-items: flex-end; gap: 16px;
+  padding: 14px 16px;
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-10);
 }
