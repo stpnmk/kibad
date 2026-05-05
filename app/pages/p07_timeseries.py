@@ -157,6 +157,33 @@ def _get_df(ds_name, raw, prep):
     return df
 
 
+def _get_df_agg(ds_name, raw, prep, date_col, target_col,
+                exog_cols=None, method="none"):
+    """Загрузить датасет и при необходимости свернуть дубликаты дат.
+
+    Используется ВО ВСЕХ forecast-callback'ах, чтобы выбранный наверху
+    страницы метод агрегации единообразно применялся к каждому прогнозу.
+    """
+    df = _get_df(ds_name, raw, prep)
+    if df is None or not method or method == "none":
+        return df
+    if not date_col or not target_col:
+        return df
+    try:
+        from core.timeseries_auto import (
+            aggregate_duplicates, detect_duplicate_dates,
+        )
+        info = detect_duplicate_dates(df, date_col)
+        if not info["has_duplicates"]:
+            return df
+        return aggregate_duplicates(
+            df, date_col, target_col,
+            exog_cols=exog_cols, method=method,
+        )
+    except Exception:
+        return df
+
+
 def _fmt_num(v: Any, digits: int = 4) -> str:
     try:
         f = float(v)
@@ -908,6 +935,12 @@ layout = html.Div(
         _page_head(),
         _help_accordion(),
         _controls(),
+        # Глобальный стор: метод агрегации применяется ко ВСЕМ прогнозам.
+        dcc.Store(id="ts-agg-method", data="none"),
+        # Динамическая карточка «Дубликаты дат» — видна на любой вкладке,
+        # пока выбраны датасет + дата + цель и есть дубли.
+        html.Div(id="ts-duplicates-card",
+                 style={"marginBottom": "12px"}),
         html.Div(
             dbc.Tabs(
                 id="ts-tabs",
@@ -1034,14 +1067,9 @@ def _render_tab(tab, ds_name, raw, prep):
                 style={"marginBottom": "12px",
                        "color": "rgba(255,255,255,0.65)"},
             ),
-            # Динамическая карточка «Дубликаты дат» (виден только если есть дубли).
-            html.Div(id="auto-duplicates-card",
-                     style={"marginBottom": "12px"}),
-            # Динамическая карточка «Рекомендованные внешние факторы».
+            # Карточка «Рекомендованные внешние факторы» — только в авто-режиме.
             html.Div(id="auto-exog-card",
                      style={"marginBottom": "12px"}),
-            # Скрытый стор для выбранного метода агрегации (сюда пишет radio).
-            dcc.Store(id="auto-aggregation-method", data="none"),
             dcc.Loading(html.Div(id="auto-result"), type="circle",
                         color=ACCENT_500),
         ])
@@ -1823,7 +1851,7 @@ _AGG_OPTIONS = [
 
 
 @callback(
-    Output("auto-duplicates-card", "children"),
+    Output("ts-duplicates-card", "children"),
     Input("ts-ds-select", "value"),
     Input("ts-date-col", "value"),
     Input("ts-target-col", "value"),
@@ -1850,8 +1878,8 @@ def _auto_duplicates_panel(ds_name, date_col, target_col, raw, prep):
                 ),
                 html.Span(
                     f"На {info['n_unique_dates']} уникальных дат приходится "
-                    f"{info['n_total_rows']} строк. Чтобы прогноз был "
-                    "корректным, нужно свести каждую дату к одной точке.",
+                    f"{info['n_total_rows']} строк. Выбранный способ агрегации "
+                    "применяется ко всем прогнозам и расчётам в этом разделе.",
                     style={"color": "rgba(255,255,255,0.78)"},
                 ),
             ],
@@ -1868,7 +1896,7 @@ def _auto_duplicates_panel(ds_name, date_col, target_col, raw, prep):
                     "наблюдение в день.",
                 ),
                 dcc.RadioItems(
-                    id="auto-agg-radio",
+                    id="ts-agg-radio",
                     options=_AGG_OPTIONS,
                     value="mean",
                     inline=True,
@@ -1880,9 +1908,8 @@ def _auto_duplicates_panel(ds_name, date_col, target_col, raw, prep):
 
 
 @callback(
-    Output("auto-aggregation-method", "data"),
-    Input("auto-agg-radio", "value"),
-    prevent_initial_call=True,
+    Output("ts-agg-method", "data"),
+    Input("ts-agg-radio", "value"),
 )
 def _sync_agg_method(value):
     return value or "none"
@@ -2221,7 +2248,7 @@ def _waterfall_card(auto_result, df, date_col, target_col) -> html.Div | None:
     State("ts-ds-select", "value"),
     State("ts-date-col", "value"), State("ts-target-col", "value"),
     State("ts-exog-cols", "value"),
-    State("auto-aggregation-method", "data"),
+    State("ts-agg-method", "data"),
     State(STORE_DATASET, "data"), State(STORE_PREPARED, "data"),
     prevent_initial_call=True,
 )
@@ -2325,15 +2352,17 @@ def _run_auto(n, ds_name, date_col, target_col, exog_cols,
     State("ts-ds-select", "value"),
     State("ts-date-col", "value"), State("ts-target-col", "value"),
     State("ts-horizon", "value"), State("ts-period", "value"),
+    State("ts-agg-method", "data"),
     State(STORE_DATASET, "data"), State(STORE_PREPARED, "data"),
     prevent_initial_call=True,
 )
 def _run_naive(n, naive_type, ds_name, date_col, target_col,
-               horizon, period, raw, prep):
+               horizon, period, agg_method, raw, prep):
     if not all([date_col, target_col]):
         return alert_banner(
             "Выберите колонку даты и целевую переменную.", "warning")
-    df = _get_df(ds_name, raw, prep)
+    df = _get_df_agg(ds_name, raw, prep, date_col, target_col,
+                     method=agg_method)
     if df is None:
         return alert_banner("Данные не найдены.", "danger")
     try:
@@ -2407,15 +2436,17 @@ def _run_naive(n, naive_type, ds_name, date_col, target_col,
     State("ts-date-col", "value"), State("ts-target-col", "value"),
     State("ts-horizon", "value"), State("ts-lags", "value"),
     State("ts-exog-cols", "value"),
+    State("ts-agg-method", "data"),
     State(STORE_DATASET, "data"), State(STORE_PREPARED, "data"),
     prevent_initial_call=True,
 )
 def _run_arx(n, alpha_r, ds_name, date_col, target_col,
-             horizon, lags_str, exog_cols, raw, prep):
+             horizon, lags_str, exog_cols, agg_method, raw, prep):
     if not all([date_col, target_col]):
         return alert_banner(
             "Выберите колонку даты и целевую переменную.", "warning")
-    df = _get_df(ds_name, raw, prep)
+    df = _get_df_agg(ds_name, raw, prep, date_col, target_col,
+                     exog_cols=exog_cols, method=agg_method)
     if df is None:
         return alert_banner("Данные не найдены.", "danger")
     try:
@@ -2500,15 +2531,17 @@ def _run_arx(n, alpha_r, ds_name, date_col, target_col,
     State("ts-date-col", "value"), State("ts-target-col", "value"),
     State("ts-horizon", "value"), State("ts-period", "value"),
     State("ts-exog-cols", "value"),
+    State("ts-agg-method", "data"),
     State(STORE_DATASET, "data"), State(STORE_PREPARED, "data"),
     prevent_initial_call=True,
 )
 def _run_sarimax(n, p, d, q, P, D, Q, ds_name, date_col, target_col,
-                 horizon, period, exog_cols, raw, prep):
+                 horizon, period, exog_cols, agg_method, raw, prep):
     if not all([date_col, target_col]):
         return alert_banner(
             "Выберите колонку даты и целевую переменную.", "warning")
-    df = _get_df(ds_name, raw, prep)
+    df = _get_df_agg(ds_name, raw, prep, date_col, target_col,
+                     exog_cols=exog_cols, method=agg_method)
     if df is None:
         return alert_banner("Данные не найдены.", "danger")
     try:
@@ -2662,16 +2695,18 @@ def _sarimax_params_table_card(params: pd.DataFrame) -> html.Div:
     State("ts-date-col", "value"), State("ts-target-col", "value"),
     State("ts-period", "value"), State("ts-lags", "value"),
     State("ts-exog-cols", "value"),
+    State("ts-agg-method", "data"),
     State(STORE_DATASET, "data"), State(STORE_PREPARED, "data"),
     prevent_initial_call=True,
 )
 def _run_backtest(n, model, folds, min_train, bt_h,
                   ds_name, date_col, target_col,
-                  period, lags_str, exog_cols, raw, prep):
+                  period, lags_str, exog_cols, agg_method, raw, prep):
     if not all([date_col, target_col]):
         return alert_banner(
             "Выберите колонку даты и целевую переменную.", "warning")
-    df = _get_df(ds_name, raw, prep)
+    df = _get_df_agg(ds_name, raw, prep, date_col, target_col,
+                     exog_cols=exog_cols, method=agg_method)
     if df is None:
         return alert_banner("Данные не найдены.", "danger")
     try:
@@ -2877,13 +2912,16 @@ def _backtest_folds_table(summary_df: pd.DataFrame) -> html.Table:
     Input("btn-acf", "n_clicks"),
     State("acf-col", "value"), State("acf-nlags", "value"),
     State("ts-ds-select", "value"),
+    State("ts-date-col", "value"),
+    State("ts-agg-method", "data"),
     State(STORE_DATASET, "data"), State(STORE_PREPARED, "data"),
     prevent_initial_call=True,
 )
-def _run_acf(n, col, nlags, ds_name, raw, prep):
+def _run_acf(n, col, nlags, ds_name, date_col, agg_method, raw, prep):
     if not col:
         return alert_banner("Выберите числовую колонку.", "warning")
-    df = _get_df(ds_name, raw, prep)
+    df = _get_df_agg(ds_name, raw, prep, date_col, col,
+                     method=agg_method) if date_col else _get_df(ds_name, raw, prep)
     if df is None:
         return alert_banner("Данные не найдены.", "danger")
     try:
@@ -2977,15 +3015,17 @@ def _run_acf(n, col, nlags, ds_name, raw, prep):
     State("ts-ds-select", "value"),
     State("ts-date-col", "value"), State("ts-target-col", "value"),
     State("ts-period", "value"),
+    State("ts-agg-method", "data"),
     State(STORE_DATASET, "data"), State(STORE_PREPARED, "data"),
     prevent_initial_call=True,
 )
 def _run_stl(n, stl_type, robust_chk, ds_name, date_col, target_col,
-             period, raw, prep):
+             period, agg_method, raw, prep):
     if not all([date_col, target_col]):
         return alert_banner(
             "Выберите колонку даты и целевую переменную.", "warning")
-    df = _get_df(ds_name, raw, prep)
+    df = _get_df_agg(ds_name, raw, prep, date_col, target_col,
+                     method=agg_method)
     if df is None:
         return alert_banner("Данные не найдены.", "danger")
     try:
@@ -3101,16 +3141,18 @@ def _run_stl(n, stl_type, robust_chk, ds_name, date_col, target_col,
     State("ts-horizon", "value"), State("ts-period", "value"),
     State("ts-exog-cols", "value"),
     State("ts-lags", "value"), State("ts-alpha", "value"),
+    State("ts-agg-method", "data"),
     State(STORE_DATASET, "data"), State(STORE_PREPARED, "data"),
     prevent_initial_call=True,
 )
 def _run_diag(n, model, ds_name, date_col, target_col,
               horizon, period, exog_cols, lags_str, alpha_r,
-              raw, prep):
+              agg_method, raw, prep):
     if not all([date_col, target_col]):
         return alert_banner(
             "Выберите колонку даты и целевую переменную.", "warning")
-    df = _get_df(ds_name, raw, prep)
+    df = _get_df_agg(ds_name, raw, prep, date_col, target_col,
+                     exog_cols=exog_cols, method=agg_method)
     if df is None:
         return alert_banner("Данные не найдены.", "danger")
     try:
@@ -3290,16 +3332,18 @@ def _run_diag(n, model, ds_name, date_col, target_col,
     State("ts-horizon", "value"), State("ts-period", "value"),
     State("ts-exog-cols", "value"),
     State("ts-lags", "value"), State("ts-alpha", "value"),
+    State("ts-agg-method", "data"),
     State(STORE_DATASET, "data"), State(STORE_PREPARED, "data"),
     prevent_initial_call=True,
 )
 def _run_compare(n, ds_name, date_col, target_col,
                  horizon, period, exog_cols, lags_str, alpha_r,
-                 raw, prep):
+                 agg_method, raw, prep):
     if not all([date_col, target_col]):
         return alert_banner(
             "Выберите колонку даты и целевую переменную.", "warning")
-    df = _get_df(ds_name, raw, prep)
+    df = _get_df_agg(ds_name, raw, prep, date_col, target_col,
+                     exog_cols=exog_cols, method=agg_method)
     if df is None:
         return alert_banner("Данные не найдены.", "danger")
     try:
@@ -3530,14 +3574,16 @@ def _toggle_thresh_field(sensitivity):
     State("anom-sensitivity", "value"),
     State("ts-ds-select", "value"),
     State("ts-date-col", "value"), State("ts-period", "value"),
+    State("ts-agg-method", "data"),
     State(STORE_DATASET, "data"), State(STORE_PREPARED, "data"),
     prevent_initial_call=True,
 )
 def _run_anomaly(n, col, method, window, thresh_tick, sensitivity,
-                 ds_name, date_col, period, raw, prep):
+                 ds_name, date_col, period, agg_method, raw, prep):
     if not col:
         return alert_banner("Выберите числовую колонку.", "warning")
-    df = _get_df(ds_name, raw, prep)
+    df = _get_df_agg(ds_name, raw, prep, date_col, col,
+                     method=agg_method) if date_col else _get_df(ds_name, raw, prep)
     if df is None:
         return alert_banner("Данные не найдены.", "danger")
     try:
