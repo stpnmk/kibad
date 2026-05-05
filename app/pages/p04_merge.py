@@ -320,9 +320,13 @@ layout = html.Div(
     Output("merge-right-ds", "options"),
     Output("concat-datasets", "options"),
     Input(STORE_DATASET, "data"),
+    Input(STORE_PREPARED, "data"),
 )
-def update_ds_lists(datasets):
-    names = list_datasets(datasets)
+def update_ds_lists(datasets, prepared):
+    # До этого фикса dropdown читал только raw STORE_DATASET — поэтому
+    # подготовленные на странице «Подготовка» датасеты не появлялись здесь
+    # и пилл-карточка ключей оставалась пустой.
+    names = sorted(set(list_datasets(datasets) + list_datasets(prepared)))
     opts = [{"label": n, "value": n} for n in names]
     return opts, opts, opts
 
