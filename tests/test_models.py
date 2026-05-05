@@ -312,3 +312,60 @@ def test_naive_with_object_dates():
     })
     res = run_naive_forecast(df, "date", "y", horizon=6)
     assert len(res.forecast_df) == n + 6
+
+
+def test_plot_forecast_renders_with_timestamp_dates():
+    """Регрессия: `_plot_forecast_v2` падал на pandas 2.x с
+    «Addition/subtraction of integers and integer-arrays with Timestamp …»,
+    потому что `fig.add_vline(x=Timestamp, annotation_text=…)` внутри plotly
+    делает `mean([x, x])` через Python `sum()`, а это `int + Timestamp`.
+    Тест должен пройти без TypeError."""
+    import pandas as pd, numpy as np
+    import dash, dash_bootstrap_components as dbc
+    # `register_page` требует уже инстанциированного app
+    dash.Dash(__name__, use_pages=True, pages_folder='', assets_folder='app/assets',
+              external_stylesheets=[dbc.themes.BOOTSTRAP],
+              suppress_callback_exceptions=True)
+    from app.pages.p07_timeseries import _plot_forecast_v2
+    from core.models import ForecastResult
+
+    n = 24
+    dates = pd.date_range("2024-01-01", periods=n, freq="MS")
+    fut_dates = pd.date_range("2026-01-01", periods=6, freq="MS")
+    rng = np.random.RandomState(0)
+    actual = rng.randn(n).cumsum() + 100
+    forecast = np.r_[actual + rng.randn(n)*0.1, np.full(6, actual[-1])]
+    fd = pd.DataFrame({
+        "date": list(dates) + list(fut_dates),
+        "actual": list(actual) + [np.nan] * 6,
+        "forecast": forecast,
+        "lower":   np.r_[[np.nan] * n, forecast[-6:] - 1],
+        "upper":   np.r_[[np.nan] * n, forecast[-6:] + 1],
+    })
+    result = ForecastResult(model_name="test", forecast_df=fd, metrics={})
+    fig = _plot_forecast_v2(result, "y", show_fit=True)
+    assert fig is not None
+    # Должны появиться и линия-shape, и аннотация «СЕГОДНЯ»
+    shapes = fig.layout.shapes or ()
+    annots = fig.layout.annotations or ()
+    assert any(getattr(s, "type", None) == "line" for s in shapes)
+    assert any("СЕГОДНЯ" in (a.text or "") for a in annots)
+
+
+def test_coef_chart_no_duplicate_kwarg_on_axis():
+    """Регрессия: `_coef_chart` падал с
+    «dict() got multiple values for keyword argument 'zerolinecolor'»
+    из-за splatting `dict(**lay['xaxis'], zerolinecolor=…)` поверх ключа,
+    который уже есть в `_base_layout`. Должно отрабатывать без TypeError."""
+    import pandas as pd, dash, dash_bootstrap_components as dbc
+    dash.Dash(__name__, use_pages=True, pages_folder='', assets_folder='app/assets',
+              external_stylesheets=[dbc.themes.BOOTSTRAP],
+              suppress_callback_exceptions=True)
+    from app.pages.p07_timeseries import _coef_chart
+    coef = pd.DataFrame({
+        "feature": [f"lag_{i}" for i in range(1, 6)],
+        "coefficient": [0.42, -0.31, 0.05, -0.12, 0.08],
+    })
+    fig = _coef_chart(coef, top_n=5)
+    assert fig is not None
+    assert len(fig.data) == 1

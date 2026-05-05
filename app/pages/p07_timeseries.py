@@ -204,16 +204,25 @@ def _plot_forecast_v2(
             showlegend=False,
         ))
 
-    # 5. "Today" vertical line at forecast boundary
+    # 5. "Today" vertical line at forecast boundary.
+    # NB: использовать `fig.add_vline(x=Timestamp, annotation_text=...)` нельзя:
+    # plotly считает позицию аннотации через `mean([x, x])`, что внутри триггерит
+    # `int + Timestamp` — pandas 2.x на этом падает с
+    # «Addition/subtraction of integers and integer-arrays with Timestamp is no
+    # longer supported.» Делаем линию и подпись отдельными примитивами.
     if not hist.empty and not fut.empty:
-        fig.add_vline(
-            x=hist["date"].iloc[-1],
-            line_dash="dash", line_color=TS_TODAY, line_width=1,
+        boundary = hist["date"].iloc[-1]
+        fig.add_shape(
+            type="line", x0=boundary, x1=boundary, y0=0, y1=1,
+            xref="x", yref="paper",
+            line=dict(color=TS_TODAY, width=1, dash="dash"),
             opacity=0.7,
-            annotation_text="СЕГОДНЯ", annotation_position="top",
-            annotation_font=dict(size=10, color=TEXT_TER,
-                                 family="JetBrains Mono"),
-            annotation_bgcolor=SURFACE_1,
+        )
+        fig.add_annotation(
+            x=boundary, y=1.0, xref="x", yref="paper",
+            text="СЕГОДНЯ", showarrow=False, yshift=10,
+            font=dict(size=10, color=TEXT_TER, family="JetBrains Mono"),
+            bgcolor=SURFACE_1,
         )
 
     lay = _base_layout(height)
@@ -257,10 +266,14 @@ def _coef_chart(coef_df: pd.DataFrame, top_n: int = 15) -> go.Figure:
         showlegend=False,
     ))
     lay = _base_layout(height=32 * max(len(df), 4) + 80)
+    # `_base_layout` already populates xaxis/yaxis with `zerolinecolor` etc.
+    # При splatting + повторе ключа Python падает с
+    # `dict() got multiple values for keyword argument 'zerolinecolor'`.
+    # Поэтому собираем словарь через {**base, **overrides}.
     lay.update(dict(
-        xaxis=dict(**lay["xaxis"], zeroline=True,
-                   zerolinecolor=GRID_STRONG, zerolinewidth=1),
-        yaxis=dict(**lay["yaxis"], automargin=True),
+        xaxis={**lay["xaxis"], "zeroline": True,
+               "zerolinecolor": GRID_STRONG, "zerolinewidth": 1},
+        yaxis={**lay["yaxis"], "automargin": True},
         margin=dict(l=150, r=60, t=20, b=40),
     ))
     fig.update_layout(**lay)
