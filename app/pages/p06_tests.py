@@ -2094,7 +2094,9 @@ def _run_diagnostics(n, val_col, grp_col, ga, gb, alpha_tick,
             html.Div([
                 _metric(nr.test_name + " W", f"{nr.statistic:.3f}", ""),
                 _metric("p-value", f"{nr.p_value:.4g}",
-                        "< α" if nr.significant else "≥ α"),
+                        # NormalityResult: is_normal == True ⇔ p ≥ α
+                        # (нулевую гипотезу о нормальности НЕ отвергаем).
+                        "< α" if not nr.is_normal else "≥ α"),
                 _metric("Skewness", f"{nr.skewness:+.2f}", nr.skew_label),
                 _metric("Kurtosis", f"{nr.kurtosis:+.2f}", nr.kurt_label),
             ], style={"display": "grid",
