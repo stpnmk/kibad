@@ -150,6 +150,26 @@ class NaiveForecast:
             preds = np.full(steps, self._history[-1])
         return preds
 
+    def predict_in_sample(self) -> np.ndarray:
+        """1-step-ahead in-sample предсказания.
+
+        Для seasonal naive: ŷ_t = y_{t - period} при t >= period; иначе NaN.
+        Для plain naive:    ŷ_t = y_{t-1}        при t >= 1;       иначе NaN.
+
+        Эти значения — то, что должно сравниваться с y_t для оценки реальной
+        ошибки модели на исторических данных (раньше use of predict(len(y))
+        возвращал будущую проекцию и давал смещённые метрики).
+        """
+        if self._history is None:
+            raise RuntimeError("Call fit() first.")
+        n = len(self._history)
+        preds = np.full(n, np.nan)
+        if self.seasonal and n > self.period:
+            preds[self.period:] = self._history[: n - self.period]
+        elif not self.seasonal and n >= 2:
+            preds[1:] = self._history[: n - 1]
+        return preds
+
 
 def _coerce_datetime_series(dates) -> pd.Series:
     """Coerce a date-like input to ``datetime64[ns]`` **preserving length & order**.
@@ -287,8 +307,9 @@ def run_naive_forecast(
     model.fit(y)
     preds = model.predict(horizon)
 
-    # residual std for CI (exclude NaN predictions to avoid bias)
-    in_sample = model.predict(len(y))[-len(y):]
+    # Корректные in-sample предсказания: ŷ_t = y_{t-period} (или y_{t-1}).
+    # Раньше использовалось predict(len(y)) — это будущий прогноз, а не in-sample.
+    in_sample = model.predict_in_sample()
     valid_mask = ~np.isnan(in_sample)
     if valid_mask.any():
         resid = y[valid_mask] - in_sample[valid_mask]
@@ -318,7 +339,17 @@ def run_naive_forecast(
         "upper": upper,
     })
     forecast_df = pd.concat([hist_df, fut_df], ignore_index=True)
-    metrics = compute_all_metrics(y, model.predict(len(y)))
+    # Метрики считаются только на валидных in-sample точках (для seasonal-naive
+    # первые `period` точек прогноза не определены).
+    if valid_mask.any():
+        metrics = compute_all_metrics(y[valid_mask], in_sample[valid_mask])
+    else:
+        metrics = {"MAE": float("nan"), "RMSE": float("nan"),
+                   "MAPE": float("nan"), "Bias": float("nan")}
+
+    # Также добавим in-sample fit (NaN до периода) в hist_df, чтобы
+    # графики могли показать «как модель попадала в прошлое».
+    forecast_df.loc[forecast_df["actual"].notna(), "forecast"] = in_sample[: len(y)]
 
     return ForecastResult(
         model_name="Seasonal Naive" if seasonal else "Naive",
@@ -757,6 +788,13 @@ def rolling_backtest(
     n = len(df)
     results = []
     all_metrics = []
+
+    if n < min_train + horizon:
+        raise ValueError(
+            f"Недостаточно данных для бэктеста: всего {n} наблюдений, "
+            f"требуется не меньше min_train ({min_train}) + horizon ({horizon}) "
+            f"= {min_train + horizon}. Уменьшите min_train или горизонт."
+        )
 
     step = max(1, (n - min_train - horizon) // max(1, n_folds))
     fold_starts = range(min_train, n - horizon, step)

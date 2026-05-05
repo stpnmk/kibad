@@ -114,6 +114,29 @@ def test_naive_forecast_short_history_falls_back():
     assert np.all(preds == 7.0)
 
 
+def test_naive_predict_in_sample_seasonal():
+    """ŷ_t = y_{t-period} для t >= period; NaN иначе."""
+    history = np.arange(24, dtype=float) + 100  # 100..123
+    model = NaiveForecast(seasonal=True, period=12)
+    model.fit(history)
+    in_s = model.predict_in_sample()
+    assert in_s.shape == history.shape
+    # первые 12 точек — NaN (нет предыстории на сезон назад)
+    assert np.all(np.isnan(in_s[:12]))
+    # с 12-й точки — y_{t-12}
+    np.testing.assert_array_equal(in_s[12:], history[:12])
+
+
+def test_naive_predict_in_sample_plain():
+    """ŷ_t = y_{t-1} для plain naive; NaN для t=0."""
+    history = np.array([10.0, 20.0, 30.0, 40.0])
+    model = NaiveForecast(seasonal=False)
+    model.fit(history)
+    in_s = model.predict_in_sample()
+    assert np.isnan(in_s[0])
+    np.testing.assert_array_equal(in_s[1:], history[:-1])
+
+
 # ---------------------------------------------------------------------------
 # run_naive_forecast
 # ---------------------------------------------------------------------------

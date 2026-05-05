@@ -1053,15 +1053,29 @@ def _render_tab(tab, ds_name, raw, prep):
                 "НАИВНЫЙ / СЕЗОННЫЙ НАИВНЫЙ ПРОГНОЗ",
                 "Базовая линия для сравнения с более сложными моделями",
                 [
-                    dcc.RadioItems(
-                        id="naive-type",
-                        options=[
-                            {"label": "Сезонный наивный", "value": "seasonal"},
-                            {"label": "Наивный (последнее значение)",
-                             "value": "last"},
+                    html.Div(
+                        [
+                            dcc.RadioItems(
+                                id="naive-type",
+                                options=[
+                                    {"label": "Сезонный наивный",
+                                     "value": "seasonal"},
+                                    {"label": "Наивный (последнее значение)",
+                                     "value": "last"},
+                                ],
+                                value="seasonal", inline=True,
+                                className="kb-ts-radio",
+                            ),
+                            _hint(
+                                "Сезонный наивный: ŷ_t = y_{t-period}, повторяет "
+                                "последний сезонный цикл. Хорош при выраженной "
+                                "сезонности и горизонте 1–3 периода.\n"
+                                "Наивный: ŷ_t = последнее значение. "
+                                "Подходит как самая простая базовая линия для "
+                                "сравнения с более сложными моделями.",
+                            ),
                         ],
-                        value="seasonal", inline=True,
-                        className="kb-ts-radio",
+                        style={"display": "flex", "alignItems": "center"},
                     ),
                     html.Button(
                         [icon("play", 14),
@@ -1081,11 +1095,20 @@ def _render_tab(tab, ds_name, raw, prep):
             _tab_head(
                 "ARX: AUTOREGRESSION + RIDGE",
                 "Авторегрессия с экзогенными факторами, Ridge-регуляризация",
-                [html.Button(
-                    [icon("play", 14), html.Span("Запустить ARX")],
-                    id="btn-arx", className="kb-btn kb-btn--primary",
-                    n_clicks=0,
-                )],
+                [
+                    html.Button(
+                        [icon("magic", 12), html.Span("Подобрать лаги")],
+                        id="btn-arx-auto",
+                        className="kb-btn kb-btn--secondary kb-btn--sm",
+                        n_clicks=0,
+                        title="Подберёт лаги по PACF + сезонный лаг",
+                    ),
+                    html.Button(
+                        [icon("play", 14), html.Span("Запустить ARX")],
+                        id="btn-arx", className="kb-btn kb-btn--primary",
+                        n_clicks=0,
+                    ),
+                ],
             ),
             dcc.Loading(html.Div(id="arx-result"), type="circle",
                         color=ACCENT_500),
@@ -1097,11 +1120,20 @@ def _render_tab(tab, ds_name, raw, prep):
             _tab_head(
                 "SARIMAX: SEASONAL ARIMA С ДОВЕРИТ. ИНТЕРВАЛАМИ",
                 "Сезонная ARIMA с экзогенными регрессорами и CI 95%",
-                [html.Button(
-                    [icon("play", 14), html.Span("Запустить SARIMAX")],
-                    id="btn-sarimax", className="kb-btn kb-btn--primary",
-                    n_clicks=0,
-                )],
+                [
+                    html.Button(
+                        [icon("magic", 12), html.Span("Подобрать (p,d,q)(P,D,Q)")],
+                        id="btn-sarimax-auto",
+                        className="kb-btn kb-btn--secondary kb-btn--sm",
+                        n_clicks=0,
+                        title="Эвристический подбор по ADF и силе сезонности",
+                    ),
+                    html.Button(
+                        [icon("play", 14), html.Span("Запустить SARIMAX")],
+                        id="btn-sarimax", className="kb-btn kb-btn--primary",
+                        n_clicks=0,
+                    ),
+                ],
             ),
             _sarimax_params_card(),
             dcc.Loading(html.Div(id="sarimax-result"), type="circle",
@@ -1114,7 +1146,15 @@ def _render_tab(tab, ds_name, raw, prep):
             _tab_head(
                 "ROLLING-WINDOW BACKTEST",
                 "Оценка устойчивости модели на перекрывающихся историях",
-                [],
+                [
+                    html.Button(
+                        [icon("magic", 12), html.Span("Подобрать параметры")],
+                        id="btn-bt-auto",
+                        className="kb-btn kb-btn--secondary kb-btn--sm",
+                        n_clicks=0,
+                        title="Авто-настройка фолдов / min_train / горизонта по длине ряда",
+                    ),
+                ],
             ),
             _backtest_config_card(),
             dcc.Loading(html.Div(id="backtest-result"), type="circle",
@@ -1146,11 +1186,20 @@ def _render_tab(tab, ds_name, raw, prep):
             _tab_head(
                 "STL DECOMPOSITION",
                 "Разложение ряда на тренд, сезонность и остаток",
-                [html.Button(
-                    [icon("play", 14), html.Span("Декомпозировать")],
-                    id="btn-stl", className="kb-btn kb-btn--primary",
-                    n_clicks=0,
-                )],
+                [
+                    html.Button(
+                        [icon("magic", 12), html.Span("Подобрать период")],
+                        id="btn-stl-auto",
+                        className="kb-btn kb-btn--secondary kb-btn--sm",
+                        n_clicks=0,
+                        title="Авто-определение периода по ACF/частоте дат",
+                    ),
+                    html.Button(
+                        [icon("play", 14), html.Span("Декомпозировать")],
+                        id="btn-stl", className="kb-btn kb-btn--primary",
+                        n_clicks=0,
+                    ),
+                ],
             ),
             _stl_config_card(),
             dcc.Loading(html.Div(id="stl-result"), type="circle",
@@ -1199,11 +1248,22 @@ def _render_tab(tab, ds_name, raw, prep):
             _tab_head(
                 "ANOMALY DETECTION",
                 "Rolling Z-Score или STL Residual, порог в σ",
-                [html.Button(
-                    [icon("search", 14), html.Span("Найти аномалии")],
-                    id="btn-anomaly", className="kb-btn kb-btn--primary",
-                    n_clicks=0,
-                )],
+                [
+                    html.Button(
+                        [icon("magic", 12),
+                         html.Span("Подобрать метод и окно")],
+                        id="btn-anom-auto",
+                        className="kb-btn kb-btn--secondary kb-btn--sm",
+                        n_clicks=0,
+                        title="Выбор метода: STL при сильной сезонности, иначе rolling-Z; "
+                              "окно подбирается из периода данных",
+                    ),
+                    html.Button(
+                        [icon("search", 14), html.Span("Найти аномалии")],
+                        id="btn-anomaly", className="kb-btn kb-btn--primary",
+                        n_clicks=0,
+                    ),
+                ],
             ),
             _anom_config_card(num_cols),
             dcc.Loading(html.Div(id="anomaly-result"), type="circle",
@@ -1350,7 +1410,14 @@ def _backtest_config_card() -> html.Div:
                 [
                     html.Div(
                         [
-                            html.Label("МОДЕЛЬ", className="kb-ts-ctrl-label"),
+                            _label_with_hint(
+                                "МОДЕЛЬ",
+                                "Какую модель проверять на устойчивость. "
+                                "Бэктест прогоняет её на нескольких "
+                                "исторических срезах: модель обучается на "
+                                "первой части, тестируется на следующем "
+                                "горизонте — и так несколько фолдов.",
+                            ),
                             dcc.Dropdown(
                                 id="bt-model",
                                 options=[
@@ -1918,6 +1985,167 @@ def _apply_recommended_exog(n_clicks, cols_csv, current):
     rec = [c for c in cols_csv.split(",") if c]
     merged = list(dict.fromkeys((current or []) + rec))
     return merged
+
+
+# --- Авто-подбор гиперпараметров для экспертных вкладок ------------------
+
+def _safe_target_series(df, date_col, target_col):
+    if df is None or date_col not in df.columns or target_col not in df.columns:
+        return None, None
+    work = df[[date_col, target_col]].dropna()
+    if work.empty:
+        return None, None
+    work = work.sort_values(date_col)
+    return work[date_col], pd.to_numeric(work[target_col], errors="coerce").dropna()
+
+
+# 7.2 ARX — авто-подбор лагов
+@callback(
+    Output("ts-lags", "value"),
+    Input("btn-arx-auto", "n_clicks"),
+    State("ts-ds-select", "value"),
+    State("ts-date-col", "value"), State("ts-target-col", "value"),
+    State(STORE_DATASET, "data"), State(STORE_PREPARED, "data"),
+    prevent_initial_call=True,
+)
+def _autosuggest_arx_lags(n, ds_name, date_col, target_col, raw, prep):
+    if not n:
+        return no_update
+    df = _get_df(ds_name, raw, prep)
+    dates, series = _safe_target_series(df, date_col, target_col)
+    if series is None:
+        return no_update
+    from core.timeseries_auto import detect_period, suggest_arx_lags
+    period = detect_period(series, dates)
+    lags = suggest_arx_lags(series, period)
+    return ",".join(str(l) for l in lags)
+
+
+# 7.3 SARIMAX — авто-подбор (p,d,q)(P,D,Q)
+@callback(
+    Output("sarimax-p", "value"), Output("sarimax-d", "value"),
+    Output("sarimax-q", "value"), Output("sarimax-P", "value"),
+    Output("sarimax-D", "value"), Output("sarimax-Q", "value"),
+    Output("ts-period", "value", allow_duplicate=True),
+    Input("btn-sarimax-auto", "n_clicks"),
+    State("ts-ds-select", "value"),
+    State("ts-date-col", "value"), State("ts-target-col", "value"),
+    State(STORE_DATASET, "data"), State(STORE_PREPARED, "data"),
+    prevent_initial_call=True,
+)
+def _autosuggest_sarimax_order(n, ds_name, date_col, target_col, raw, prep):
+    if not n:
+        return (no_update,) * 7
+    df = _get_df(ds_name, raw, prep)
+    dates, series = _safe_target_series(df, date_col, target_col)
+    if series is None:
+        return (no_update,) * 7
+    from core.timeseries_auto import (
+        adf_stationarity, detect_period, suggest_sarimax_order,
+    )
+    period = detect_period(series, dates)
+    adf = adf_stationarity(series)
+    order, seasonal_order = suggest_sarimax_order(
+        series, period, adf.get("pvalue"))
+    return (
+        int(order[0]), int(order[1]), int(order[2]),
+        int(seasonal_order[0]), int(seasonal_order[1]), int(seasonal_order[2]),
+        int(period if period >= 2 else 12),
+    )
+
+
+# 7.6 STL — авто-определение периода
+@callback(
+    Output("ts-period", "value", allow_duplicate=True),
+    Input("btn-stl-auto", "n_clicks"),
+    State("ts-ds-select", "value"),
+    State("ts-date-col", "value"), State("ts-target-col", "value"),
+    State(STORE_DATASET, "data"), State(STORE_PREPARED, "data"),
+    prevent_initial_call=True,
+)
+def _autosuggest_stl_period(n, ds_name, date_col, target_col, raw, prep):
+    if not n:
+        return no_update
+    df = _get_df(ds_name, raw, prep)
+    dates, series = _safe_target_series(df, date_col, target_col)
+    if series is None:
+        return no_update
+    from core.timeseries_auto import detect_period
+    period = detect_period(series, dates)
+    return int(period if period >= 2 else 12)
+
+
+# 7.4 Backtest — авто-настройки на основе длины ряда
+@callback(
+    Output("bt-folds", "value"),
+    Output("bt-min-train", "value"),
+    Output("bt-horizon-fold", "value"),
+    Input("btn-bt-auto", "n_clicks"),
+    State("ts-ds-select", "value"),
+    State("ts-date-col", "value"), State("ts-target-col", "value"),
+    State(STORE_DATASET, "data"), State(STORE_PREPARED, "data"),
+    prevent_initial_call=True,
+)
+def _autosuggest_backtest(n, ds_name, date_col, target_col, raw, prep):
+    if not n:
+        return no_update, no_update, no_update
+    df = _get_df(ds_name, raw, prep)
+    dates, series = _safe_target_series(df, date_col, target_col)
+    if series is None:
+        return no_update, no_update, no_update
+    n_obs = len(series)
+    # Эвристика: горизонт ~ период (но <= 12), min_train >= 2 периода,
+    # фолдов 3..6 чтобы test-окна не пересекались.
+    from core.timeseries_auto import detect_period
+    period = detect_period(series, dates)
+    horizon = max(2, min(period if period >= 2 else 6, 12))
+    min_train = max(12, (2 * period) if period >= 2 else int(0.5 * n_obs))
+    min_train = min(min_train, max(12, n_obs - horizon - 5))
+    available = max(1, n_obs - min_train - horizon)
+    folds = max(2, min(6, available // max(1, horizon)))
+    return int(folds), int(min_train), int(horizon)
+
+
+# 7.9 Anomaly — авто-выбор метода и окна
+@callback(
+    Output("anom-method", "value"),
+    Output("anom-window", "value"),
+    Input("btn-anom-auto", "n_clicks"),
+    State("ts-ds-select", "value"),
+    State("ts-date-col", "value"), State("ts-target-col", "value"),
+    State("anom-col", "value"),
+    State(STORE_DATASET, "data"), State(STORE_PREPARED, "data"),
+    prevent_initial_call=True,
+)
+def _autosuggest_anomaly(n, ds_name, date_col, target_col, anom_col, raw, prep):
+    if not n:
+        return no_update, no_update
+    df = _get_df(ds_name, raw, prep)
+    if df is None:
+        return no_update, no_update
+    use_col = anom_col or target_col
+    if use_col not in df.columns:
+        return no_update, no_update
+    series = pd.to_numeric(df[use_col], errors="coerce").dropna()
+    if series.empty:
+        return no_update, no_update
+    from core.timeseries_auto import (
+        detect_period, seasonality_strength,
+    )
+    dates_series = (df[date_col] if date_col in df.columns else None)
+    period = detect_period(series, dates_series)
+    method = "rolling_zscore"
+    if period >= 2 and len(series) >= 2 * period:
+        try:
+            tmp_df = df[[date_col, use_col]].dropna() if date_col in df.columns else None
+            if tmp_df is not None:
+                fs = seasonality_strength(tmp_df, date_col, use_col, period)
+                if fs.get("fs", 0) >= 0.4:
+                    method = "stl_residual"
+        except Exception:
+            pass
+    window = int(period if period >= 4 else 12)
+    return method, window
 
 
 # --- Водопад вкладов в прогноз -------------------------------------------
