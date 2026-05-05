@@ -37,7 +37,9 @@ from core.models import (
     rolling_backtest, detect_anomalies, ForecastResult,
 )
 from core.timeseries_auto import (
-    adf_stationarity, interpret_metrics, run_auto_forecast,
+    adf_stationarity, aggregate_duplicates, compute_forecast_waterfall,
+    detect_duplicate_dates, interpret_metrics, recommend_exog,
+    run_auto_forecast,
 )
 
 
@@ -1032,6 +1034,14 @@ def _render_tab(tab, ds_name, raw, prep):
                 style={"marginBottom": "12px",
                        "color": "rgba(255,255,255,0.65)"},
             ),
+            # Динамическая карточка «Дубликаты дат» (виден только если есть дубли).
+            html.Div(id="auto-duplicates-card",
+                     style={"marginBottom": "12px"}),
+            # Динамическая карточка «Рекомендованные внешние факторы».
+            html.Div(id="auto-exog-card",
+                     style={"marginBottom": "12px"}),
+            # Скрытый стор для выбранного метода агрегации (сюда пишет radio).
+            dcc.Store(id="auto-aggregation-method", data="none"),
             dcc.Loading(html.Div(id="auto-result"), type="circle",
                         color=ACCENT_500),
         ])
@@ -1734,16 +1744,261 @@ def _auto_status_card(decisions: dict, notes: list[str]) -> html.Div:
     ])
 
 
+# --- Карточка «Дубликаты дат» (динамическая) -----------------------------
+
+_AGG_OPTIONS = [
+    {"label": "Использовать как есть", "value": "none"},
+    {"label": "Среднее",                "value": "mean"},
+    {"label": "Медиана",                "value": "median"},
+    {"label": "Сумма",                  "value": "sum"},
+    {"label": "Последнее",              "value": "last"},
+]
+
+
+@callback(
+    Output("auto-duplicates-card", "children"),
+    Input("ts-ds-select", "value"),
+    Input("ts-date-col", "value"),
+    Input("ts-target-col", "value"),
+    State(STORE_DATASET, "data"),
+    State(STORE_PREPARED, "data"),
+)
+def _auto_duplicates_panel(ds_name, date_col, target_col, raw, prep):
+    if not all([ds_name, date_col, target_col]):
+        return None
+    df = _get_df(ds_name, raw, prep)
+    if df is None or date_col not in df.columns:
+        return None
+    info = detect_duplicate_dates(df, date_col)
+    if not info["has_duplicates"]:
+        return None
+    return _card([
+        html.Div(
+            [
+                dbc.Badge(
+                    f"⚠ Найдено {info['n_duplicates']} дублей дат",
+                    color="warning",
+                    style={"fontSize": "12px", "padding": "6px 10px",
+                           "marginRight": "10px"},
+                ),
+                html.Span(
+                    f"На {info['n_unique_dates']} уникальных дат приходится "
+                    f"{info['n_total_rows']} строк. Чтобы прогноз был "
+                    "корректным, нужно свести каждую дату к одной точке.",
+                    style={"color": "rgba(255,255,255,0.78)"},
+                ),
+            ],
+            style={"marginBottom": "10px"},
+        ),
+        html.Div(
+            [
+                _label_with_hint(
+                    "СПОСОБ АГРЕГАЦИИ",
+                    "Среднее — для непрерывных метрик (цены, курсы). "
+                    "Медиана — устойчивее к выбросам. "
+                    "Сумма — если в одну дату попало несколько событий "
+                    "(чеки, заказы). Последнее — если важно последнее "
+                    "наблюдение в день.",
+                ),
+                dcc.RadioItems(
+                    id="auto-agg-radio",
+                    options=_AGG_OPTIONS,
+                    value="mean",
+                    inline=True,
+                    className="kb-ts-radio",
+                ),
+            ],
+        ),
+    ])
+
+
+@callback(
+    Output("auto-aggregation-method", "data"),
+    Input("auto-agg-radio", "value"),
+    prevent_initial_call=True,
+)
+def _sync_agg_method(value):
+    return value or "none"
+
+
+# --- Карточка «Рекомендованные внешние факторы» ---------------------------
+
+@callback(
+    Output("auto-exog-card", "children"),
+    Input("ts-ds-select", "value"),
+    Input("ts-date-col", "value"),
+    Input("ts-target-col", "value"),
+    State(STORE_DATASET, "data"),
+    State(STORE_PREPARED, "data"),
+)
+def _auto_exog_panel(ds_name, date_col, target_col, raw, prep):
+    if not all([ds_name, date_col, target_col]):
+        return None
+    df = _get_df(ds_name, raw, prep)
+    if df is None:
+        return None
+    try:
+        recs = recommend_exog(df, date_col, target_col, max_recommend=6)
+    except Exception:
+        return None
+    recommended = [r for r in recs if r["recommend"]]
+    if not recs:
+        return None
+
+    rows = []
+    for r in recs:
+        badges = []
+        corr = r["correlation"]
+        corr_color = ("success" if abs(corr) >= 0.6
+                      else "warning" if abs(corr) >= 0.3
+                      else "secondary")
+        badges.append(dbc.Badge(f"corr {corr:+.2f}", color=corr_color,
+                                style={"marginRight": "6px"}))
+        if r["stationary"] is True:
+            badges.append(dbc.Badge("стационарен", color="success",
+                                    style={"marginRight": "6px"}))
+        elif r["stationary"] is False:
+            badges.append(dbc.Badge("нестационарен", color="warning",
+                                    style={"marginRight": "6px"}))
+        if r["completeness"] < 0.95:
+            badges.append(dbc.Badge(
+                f"пропусков {(1-r['completeness'])*100:.0f}%",
+                color="warning", style={"marginRight": "6px"}))
+        if r["recommend"]:
+            badges.append(dbc.Badge("рекомендуем", color="info",
+                                    style={"marginRight": "6px"}))
+
+        rows.append(html.Tr([
+            html.Td(r["col"], style={"fontWeight": "600",
+                                      "padding": "6px 12px 6px 0",
+                                      "whiteSpace": "nowrap"}),
+            html.Td(badges, style={"padding": "6px 0"}),
+        ]))
+
+    rec_cols_csv = ",".join(r["col"] for r in recommended)
+    apply_btn = html.Button(
+        [icon("plus", 12), html.Span(
+            f"Использовать рекомендованные ({len(recommended)})")],
+        id="btn-auto-apply-exog",
+        className="kb-btn kb-btn--secondary",
+        n_clicks=0,
+        disabled=not recommended,
+        title=("Подставит в поле «Внешние факторы» столбцы "
+               "с высокой корреляцией и низкой долей пропусков"),
+        **{"data-cols": rec_cols_csv},
+    )
+
+    return _card([
+        _card_head(
+            "Рекомендованные внешние факторы",
+            right=apply_btn,
+        ),
+        html.Div(
+            "Числовые колонки, отсортированные по корреляции с целевой "
+            "переменной. Учитывается стационарность (ADF) и доля пропусков.",
+            style={"color": "rgba(255,255,255,0.65)", "fontSize": "12px",
+                   "marginBottom": "8px"},
+        ),
+        html.Table(html.Tbody(rows),
+                   className="kb-ts-tbl",
+                   style={"width": "100%"}),
+    ])
+
+
+@callback(
+    Output("ts-exog-cols", "value"),
+    Input("btn-auto-apply-exog", "n_clicks"),
+    State("btn-auto-apply-exog", "data-cols"),
+    State("ts-exog-cols", "value"),
+    prevent_initial_call=True,
+)
+def _apply_recommended_exog(n_clicks, cols_csv, current):
+    if not n_clicks or not cols_csv:
+        return no_update
+    rec = [c for c in cols_csv.split(",") if c]
+    merged = list(dict.fromkeys((current or []) + rec))
+    return merged
+
+
+# --- Водопад вкладов в прогноз -------------------------------------------
+
+def _waterfall_figure(wf_df: pd.DataFrame, target_col: str) -> go.Figure:
+    """Plotly waterfall: вклад каждого фактора в средний прогноз."""
+    if wf_df.empty:
+        return go.Figure()
+
+    body = wf_df[wf_df["kind"] != "total"]
+    total_row = wf_df[wf_df["kind"] == "total"]
+
+    measures = ["relative"] * len(body)
+    x_labels = list(body["factor"])
+    y_values = [float(v) for v in body["contribution"]]
+
+    if not total_row.empty:
+        measures.append("total")
+        x_labels.append(total_row.iloc[0]["factor"])
+        y_values.append(float(total_row.iloc[0]["contribution"]))
+
+    fig = go.Figure(go.Waterfall(
+        orientation="v",
+        measure=measures,
+        x=x_labels,
+        y=y_values,
+        text=[f"{v:+,.1f}" if i != len(measures) - 1 else f"{v:,.1f}"
+              for i, v in enumerate(y_values)],
+        textposition="outside",
+        connector={"line": {"color": "rgba(255,255,255,0.25)"}},
+        increasing={"marker": {"color": "#5BA678"}},
+        decreasing={"marker": {"color": "#C8503B"}},
+        totals={"marker": {"color": "#4A7FB0"}},
+    ))
+    fig.update_layout(
+        title=None,
+        showlegend=False,
+        height=320,
+        margin=dict(t=10, r=20, b=80, l=50),
+        yaxis_title=target_col,
+        xaxis=dict(tickangle=-25),
+    )
+    return apply_kibad_theme(fig)
+
+
+def _waterfall_card(auto_result, df, date_col, target_col) -> html.Div | None:
+    try:
+        wf = compute_forecast_waterfall(auto_result, df, date_col, target_col)
+    except Exception:
+        return None
+    if wf.empty:
+        return None
+    fig = _waterfall_figure(wf, target_col)
+    return _card([
+        _card_head(
+            "Что повлияло на прогноз",
+            right=_chip(f"ФАКТОРОВ: {len(wf) - 1}", "neutral"),
+        ),
+        html.Div(
+            "Декомпозиция среднего прогноза: «Среднее за историю» — "
+            "точка отсчёта, далее каждый бар добавляет или вычитает свою "
+            "часть, итог — средний прогнозный уровень.",
+            style={"color": "rgba(255,255,255,0.65)", "fontSize": "12px",
+                   "marginBottom": "8px"},
+        ),
+        _chart_frame(fig, height=320),
+    ])
+
+
 @callback(
     Output("auto-result", "children"),
     Input("btn-auto", "n_clicks"),
     State("ts-ds-select", "value"),
     State("ts-date-col", "value"), State("ts-target-col", "value"),
     State("ts-exog-cols", "value"),
+    State("auto-aggregation-method", "data"),
     State(STORE_DATASET, "data"), State(STORE_PREPARED, "data"),
     prevent_initial_call=True,
 )
-def _run_auto(n, ds_name, date_col, target_col, exog_cols, raw, prep):
+def _run_auto(n, ds_name, date_col, target_col, exog_cols,
+              agg_method, raw, prep):
     if not all([date_col, target_col]):
         return alert_banner(
             "Выберите датасет, колонку даты и целевую переменную "
@@ -1757,6 +2012,7 @@ def _run_auto(n, ds_name, date_col, target_col, exog_cols, raw, prep):
         auto = run_auto_forecast(
             df, date_col, target_col,
             exog_cols=exog_cols if exog_cols else None,
+            aggregation_method=agg_method or "none",
         )
     except Exception as exc:
         return alert_banner(f"Не удалось построить прогноз: {exc}", "danger")
@@ -1800,6 +2056,18 @@ def _run_auto(n, ds_name, date_col, target_col, exog_cols, raw, prep):
         ]),
     ])
 
+    # Подготовим водопад на сведённых данных, чтобы соответствовать прогнозу.
+    df_for_wf = df
+    if decisions.get("aggregation_method", "none") != "none":
+        try:
+            df_for_wf = aggregate_duplicates(
+                df, date_col, target_col,
+                exog_cols=exog_cols, method=decisions["aggregation_method"],
+            )
+        except Exception:
+            df_for_wf = df
+    waterfall_card = _waterfall_card(auto, df_for_wf, date_col, target_col)
+
     hint = html.Div(
         "Если результат вас не устраивает — посмотрите соседние вкладки: "
         "там можно вручную настроить модель и сравнить прогнозы между собой.",
@@ -1811,7 +2079,11 @@ def _run_auto(n, ds_name, date_col, target_col, exog_cols, raw, prep):
                "fontSize": "13px"},
     )
 
-    return html.Div([status_card, forecast_card, hint])
+    children = [status_card, forecast_card]
+    if waterfall_card is not None:
+        children.append(waterfall_card)
+    children.append(hint)
+    return html.Div(children)
 
 
 # ---------------------------------------------------------------------------

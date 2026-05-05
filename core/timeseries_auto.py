@@ -42,6 +42,266 @@ class AutoForecastResult:
 
 
 # ---------------------------------------------------------------------------
+# Дубликаты дат
+# ---------------------------------------------------------------------------
+
+def detect_duplicate_dates(df: pd.DataFrame, date_col: str) -> dict[str, Any]:
+    """Проверить, есть ли в датасете несколько строк на одну дату."""
+    if df is None or df.empty or date_col not in df.columns:
+        return {"has_duplicates": False, "n_duplicates": 0,
+                "n_unique_dates": 0, "n_total_rows": 0}
+    dates = _coerce_datetime_series(df[date_col]).dropna()
+    n_total = int(len(dates))
+    n_unique = int(dates.nunique())
+    n_dups = n_total - n_unique
+    return {
+        "has_duplicates": n_dups > 0,
+        "n_duplicates": n_dups,
+        "n_unique_dates": n_unique,
+        "n_total_rows": n_total,
+    }
+
+
+_AGG_LABELS = {
+    "mean":   "среднее",
+    "median": "медиана",
+    "sum":    "сумма",
+    "last":   "последнее",
+    "max":    "максимум",
+    "min":    "минимум",
+}
+
+
+def aggregate_duplicates(
+    df: pd.DataFrame,
+    date_col: str,
+    target_col: str,
+    exog_cols: list[str] | None = None,
+    method: str = "mean",
+) -> pd.DataFrame:
+    """Свести несколько строк на одну дату к одной строке.
+
+    Метод применяется к target. К числовым exog всегда применяется среднее
+    (FX, GDP и подобные регрессоры не суммируются).
+    Категориальные exog берутся как первое значение.
+    """
+    if method == "none" or df is None or df.empty:
+        return df
+    if method not in _AGG_LABELS:
+        raise ValueError(f"Неизвестный метод агрегации: {method!r}")
+    work = df.copy()
+    work[date_col] = _coerce_datetime_series(work[date_col])
+    work = work.dropna(subset=[date_col])
+    cols_to_keep = [target_col] + list(exog_cols or [])
+    cols_to_keep = [c for c in cols_to_keep if c in work.columns]
+    if not cols_to_keep:
+        return work
+
+    agg_map: dict[str, str] = {target_col: method}
+    for c in (exog_cols or []):
+        if c not in work.columns:
+            continue
+        if pd.api.types.is_numeric_dtype(work[c]):
+            agg_map[c] = "mean"
+        else:
+            agg_map[c] = "first"
+    return (
+        work.groupby(date_col, as_index=False)
+        .agg(agg_map)
+        .sort_values(date_col)
+        .reset_index(drop=True)
+    )
+
+
+# ---------------------------------------------------------------------------
+# Подсказки по экзогенным факторам
+# ---------------------------------------------------------------------------
+
+def recommend_exog(
+    df: pd.DataFrame,
+    date_col: str,
+    target_col: str,
+    max_recommend: int = 6,
+) -> list[dict[str, Any]]:
+    """Оценить пригодность каждой числовой колонки как внешнего фактора.
+
+    Скоринг = |corr| × stationary_bonus × completeness.
+    Вернёт топ `max_recommend` кандидатов с пояснениями.
+    """
+    if df is None or df.empty or target_col not in df.columns:
+        return []
+    target = pd.to_numeric(df[target_col], errors="coerce")
+    n_total = max(len(df), 1)
+
+    candidates: list[dict[str, Any]] = []
+    for col in df.columns:
+        if col in (date_col, target_col):
+            continue
+        if not pd.api.types.is_numeric_dtype(df[col]):
+            continue
+        s = pd.to_numeric(df[col], errors="coerce")
+        if s.dropna().nunique() <= 1:
+            continue
+        valid = ~(target.isna() | s.isna())
+        n_valid = int(valid.sum())
+        if n_valid < 10:
+            continue
+
+        completeness = float(1 - s.isna().sum() / n_total)
+        try:
+            corr = float(target[valid].corr(s[valid]))
+        except Exception:
+            corr = float("nan")
+        if pd.isna(corr):
+            corr = 0.0
+
+        adf = adf_stationarity(s.dropna())
+        stationary = adf.get("stationary")
+        adf_p = adf.get("pvalue", float("nan"))
+        stat_bonus = 1.0 if stationary is True else (0.7 if stationary is False else 0.85)
+
+        score = abs(corr) * stat_bonus * completeness
+
+        reasons: list[str] = [f"корреляция {corr:+.2f}"]
+        if stationary is True:
+            reasons.append("ряд стационарен")
+        elif stationary is False:
+            reasons.append(f"нестационарен (ADF p={adf_p:.2f}, нужна разность)")
+        if completeness < 0.95:
+            reasons.append(f"пропусков {(1 - completeness) * 100:.0f}%")
+
+        recommend = (abs(corr) >= 0.3) and (completeness >= 0.8)
+        candidates.append({
+            "col": col,
+            "correlation": round(corr, 3),
+            "abs_correlation": round(abs(corr), 3),
+            "stationary": stationary,
+            "adf_pvalue": round(adf_p, 4) if not pd.isna(adf_p) else None,
+            "completeness": round(completeness, 3),
+            "score": round(score, 4),
+            "reason": " · ".join(reasons),
+            "recommend": bool(recommend),
+        })
+
+    candidates.sort(key=lambda x: -x["score"])
+    return candidates[:max_recommend]
+
+
+# ---------------------------------------------------------------------------
+# Водопад вкладов в прогноз
+# ---------------------------------------------------------------------------
+
+def compute_forecast_waterfall(
+    auto_result: "AutoForecastResult",
+    df: pd.DataFrame,
+    date_col: str,
+    target_col: str,
+) -> pd.DataFrame:
+    """Декомпозировать средний прогноз на baseline / тренд / сезонность / exog / прочее.
+
+    Возвращает DataFrame со столбцами factor, contribution, kind. Сумма всех
+    contribution даёт средний прогноз. Последняя строка — итоговая (kind='total').
+    """
+    fr = auto_result.forecast
+    decisions = auto_result.decisions
+    forecast_only = fr.forecast_df[fr.forecast_df["actual"].isna()]
+    if forecast_only.empty:
+        return pd.DataFrame(columns=["factor", "contribution", "kind"])
+
+    history = pd.to_numeric(df[target_col], errors="coerce").dropna()
+    if history.empty:
+        return pd.DataFrame(columns=["factor", "contribution", "kind"])
+
+    forecast_mean = float(forecast_only["forecast"].mean())
+    baseline = float(history.mean())
+    n_hist = len(history)
+    h = len(forecast_only)
+
+    rows: list[dict[str, Any]] = [
+        {"factor": "Среднее за историю",
+         "contribution": baseline, "kind": "baseline"},
+    ]
+
+    # 1. Тренд: линейная экстраполяция от середины истории к середине прогноза.
+    if n_hist >= 4:
+        x = np.arange(n_hist)
+        try:
+            slope, _ = np.polyfit(x, history.values, 1)
+            trend_contrib = float(slope) * (h / 2 + n_hist / 2)
+            if abs(trend_contrib) > 1e-9:
+                rows.append({
+                    "factor": "Тренд",
+                    "contribution": trend_contrib,
+                    "kind": "trend",
+                })
+        except Exception:
+            pass
+
+    # 2. Сезонность: средняя сезонная компонента STL на горизонте.
+    period = int(decisions.get("period", 1) or 1)
+    if period >= 2 and n_hist >= 2 * period:
+        try:
+            from statsmodels.tsa.seasonal import STL
+            stl = STL(history.values, period=period, robust=True).fit()
+            cycle = stl.seasonal[-period:]
+            future_seasonal = np.tile(
+                cycle, int(np.ceil(h / period)) + 1,
+            )[:h]
+            seasonal_contrib = float(future_seasonal.mean())
+            if abs(seasonal_contrib) > 1e-9:
+                rows.append({
+                    "factor": "Сезонность",
+                    "contribution": seasonal_contrib,
+                    "kind": "seasonal",
+                })
+        except Exception:
+            pass
+
+    # 3. Вклад внешних факторов (только для ARX — у него «чистая» Ridge).
+    model_name = decisions.get("model", {}).get("model", "")
+    exog_cols = decisions.get("exog_cols", []) or []
+    if model_name == "arx" and fr.explainability is not None and exog_cols:
+        coef_df = fr.explainability
+        for ex in exog_cols:
+            feat_name = f"exog_{ex}"
+            row = coef_df[coef_df["feature"] == feat_name]
+            if row.empty or ex not in df.columns:
+                continue
+            coef = float(row.iloc[0]["coefficient"])
+            ex_series = pd.to_numeric(df[ex], errors="coerce").dropna()
+            if ex_series.empty:
+                continue
+            ex_last = float(ex_series.iloc[-1])
+            ex_mean = float(ex_series.mean())
+            # Контрибуция = coef × (последнее значение − среднее по истории).
+            # Так получаем «изменение от типичного уровня», а не суммарный вклад.
+            delta = coef * (ex_last - ex_mean)
+            if abs(delta) > 1e-9:
+                rows.append({
+                    "factor": f"{ex} (β={coef:+.3f})",
+                    "contribution": delta,
+                    "kind": "exog",
+                })
+
+    # 4. Прочее (модель) — невязка, чтобы итог сошёлся с реальным прогнозом.
+    accounted = sum(r["contribution"] for r in rows)
+    remainder = forecast_mean - accounted
+    if abs(remainder) > 1e-6:
+        rows.append({
+            "factor": "Прочее (модель)",
+            "contribution": remainder,
+            "kind": "residual",
+        })
+
+    rows.append({
+        "factor": "Прогноз (среднее)",
+        "contribution": forecast_mean,
+        "kind": "total",
+    })
+    return pd.DataFrame(rows)
+
+
+# ---------------------------------------------------------------------------
 # Период сезонности
 # ---------------------------------------------------------------------------
 
@@ -327,8 +587,14 @@ def run_auto_forecast(
     target_col: str,
     exog_cols: list[str] | None = None,
     horizon: int | None = None,
+    aggregation_method: str = "none",
 ) -> AutoForecastResult:
-    """Полный авто-прогноз: детект периода, ADF, выбор модели, подбор гиперпараметров."""
+    """Полный авто-прогноз: детект периода, ADF, выбор модели, подбор гиперпараметров.
+
+    Если у одной даты несколько строк, можно передать ``aggregation_method``:
+    'mean' / 'median' / 'sum' / 'last' / 'min' / 'max' — тогда строки сначала
+    сводятся к одной точке на дату.
+    """
     if df is None or df.empty:
         raise ValueError("Пустой DataFrame.")
     if date_col not in df.columns or target_col not in df.columns:
@@ -336,6 +602,14 @@ def run_auto_forecast(
 
     work = df[[date_col, target_col] + list(exog_cols or [])].copy()
     work = work.dropna(subset=[date_col, target_col])
+
+    dup_info = detect_duplicate_dates(work, date_col)
+    if dup_info["has_duplicates"] and aggregation_method != "none":
+        work = aggregate_duplicates(
+            work, date_col, target_col,
+            exog_cols=exog_cols, method=aggregation_method,
+        )
+
     work = work.sort_values(date_col).reset_index(drop=True)
     n_obs = len(work)
     if n_obs < 4:
@@ -359,8 +633,21 @@ def run_auto_forecast(
         "seasonality": season,
         "model": rec,
         "exog_cols": list(exog_cols or []),
+        "duplicates": dup_info,
+        "aggregation_method": aggregation_method,
     }
     notes: list[str] = []
+    if dup_info["has_duplicates"]:
+        if aggregation_method != "none":
+            notes.append(
+                f"Обнаружено {dup_info['n_duplicates']} дублирующих дат — "
+                f"свернули по «{_AGG_LABELS.get(aggregation_method, aggregation_method)}»."
+            )
+        else:
+            notes.append(
+                f"⚠ {dup_info['n_duplicates']} дублирующих дат не свернуты. "
+                "Выберите способ агрегации в разделе «Дубликаты дат» — это улучшит качество."
+            )
     notes.append(
         f"Наблюдений: {n_obs}. Сезонный период: {period if period >= 2 else 'не обнаружен'}."
     )

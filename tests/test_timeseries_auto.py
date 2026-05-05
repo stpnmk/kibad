@@ -14,8 +14,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core.timeseries_auto import (
     adf_stationarity,
+    aggregate_duplicates,
+    compute_forecast_waterfall,
+    detect_duplicate_dates,
     detect_period,
     interpret_metrics,
+    recommend_exog,
     recommend_model,
     run_auto_forecast,
     seasonality_strength,
@@ -226,3 +230,153 @@ def test_auto_forecast_horizon_default(monthly_seasonal_ts):
     result = run_auto_forecast(monthly_seasonal_ts, "date", "value")
     h = result.decisions["horizon"]
     assert 6 <= h <= 60
+
+
+# ---------------------------------------------------------------------------
+# detect_duplicate_dates / aggregate_duplicates
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def duplicated_ts() -> pd.DataFrame:
+    """48 строк, по 4 строки на каждую из 12 уникальных дат."""
+    np.random.seed(11)
+    dates = pd.date_range("2024-01-01", periods=12, freq="MS").repeat(4)
+    return pd.DataFrame({
+        "date": dates,
+        "value": np.random.normal(100, 5, 48),
+        "fx": np.random.normal(70, 1, 48),
+    })
+
+
+def test_detect_duplicate_dates_positive(duplicated_ts):
+    info = detect_duplicate_dates(duplicated_ts, "date")
+    assert info["has_duplicates"] is True
+    assert info["n_duplicates"] == 36  # 48 - 12 unique
+    assert info["n_unique_dates"] == 12
+
+
+def test_detect_duplicate_dates_clean(monthly_seasonal_ts):
+    info = detect_duplicate_dates(monthly_seasonal_ts, "date")
+    assert info["has_duplicates"] is False
+    assert info["n_duplicates"] == 0
+
+
+def test_aggregate_duplicates_mean(duplicated_ts):
+    out = aggregate_duplicates(duplicated_ts, "date", "value",
+                               exog_cols=["fx"], method="mean")
+    assert len(out) == 12  # 48 → 12 unique dates
+    expected_first = duplicated_ts.iloc[:4]["value"].mean()
+    assert out.iloc[0]["value"] == pytest.approx(expected_first)
+
+
+def test_aggregate_duplicates_median_vs_sum(duplicated_ts):
+    med = aggregate_duplicates(duplicated_ts, "date", "value", method="median")
+    su = aggregate_duplicates(duplicated_ts, "date", "value", method="sum")
+    assert su.iloc[0]["value"] > med.iloc[0]["value"]  # 4 строки → сумма > медианы
+
+
+def test_aggregate_duplicates_none_passthrough(duplicated_ts):
+    out = aggregate_duplicates(duplicated_ts, "date", "value", method="none")
+    assert len(out) == 48
+
+
+def test_aggregate_duplicates_unknown_method(duplicated_ts):
+    with pytest.raises(ValueError):
+        aggregate_duplicates(duplicated_ts, "date", "value", method="badmethod")
+
+
+def test_run_auto_forecast_with_aggregation(duplicated_ts):
+    res = run_auto_forecast(duplicated_ts, "date", "value",
+                            aggregation_method="mean")
+    assert res.decisions["duplicates"]["has_duplicates"] is True
+    assert res.decisions["aggregation_method"] == "mean"
+    # n_obs должно быть равным числу уникальных дат
+    assert res.decisions["n_obs"] == 12
+
+
+# ---------------------------------------------------------------------------
+# recommend_exog
+# ---------------------------------------------------------------------------
+
+def test_recommend_exog_picks_correlated_column():
+    np.random.seed(2)
+    n = 60
+    dates = pd.date_range("2018-01-01", periods=n, freq="MS")
+    x_strong = np.random.normal(0, 1, n)
+    x_weak = np.random.normal(0, 1, n)
+    y = 50 + 3 * x_strong + np.random.normal(0, 0.5, n)
+    df = pd.DataFrame({
+        "date": dates, "y": y,
+        "fx_strong": x_strong, "noise": x_weak,
+    })
+    recs = recommend_exog(df, "date", "y", max_recommend=5)
+    assert recs[0]["col"] == "fx_strong"
+    assert recs[0]["abs_correlation"] > 0.7
+    assert recs[0]["recommend"] is True
+    # noise должен идти ниже либо не попасть в рекомендованные
+    weak = next((r for r in recs if r["col"] == "noise"), None)
+    if weak is not None:
+        assert weak["abs_correlation"] < 0.3
+        assert weak["recommend"] is False
+
+
+def test_recommend_exog_skips_target_and_constant():
+    df = pd.DataFrame({
+        "date": pd.date_range("2024-01-01", periods=20, freq="MS"),
+        "y":     np.arange(20, dtype=float),
+        "const": np.ones(20),
+        "good":  np.arange(20, dtype=float) + 1,
+    })
+    recs = recommend_exog(df, "date", "y")
+    cols = [r["col"] for r in recs]
+    assert "y" not in cols
+    assert "const" not in cols
+    assert "good" in cols
+
+
+def test_recommend_exog_empty_df():
+    assert recommend_exog(pd.DataFrame(), "date", "y") == []
+
+
+# ---------------------------------------------------------------------------
+# compute_forecast_waterfall
+# ---------------------------------------------------------------------------
+
+def test_waterfall_for_seasonal(monthly_seasonal_ts):
+    auto = run_auto_forecast(monthly_seasonal_ts, "date", "value")
+    wf = compute_forecast_waterfall(auto, monthly_seasonal_ts, "date", "value")
+    assert not wf.empty
+    assert "factor" in wf.columns
+    assert "contribution" in wf.columns
+    assert "kind" in wf.columns
+    # Первая строка — baseline, последняя — total
+    assert wf.iloc[0]["kind"] == "baseline"
+    assert wf.iloc[-1]["kind"] == "total"
+    # Сумма всех вкладов (кроме total) ≈ итоговый прогноз
+    parts = wf[wf["kind"] != "total"]["contribution"].sum()
+    assert parts == pytest.approx(wf.iloc[-1]["contribution"], rel=1e-4)
+
+
+def test_waterfall_for_arx_with_exog():
+    np.random.seed(3)
+    n = 60
+    dates = pd.date_range("2018-01-01", periods=n, freq="MS")
+    x = np.random.normal(0, 1, n)
+    y = 50 + 2.5 * x + np.random.normal(0, 1, n)
+    df = pd.DataFrame({"date": dates, "y": y, "x": x})
+    auto = run_auto_forecast(df, "date", "y", exog_cols=["x"])
+    wf = compute_forecast_waterfall(auto, df, "date", "y")
+    assert not wf.empty
+    if auto.decisions["model"]["model"] == "arx":
+        kinds = set(wf["kind"])
+        assert "exog" in kinds
+
+
+def test_waterfall_empty_forecast():
+    df = pd.DataFrame({
+        "date": pd.date_range("2024-01-01", periods=12, freq="MS"),
+        "value": np.arange(12, dtype=float) * 2 + 100,
+    })
+    auto = run_auto_forecast(df, "date", "value")
+    wf = compute_forecast_waterfall(auto, df, "date", "value")
+    assert not wf.empty
