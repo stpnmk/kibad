@@ -1015,6 +1015,7 @@ class DiagnosticsResult:
     ljung_box: pd.DataFrame
     acf_residuals: np.ndarray
     ci_bound: float
+    adf_pvalue: float = float("nan")
 
 
 def compute_residual_diagnostics(result: ForecastResult) -> DiagnosticsResult:
@@ -1060,6 +1061,14 @@ def compute_residual_diagnostics(result: ForecastResult) -> DiagnosticsResult:
     acf_vals = acf(residuals, nlags=max(1, nlags), fft=True)
     ci_bound = 1.96 / np.sqrt(n) if n > 0 else 0.0
 
+    adf_pvalue = float("nan")
+    if n >= 10:
+        try:
+            from statsmodels.tsa.stattools import adfuller
+            adf_pvalue = float(adfuller(residuals, autolag="AIC")[1])
+        except Exception:
+            pass
+
     return DiagnosticsResult(
         model_name=result.model_name,
         residuals=residuals,
@@ -1067,4 +1076,5 @@ def compute_residual_diagnostics(result: ForecastResult) -> DiagnosticsResult:
         ljung_box=lb_result,
         acf_residuals=acf_vals,
         ci_bound=ci_bound,
+        adf_pvalue=adf_pvalue,
     )

@@ -36,6 +36,74 @@ from core.models import (
     run_naive_forecast, run_arx_forecast, run_sarimax_forecast,
     rolling_backtest, detect_anomalies, ForecastResult,
 )
+from core.timeseries_auto import (
+    adf_stationarity, interpret_metrics, run_auto_forecast,
+)
+
+
+# ---------------------------------------------------------------------------
+# Hint / badge helpers (для нетехнических пользователей)
+# ---------------------------------------------------------------------------
+
+# Уникальный счётчик id для тултипов
+_HINT_COUNTER = {"n": 0}
+
+
+def _hint(text: str) -> html.Span:
+    """Маленькая иконка `?` рядом с подписью с русским тултипом."""
+    _HINT_COUNTER["n"] += 1
+    tip_id = f"ts-hint-{_HINT_COUNTER['n']}"
+    return html.Span(
+        [
+            html.Span(
+                "?",
+                id=tip_id,
+                className="kb-ts-hint-icon",
+                style={
+                    "display": "inline-flex",
+                    "alignItems": "center",
+                    "justifyContent": "center",
+                    "width": "14px",
+                    "height": "14px",
+                    "marginLeft": "6px",
+                    "borderRadius": "50%",
+                    "background": "rgba(255,255,255,0.10)",
+                    "border": "1px solid rgba(255,255,255,0.25)",
+                    "color": "rgba(255,255,255,0.75)",
+                    "fontSize": "10px",
+                    "fontWeight": "600",
+                    "cursor": "help",
+                    "verticalAlign": "middle",
+                },
+            ),
+            dbc.Tooltip(text, target=tip_id, placement="top",
+                        className="kb-ts-tooltip"),
+        ],
+    )
+
+
+def _label_with_hint(label_text: str, hint_text: str,
+                     class_name: str = "kb-ts-ctrl-label") -> html.Label:
+    """Лейбл + иконка-подсказка одной html.Label."""
+    return html.Label(
+        [html.Span(label_text), _hint(hint_text)],
+        className=class_name,
+    )
+
+
+def _quality_badge(metrics: dict) -> html.Span | None:
+    """dbc.Badge с человеко-читаемой оценкой качества прогноза."""
+    info = interpret_metrics(metrics or {})
+    if info["color"] == "secondary":
+        return None
+    return dbc.Badge(
+        info["label"],
+        color=info["color"],
+        className="kb-ts-quality-badge",
+        style={"marginLeft": "8px", "fontSize": "11px",
+               "padding": "4px 8px", "borderRadius": "12px"},
+        title=info["message"],
+    )
 
 dash.register_page(
     __name__,
@@ -623,8 +691,13 @@ def _controls() -> html.Div:
                         [
                             html.Div(
                                 [
-                                    html.Label("СЕЗОННЫЙ ПЕРИОД",
-                                               className="kb-ts-ctrl-label"),
+                                    _label_with_hint(
+                                        "СЕЗОННЫЙ ПЕРИОД",
+                                        "Сколько шагов в одном цикле сезонности. "
+                                        "Для месячных данных = 12, "
+                                        "для квартальных = 4, для недельных = 52. "
+                                        "В Авто-прогнозе определяется автоматически.",
+                                    ),
                                     html.Span(id="ts-period-val",
                                               className="kb-ts-slider-val",
                                               children="12"),
@@ -643,7 +716,12 @@ def _controls() -> html.Div:
                     ),
                     html.Div(
                         [
-                            html.Label("ЛАГИ AR", className="kb-ts-ctrl-label"),
+                            _label_with_hint(
+                                "ЛАГИ AR",
+                                "Какие предыдущие точки модель учитывает. "
+                                "По умолчанию 1, 2, 3 шага назад и год назад (12). "
+                                "Если не уверены — используйте Авто-прогноз.",
+                            ),
                             dcc.Input(id="ts-lags", value="1,2,3,12",
                                       type="text", className="kb-input kb-input--mono"),
                             html.Div([html.Span("через запятую"),
@@ -656,8 +734,13 @@ def _controls() -> html.Div:
                         [
                             html.Div(
                                 [
-                                    html.Label("RIDGE α",
-                                               className="kb-ts-ctrl-label"),
+                                    _label_with_hint(
+                                        "RIDGE α",
+                                        "Сила регуляризации Ridge. "
+                                        "Чем больше — тем сильнее модель «усмиряет» "
+                                        "коэффициенты и меньше переобучается. "
+                                        "Разумный диапазон: 1–50.",
+                                    ),
                                     html.Span(id="ts-alpha-val",
                                               className="kb-ts-slider-val",
                                               children="10"),
@@ -805,6 +888,7 @@ def _fmt_df_tbl(df: pd.DataFrame, max_rows: int = 10) -> html.Table:
 # ---------------------------------------------------------------------------
 
 _TABS = [
+    ("tab-auto",    "Авто-прогноз"),
     ("tab-naive",   "Наивный"),
     ("tab-arx",     "ARX"),
     ("tab-sarimax", "SARIMAX"),
@@ -825,7 +909,7 @@ layout = html.Div(
         html.Div(
             dbc.Tabs(
                 id="ts-tabs",
-                active_tab="tab-naive",
+                active_tab="tab-auto",
                 children=[dbc.Tab(label=lbl, tab_id=tid)
                           for tid, lbl in _TABS],
                 className="kb-ts-tabs",
@@ -925,6 +1009,32 @@ def _empty_state() -> html.Div:
 )
 def _render_tab(tab, ds_name, raw, prep):
     df = _get_df(ds_name, raw, prep)
+
+    # ---- 7.0 Авто-прогноз --------------------------------------------
+    if tab == "tab-auto":
+        return html.Div([
+            _tab_head(
+                "АВТО-ПРОГНОЗ",
+                "Один клик — мы сами определим период, выберем модель и "
+                "построим прогноз с пояснениями.",
+                [html.Button(
+                    [icon("play", 14),
+                     html.Span("Построить прогноз автоматически")],
+                    id="btn-auto", className="kb-btn kb-btn--primary",
+                    n_clicks=0,
+                )],
+            ),
+            html.Div(
+                "Что нужно: выбрать датасет, колонку даты и целевую "
+                "переменную в контрольной панели сверху. Внешние факторы "
+                "и горизонт — опционально.",
+                className="kb-ts-tab-sub",
+                style={"marginBottom": "12px",
+                       "color": "rgba(255,255,255,0.65)"},
+            ),
+            dcc.Loading(html.Div(id="auto-result"), type="circle",
+                        color=ACCENT_500),
+        ])
 
     # ---- 7.1 Наивный --------------------------------------------------
     if tab == "tab-naive":
@@ -1098,12 +1208,13 @@ def _render_tab(tab, ds_name, raw, prep):
 # ---------------------------------------------------------------------------
 
 def _sarimax_params_card() -> html.Div:
-    def _slider_field(label: str, idc: str, min_v: int, max_v: int,
-                      default: int, val_id: str) -> html.Div:
+    def _slider_field(label_text: str, hint_text: str, idc: str,
+                      min_v: int, max_v: int, default: int,
+                      val_id: str) -> html.Div:
         return html.Div(
             [
                 html.Div(
-                    [html.Label(label, className="kb-ts-ctrl-label"),
+                    [_label_with_hint(label_text, hint_text),
                      html.Span(str(default), id=val_id,
                                className="kb-ts-slider-val")],
                     className="kb-ts-slider-hdr",
@@ -1123,15 +1234,29 @@ def _sarimax_params_card() -> html.Div:
         [
             html.Div(
                 [
-                    html.Div("НЕСЕЗОННЫЕ", className="kb-overline"),
+                    html.Div(
+                        [html.Span("НЕСЕЗОННЫЕ"),
+                         _hint("Несезонные параметры ARIMA. "
+                               "Если не уверены — используйте Авто-прогноз: "
+                               "он подберёт значения автоматически.")],
+                        className="kb-overline"),
                     html.Div(
                         [
-                            _slider_field("p (AR)", "sarimax-p", 0, 5, 2,
-                                          "sarimax-p-val"),
-                            _slider_field("d (diff)", "sarimax-d", 0, 2, 1,
-                                          "sarimax-d-val"),
-                            _slider_field("q (MA)", "sarimax-q", 0, 5, 1,
-                                          "sarimax-q-val"),
+                            _slider_field(
+                                "p (AR)",
+                                "Сколько прошлых значений ряда учитывает модель. "
+                                "Типично 0–2.",
+                                "sarimax-p", 0, 5, 2, "sarimax-p-val"),
+                            _slider_field(
+                                "d (diff)",
+                                "Сколько раз брать разности, чтобы убрать тренд. "
+                                "Обычно 0 или 1; для нестационарного ряда — 1.",
+                                "sarimax-d", 0, 2, 1, "sarimax-d-val"),
+                            _slider_field(
+                                "q (MA)",
+                                "Сколько прошлых ошибок прогноза учитывает модель. "
+                                "Типично 0–2.",
+                                "sarimax-q", 0, 5, 1, "sarimax-q-val"),
                         ],
                         className="kb-ts-sarimax-grid",
                     ),
@@ -1139,17 +1264,29 @@ def _sarimax_params_card() -> html.Div:
             ),
             html.Div(
                 [
-                    html.Div("СЕЗОННЫЕ (m из контрольной панели)",
-                             className="kb-overline",
-                             style={"marginTop": "12px"}),
+                    html.Div(
+                        [html.Span("СЕЗОННЫЕ (m из контрольной панели)"),
+                         _hint("То же самое, но для сезонной компоненты. "
+                               "m = период сезонности из контрольной панели.")],
+                        className="kb-overline",
+                        style={"marginTop": "12px"}),
                     html.Div(
                         [
-                            _slider_field("P (sAR)", "sarimax-P", 0, 3, 1,
-                                          "sarimax-P-val"),
-                            _slider_field("D (sDiff)", "sarimax-D", 0, 2, 1,
-                                          "sarimax-D-val"),
-                            _slider_field("Q (sMA)", "sarimax-Q", 0, 3, 1,
-                                          "sarimax-Q-val"),
+                            _slider_field(
+                                "P (sAR)",
+                                "Сезонный AR — сколько прошлых сезонов учитывать. "
+                                "Обычно 0 или 1.",
+                                "sarimax-P", 0, 3, 1, "sarimax-P-val"),
+                            _slider_field(
+                                "D (sDiff)",
+                                "Сезонная разность. 1 — если в ряду есть выраженная "
+                                "годовая (или иная сезонная) волна.",
+                                "sarimax-D", 0, 2, 1, "sarimax-D-val"),
+                            _slider_field(
+                                "Q (sMA)",
+                                "Сезонный MA — учёт сезонных ошибок. "
+                                "Обычно 0 или 1.",
+                                "sarimax-Q", 0, 3, 1, "sarimax-Q-val"),
                         ],
                         className="kb-ts-sarimax-grid",
                     ),
@@ -1161,12 +1298,13 @@ def _sarimax_params_card() -> html.Div:
 
 
 def _backtest_config_card() -> html.Div:
-    def _slider_field(label: str, idc: str, min_v: int, max_v: int,
-                      default: int, val_id: str) -> html.Div:
+    def _slider_field(label_text: str, hint_text: str, idc: str,
+                      min_v: int, max_v: int, default: int,
+                      val_id: str) -> html.Div:
         return html.Div(
             [
                 html.Div(
-                    [html.Label(label, className="kb-ts-ctrl-label"),
+                    [_label_with_hint(label_text, hint_text),
                      html.Span(str(default), id=val_id,
                                className="kb-ts-slider-val")],
                     className="kb-ts-slider-hdr",
@@ -1216,12 +1354,22 @@ def _backtest_config_card() -> html.Div:
                         ],
                         className="kb-ts-ctrl-field",
                     ),
-                    _slider_field("ФОЛДОВ", "bt-folds", 2, 8, 5,
-                                  "bt-folds-val"),
-                    _slider_field("MIN TRAIN", "bt-min-train", 12, 60, 24,
-                                  "bt-min-train-val"),
-                    _slider_field("ГОРИЗОНТ ФОЛДА", "bt-horizon-fold", 1, 24, 6,
-                                  "bt-horizon-fold-val"),
+                    _slider_field(
+                        "ФОЛДОВ",
+                        "На сколько разных «исторических срезов» делим ряд "
+                        "для проверки. Больше фолдов — устойчивее оценка, "
+                        "но медленнее.",
+                        "bt-folds", 2, 8, 5, "bt-folds-val"),
+                    _slider_field(
+                        "MIN TRAIN",
+                        "Минимальная длина обучающей выборки в каждом фолде "
+                        "(в шагах ряда).",
+                        "bt-min-train", 12, 60, 24, "bt-min-train-val"),
+                    _slider_field(
+                        "ГОРИЗОНТ ФОЛДА",
+                        "На сколько шагов вперёд прогнозируем в каждом фолде. "
+                        "Имитирует реальное использование модели.",
+                        "bt-horizon-fold", 1, 24, 6, "bt-horizon-fold-val"),
                 ],
                 className="kb-ts-bt-grid",
             ),
@@ -1236,7 +1384,11 @@ def _acf_config_card(num_cols: list) -> html.Div:
         [
             html.Div(
                 [
-                    html.Label("ПЕРЕМЕННАЯ", className="kb-ts-ctrl-label"),
+                    _label_with_hint(
+                        "ПЕРЕМЕННАЯ",
+                        "Числовая колонка, для которой строим автокорреляции. "
+                        "Обычно — целевая переменная.",
+                    ),
                     dcc.Dropdown(id="acf-col", options=opts,
                                  value=(num_cols[0] if num_cols else None),
                                  clearable=False,
@@ -1247,7 +1399,10 @@ def _acf_config_card(num_cols: list) -> html.Div:
             html.Div(
                 [
                     html.Div(
-                        [html.Label("ЛАГИ", className="kb-ts-ctrl-label"),
+                        [_label_with_hint(
+                            "ЛАГИ",
+                            "До какого максимального лага считать ACF/PACF. "
+                            "Обычно 30–40 шагов хватает для месячных рядов."),
                          html.Span("30", id="acf-nlags-val",
                                    className="kb-ts-slider-val")],
                         className="kb-ts-slider-hdr",
@@ -1272,7 +1427,13 @@ def _stl_config_card() -> html.Div:
         [
             html.Div(
                 [
-                    html.Div("ТИП МОДЕЛИ", className="kb-overline"),
+                    html.Div(
+                        [html.Span("ТИП МОДЕЛИ"),
+                         _hint("Аддитивная: y = тренд + сезонность + остаток. "
+                               "Мультипликативная: y = тренд × сезонность × остаток. "
+                               "Мультипликативная требует y > 0 и подходит, если "
+                               "амплитуда сезонности растёт вместе с уровнем ряда.")],
+                        className="kb-overline"),
                     dcc.RadioItems(
                         id="stl-type",
                         options=[
@@ -1294,6 +1455,10 @@ def _stl_config_card() -> html.Div:
                         value=["robust"], inline=True,
                         className="kb-ts-check",
                     ),
+                    _hint(
+                        "Robust — устойчивая к выбросам версия LOESS. "
+                        "Включайте, если в ряду есть резкие выбросы.",
+                    ),
                     html.Span(
                         "— рекомендуется для рядов с выбросами",
                         className="kb-ts-stl-hint",
@@ -1309,7 +1474,11 @@ def _stl_config_card() -> html.Div:
 def _diag_config_card() -> html.Div:
     return html.Div(
         [
-            html.Label("МОДЕЛЬ", className="kb-ts-ctrl-label"),
+            _label_with_hint(
+                "МОДЕЛЬ",
+                "Какую только что обученную модель проверять на адекватность "
+                "по остаткам (residuals).",
+            ),
             dcc.Dropdown(
                 id="diag-model",
                 options=[
@@ -1331,7 +1500,10 @@ def _anom_config_card(num_cols: list) -> html.Div:
         [
             html.Div(
                 [
-                    html.Label("ПЕРЕМЕННАЯ", className="kb-ts-ctrl-label"),
+                    _label_with_hint(
+                        "ПЕРЕМЕННАЯ",
+                        "Числовая колонка, в которой ищем аномалии.",
+                    ),
                     dcc.Dropdown(id="anom-col", options=opts,
                                  value=(num_cols[0] if num_cols else None),
                                  clearable=False,
@@ -1341,7 +1513,14 @@ def _anom_config_card(num_cols: list) -> html.Div:
             ),
             html.Div(
                 [
-                    html.Label("МЕТОД", className="kb-ts-ctrl-label"),
+                    _label_with_hint(
+                        "МЕТОД",
+                        "Rolling Z — скользящее окно: точка аномальна, если "
+                        "сильно отклоняется от соседей. Хорош для трендовых "
+                        "рядов без сильной сезонности. STL Residual — сначала "
+                        "вычитает тренд и сезонность, потом ищет выбросы в "
+                        "остатке. Лучше для сезонных рядов.",
+                    ),
                     dcc.RadioItems(
                         id="anom-method",
                         options=[
@@ -1356,8 +1535,34 @@ def _anom_config_card(num_cols: list) -> html.Div:
             ),
             html.Div(
                 [
+                    _label_with_hint(
+                        "ЧУВСТВИТЕЛЬНОСТЬ",
+                        "Низкая — отмечаются только сильные выбросы (порог 3.0σ). "
+                        "Средняя — сбалансированный режим (2.5σ). "
+                        "Высокая — отмечаются и менее выраженные отклонения (2.0σ). "
+                        "«Точная настройка» открывает ручной слайдер в σ.",
+                    ),
+                    dcc.RadioItems(
+                        id="anom-sensitivity",
+                        options=[
+                            {"label": "Низкая", "value": "low"},
+                            {"label": "Средняя", "value": "medium"},
+                            {"label": "Высокая", "value": "high"},
+                            {"label": "Точная настройка", "value": "custom"},
+                        ],
+                        value="medium", inline=True,
+                        className="kb-ts-radio",
+                    ),
+                ],
+                className="kb-ts-ctrl-field",
+            ),
+            html.Div(
+                [
                     html.Div(
-                        [html.Label("ОКНО", className="kb-ts-ctrl-label"),
+                        [_label_with_hint(
+                            "ОКНО",
+                            "Размер скользящего окна для расчёта среднего и "
+                            "стандартного отклонения. Для месячных данных — около 12."),
                          html.Span("12", id="anom-window-val",
                                    className="kb-ts-slider-val")],
                         className="kb-ts-slider-hdr",
@@ -1375,8 +1580,11 @@ def _anom_config_card(num_cols: list) -> html.Div:
             html.Div(
                 [
                     html.Div(
-                        [html.Label("ПОРОГ (σ)",
-                                    className="kb-ts-ctrl-label"),
+                        [_label_with_hint(
+                            "ПОРОГ (σ)",
+                            "Сколько стандартных отклонений от тренда считать "
+                            "аномалией. 2.0 — много пометок, 3.0 — только "
+                            "явные выбросы. Активен только в режиме «Точная настройка»."),
                          html.Span("2.5", id="anom-thresh-val",
                                    className="kb-ts-slider-val")],
                         className="kb-ts-slider-hdr",
@@ -1390,6 +1598,7 @@ def _anom_config_card(num_cols: list) -> html.Div:
                              className="kb-ts-slider-range"),
                 ],
                 className="kb-ts-slider-field",
+                id="anom-thresh-field",
             ),
         ],
         className="kb-ts-card kb-ts-card--pad kb-ts-anom-grid",
@@ -1425,6 +1634,184 @@ def _syc_aw(v): return str(int(v or 0))
 def _syc_at(v):
     t = (int(v or 25)) / 10.0
     return f"{t:.1f}"
+
+
+# ---------------------------------------------------------------------------
+# 7.0 — Auto-forecast callback (полная автоматика)
+# ---------------------------------------------------------------------------
+
+_MODEL_NAME_RUS = {
+    "naive_seasonal": "Сезонный наивный",
+    "naive_last":     "Наивный (последнее значение)",
+    "arx":            "ARX (Ridge + лаги)",
+    "sarimax":        "SARIMAX",
+}
+
+
+def _auto_status_card(decisions: dict, notes: list[str]) -> html.Div:
+    """Карточка-сводка: что система решила и почему."""
+    period = decisions.get("period", 1)
+    horizon = decisions.get("horizon", 12)
+    model_info = decisions.get("model", {})
+    model_label = _MODEL_NAME_RUS.get(model_info.get("model", ""),
+                                      model_info.get("model", "?"))
+    confidence = model_info.get("confidence", "medium")
+    confidence_color = {"high": "success", "medium": "warning",
+                        "low": "danger"}.get(confidence, "warning")
+    confidence_text = {"high": "Высокая уверенность",
+                       "medium": "Средняя уверенность",
+                       "low": "Осторожно — мало данных"}[confidence]
+
+    season = decisions.get("seasonality", {})
+    stat = decisions.get("stationarity", {})
+    quality = decisions.get("metrics_interpretation", {})
+
+    rows = [
+        ("Модель",
+         html.Span([model_label, " ",
+                    dbc.Badge(confidence_text, color=confidence_color,
+                              className="ms-2",
+                              style={"marginLeft": "6px",
+                                     "fontSize": "11px"})])),
+        ("Сезонный период",
+         "не обнаружен" if period < 2 else f"{period} (определён автоматически)"),
+        ("Сезонность",
+         f"{season.get('label', '—')} (Fs = {season.get('fs', 0):.2f})"
+         if season.get("label") not in (None, "Нет сезонности") else "не обнаружена"),
+        ("Стационарность", stat.get("hint", "—")),
+        ("Горизонт прогноза", f"{horizon} шагов вперёд"),
+    ]
+    if "arx_lags" in decisions:
+        rows.append(("Подобранные лаги AR", str(decisions["arx_lags"])))
+    if "sarimax_order" in decisions:
+        rows.append((
+            "SARIMAX",
+            f"order={decisions['sarimax_order']}, "
+            f"seasonal_order={decisions['sarimax_seasonal_order']}",
+        ))
+
+    table = html.Table(
+        html.Tbody([
+            html.Tr([
+                html.Td(label, className="kb-ts-tbl__td",
+                        style={"opacity": 0.7, "paddingRight": "12px",
+                               "whiteSpace": "nowrap"}),
+                html.Td(value, className="kb-ts-tbl__td"),
+            ])
+            for label, value in rows
+        ]),
+        className="kb-ts-tbl",
+        style={"width": "100%"},
+    )
+
+    quality_msg = quality.get("message", "")
+    quality_color = quality.get("color", "secondary")
+    quality_label = quality.get("label", "")
+
+    notes_block = html.Ul(
+        [html.Li(t) for t in notes],
+        style={"margin": "0", "paddingLeft": "18px",
+               "color": "rgba(255,255,255,0.75)", "lineHeight": "1.6"},
+    )
+
+    return _card([
+        _card_head(
+            "Что решила автоматика",
+            right=(dbc.Badge(quality_label, color=quality_color,
+                             title=quality_msg,
+                             style={"fontSize": "12px",
+                                    "padding": "6px 10px"})
+                   if quality_label else None),
+        ),
+        table,
+        html.Div(
+            "Подробные решения:",
+            style={"marginTop": "12px", "fontWeight": "600",
+                   "fontSize": "12px",
+                   "color": "rgba(255,255,255,0.55)"},
+        ),
+        notes_block,
+    ])
+
+
+@callback(
+    Output("auto-result", "children"),
+    Input("btn-auto", "n_clicks"),
+    State("ts-ds-select", "value"),
+    State("ts-date-col", "value"), State("ts-target-col", "value"),
+    State("ts-exog-cols", "value"),
+    State(STORE_DATASET, "data"), State(STORE_PREPARED, "data"),
+    prevent_initial_call=True,
+)
+def _run_auto(n, ds_name, date_col, target_col, exog_cols, raw, prep):
+    if not all([date_col, target_col]):
+        return alert_banner(
+            "Выберите датасет, колонку даты и целевую переменную "
+            "в контрольной панели сверху.",
+            "warning",
+        )
+    df = _get_df(ds_name, raw, prep)
+    if df is None:
+        return alert_banner("Данные не найдены.", "danger")
+    try:
+        auto = run_auto_forecast(
+            df, date_col, target_col,
+            exog_cols=exog_cols if exog_cols else None,
+        )
+    except Exception as exc:
+        return alert_banner(f"Не удалось построить прогноз: {exc}", "danger")
+
+    fr = auto.forecast
+    decisions = auto.decisions
+    notes = auto.notes
+    m = fr.metrics
+
+    metric_line = (
+        f"MAE: {_fmt_num(m.get('MAE'), 2)} · "
+        f"RMSE: {_fmt_num(m.get('RMSE'), 2)} · "
+        + (f"sMAPE: {_fmt_pct(m.get('sMAPE'))} · "
+           if 'sMAPE' in m else f"MAPE: {_fmt_pct(m.get('MAPE'))} · ")
+        + f"Bias: {_fmt_signed(m.get('Bias'), 2)}"
+    )
+
+    status_card = _auto_status_card(decisions, notes)
+
+    fig = _plot_forecast_v2(fr, target_col,
+                            show_fit=True,
+                            model_color=TS_FORECAST, height=340)
+    forecast_card = _card([
+        _card_head(
+            f"Прогноз: {target_col}",
+            right=_model_chip(fr.model_name.upper(), TS_FORECAST, "info"),
+        ),
+        html.Div(
+            [html.Span(metric_line, className="kb-mono"),
+             _quality_badge(m)],
+            className="kb-ts-card__submeta",
+            style={"display": "flex", "alignItems": "center",
+                   "gap": "8px", "flexWrap": "wrap"},
+        ),
+        _chart_frame(fig, height=340),
+        _legend_row([
+            ("history",  TS_ACTUALS),
+            ("fit",      TS_FIT, "dash"),
+            ("forecast", TS_FORECAST),
+            ("CI 95%",   TS_CI, "band"),
+        ]),
+    ])
+
+    hint = html.Div(
+        "Если результат вас не устраивает — посмотрите соседние вкладки: "
+        "там можно вручную настроить модель и сравнить прогнозы между собой.",
+        style={"marginTop": "12px", "padding": "10px 14px",
+               "borderRadius": "8px",
+               "background": "rgba(74,127,176,0.10)",
+               "border": "1px solid rgba(74,127,176,0.25)",
+               "color": "rgba(255,255,255,0.78)",
+               "fontSize": "13px"},
+    )
+
+    return html.Div([status_card, forecast_card, hint])
 
 
 # ---------------------------------------------------------------------------
@@ -1477,8 +1864,13 @@ def _run_naive(n, naive_type, ds_name, date_col, target_col,
                 f"Наивный прогноз: {target_col}",
                 right=_model_chip("NAIVE", TS_NAIVE, "warning"),
             ),
-            html.Div(metric_line,
-                     className="kb-ts-card__submeta kb-mono"),
+            html.Div(
+                [html.Span(metric_line, className="kb-mono"),
+                 _quality_badge(m)],
+                className="kb-ts-card__submeta",
+                style={"display": "flex", "alignItems": "center",
+                       "gap": "8px", "flexWrap": "wrap"},
+            ),
             _chart_frame(fig, height=320),
             _legend_row([
                 ("actuals", TS_ACTUALS),
@@ -1561,8 +1953,13 @@ def _run_arx(n, alpha_r, ds_name, date_col, target_col,
                 f"ARX прогноз: {target_col}",
                 right=_model_chip(arx_chip_label, TS_ARX, "info"),
             ),
-            html.Div(metric_line,
-                     className="kb-ts-card__submeta kb-mono"),
+            html.Div(
+                [html.Span(metric_line, className="kb-mono"),
+                 _quality_badge(m)],
+                className="kb-ts-card__submeta",
+                style={"display": "flex", "alignItems": "center",
+                       "gap": "8px", "flexWrap": "wrap"},
+            ),
             _chart_frame(fig, height=300),
             _legend_row([
                 ("actuals", TS_ACTUALS),
@@ -1647,8 +2044,13 @@ def _run_sarimax(n, p, d, q, P, D, Q, ds_name, date_col, target_col,
                 f"SARIMAX прогноз: {target_col}",
                 right=_model_chip("SARIMAX", TS_SARIMAX, "success"),
             ),
-            html.Div(submeta.rstrip(" ·"),
-                     className="kb-ts-card__submeta kb-mono"),
+            html.Div(
+                [html.Span(submeta.rstrip(" ·"), className="kb-mono"),
+                 _quality_badge(m)],
+                className="kb-ts-card__submeta",
+                style={"display": "flex", "alignItems": "center",
+                       "gap": "8px", "flexWrap": "wrap"},
+            ),
             _chart_frame(fig, height=300),
             _legend_row([
                 ("actuals", TS_ACTUALS),
@@ -2603,17 +3005,35 @@ def _run_compare(n, ds_name, date_col, target_col,
 # 7.9 — Anomaly detection callback
 # ---------------------------------------------------------------------------
 
+_ANOM_SENSITIVITY_TO_SIGMA = {
+    "low": 3.0,
+    "medium": 2.5,
+    "high": 2.0,
+}
+
+
+@callback(
+    Output("anom-thresh-field", "style"),
+    Input("anom-sensitivity", "value"),
+)
+def _toggle_thresh_field(sensitivity):
+    if sensitivity == "custom":
+        return {}
+    return {"display": "none"}
+
+
 @callback(
     Output("anomaly-result", "children"),
     Input("btn-anomaly", "n_clicks"),
     State("anom-col", "value"), State("anom-method", "value"),
     State("anom-window", "value"), State("anom-thresh", "value"),
+    State("anom-sensitivity", "value"),
     State("ts-ds-select", "value"),
     State("ts-date-col", "value"), State("ts-period", "value"),
     State(STORE_DATASET, "data"), State(STORE_PREPARED, "data"),
     prevent_initial_call=True,
 )
-def _run_anomaly(n, col, method, window, thresh_tick,
+def _run_anomaly(n, col, method, window, thresh_tick, sensitivity,
                  ds_name, date_col, period, raw, prep):
     if not col:
         return alert_banner("Выберите числовую колонку.", "warning")
@@ -2621,11 +3041,13 @@ def _run_anomaly(n, col, method, window, thresh_tick,
     if df is None:
         return alert_banner("Данные не найдены.", "danger")
     try:
-        threshold = (int(thresh_tick) / 10.0 if thresh_tick is not None
-                     else 2.5)
-        # slider range 15..50 maps to 1.5..5.0; already encoded that way above
-        if threshold > 10:
-            threshold = threshold / 10.0
+        if sensitivity in _ANOM_SENSITIVITY_TO_SIGMA:
+            threshold = _ANOM_SENSITIVITY_TO_SIGMA[sensitivity]
+        else:
+            threshold = (int(thresh_tick) / 10.0 if thresh_tick is not None
+                         else 2.5)
+            if threshold > 10:
+                threshold = threshold / 10.0
         series = df[col].dropna()
         if series.empty:
             return alert_banner("Нет данных.", "warning")

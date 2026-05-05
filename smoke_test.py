@@ -89,6 +89,17 @@ assert arx_res.explainability is not None
 print(f"    ARX (Ridge): MAE={arx_res.metrics['MAE']}, MAPE={arx_res.metrics['MAPE']}%")
 print(f"    Top features: {arx_res.explainability['feature'].head(3).tolist()}")
 
+# Auto-forecast (новый слой автоматики)
+from core.timeseries_auto import run_auto_forecast
+auto_res = run_auto_forecast(df, "date", "revenue")
+assert auto_res.forecast.forecast_df is not None
+assert not auto_res.forecast.forecast_df.empty
+assert auto_res.decisions["period"] >= 1
+assert len(auto_res.notes) >= 2
+print(f"    Auto-forecast: model={auto_res.decisions['model']['model']}, "
+      f"period={auto_res.decisions['period']}, "
+      f"horizon={auto_res.decisions['horizon']}")
+
 # Verify fact line not extended beyond last date
 last_actual = naive_res.forecast_df[naive_res.forecast_df["actual"].notna()]["date"].max()
 last_data = df["date"].max()
